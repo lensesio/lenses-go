@@ -162,7 +162,9 @@ func newLSQLCommand() *cobra.Command {
 			}
 
 			if statsEvery <= 0 {
+				// disable stats (in-time) and stop record (at end, including its own stats).
 				statsHandler = nil
+				stopHandler = nil
 			}
 
 			return client.LSQL(string(query), withOffsets, statsEvery, recordHandler, stopHandler, stopErrHandler, statsHandler)

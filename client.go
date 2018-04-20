@@ -566,6 +566,8 @@ func (c *Client) LSQL(
 		return errSQLEmpty
 	}
 
+	withStop := stopHandler != nil
+
 	statsEverySeconds := int(statsEvery.Seconds())
 	withStats := statsHandler != nil && statsEverySeconds > 1
 
@@ -634,6 +636,10 @@ func (c *Client) LSQL(
 			}
 			break
 		case stopPayloadType:
+			if !withStop {
+				return nil
+			}
+
 			stopMessage := LSQLStop{}
 			if err = json.Unmarshal(message, &stopMessage); err != nil {
 				return err
