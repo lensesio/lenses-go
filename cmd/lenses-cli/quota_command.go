@@ -91,6 +91,10 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				}
 			}
 
+			if err := checkRequiredFlags(cmd, flags{"quota-config": configRaw}); err != nil {
+				return err
+			}
+
 			if quota.User != "" {
 				if clientID := quota.ClientID; clientID != "" {
 					if clientID == "all" || clientID == "*" {
@@ -125,7 +129,6 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 	}
 
 	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
-	setCommand.MarkFlagRequired("quota-config")
 	setCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
 	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
 	rootSub.AddCommand(setCommand)
@@ -213,6 +216,10 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 				}
 			}
 
+			if err := checkRequiredFlags(cmd, flags{"quota-config": configRaw}); err != nil {
+				return err
+			}
+
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.CreateOrUpdateQuotaForClient(quota.ClientID, quota.Config); err != nil {
 					return err
@@ -228,8 +235,8 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 			return echo(cmd, "Quota for all clients created")
 		},
 	}
+
 	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
-	setCommand.MarkFlagRequired("quota-config")
 	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
 	rootSub.AddCommand(setCommand)
 
@@ -240,6 +247,10 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkRequiredFlags(cmd, flags{"quota-client": quota.ClientID}); err != nil {
+				return err
+			}
+
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.DeleteQuotaForClient(id); err != nil {
 					return err
@@ -257,7 +268,6 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 	}
 
 	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
-	deleteCommand.MarkFlagRequired("quota-client")
 	rootSub.AddCommand(deleteCommand)
 
 	return &rootSub

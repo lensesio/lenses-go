@@ -211,6 +211,10 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkRequiredFlags(cmd, flags{"runners": runners}); err != nil {
+				return err
+			}
+
 			identifier, err := client.LookupProcessorIdentifier(processorID, processorName, clusterName, namespace)
 			if err != nil {
 				return err
@@ -225,7 +229,6 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&runners, "runners", 1, "--runners=2")
-	cmd.MarkFlagRequired("runners")
 
 	cmd.Flags().String("id", "", "--id=processor_1")
 	cmd.Flags().String("name", "", "--name=processorName")

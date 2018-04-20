@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/landoop/lenses-go"
 
 	"github.com/spf13/cobra"
@@ -55,9 +57,14 @@ func newTopicGroupCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkRequiredFlags(cmd, flags{"name": topicName}); err != nil {
+				return err
+			}
+
 			// default is the retrieval of the particular topic info.
 			topic, err := client.GetTopic(topicName)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("topic with name: '%s' does not exist", topicName)
 				return err
 			}
 
@@ -68,7 +75,6 @@ func newTopicGroupCommand() *cobra.Command {
 	root.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
 	root.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
 	root.Flags().StringVar(&topicName, "name", "", "--name=topic1")
-	root.MarkFlagRequired("name")
 
 	// subcommands
 	root.AddCommand(newTopicCreateCommand())
@@ -144,7 +150,12 @@ func newTopicDeleteCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkRequiredFlags(cmd, flags{"name": topicName}); err != nil {
+				return err
+			}
+
 			if err := client.DeleteTopic(topicName); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, topic '%s' does not exist", topicName)
 				return err
 			}
 
@@ -153,7 +164,6 @@ func newTopicDeleteCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&topicName, "name", "", "--name=topic1")
-	cmd.MarkFlagRequired("name")
 
 	return &cmd
 }
@@ -190,6 +200,7 @@ func newTopicUpdateCommand() *cobra.Command {
 			}
 
 			if err := client.UpdateTopic(topic.Name, topic.Configs); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to update configs, topic '%s' does not exist", topic.Name)
 				return err
 			}
 
