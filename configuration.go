@@ -40,13 +40,9 @@ type Configuration struct {
 	// fill the `User` and `Password` instead.
 	Token string `json:"token" yaml:"Token" toml:"Token" survey:"-"`
 
-	// Timeout specifies a time limit for requests made by the
-	// underline HTTP Client. The timeout includes connection time, any
-	// redirects, and reading the response body. The timer remains
-	// running after Get, Head, Post, or Do return and will
-	// interrupt reading of the underline http client's Response.Body.
+	// Timeout specifies the timeout for connection establishment.
 	//
-	// A Timeout of empty means no timeout.
+	// Empty timeout value means no timeout.
 	//
 	// Such as "300ms", "-1.5h" or "2h45m".
 	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".

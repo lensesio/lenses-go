@@ -200,7 +200,7 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVar(&config.Host, "host", "", "--host=https://example.com")
 	rootCmd.PersistentFlags().StringVar(&config.User, "user", "", "--user=MyUser")
-	rootCmd.PersistentFlags().StringVar(&config.Timeout, "timeout", "", "--timeout=1h")
+	rootCmd.PersistentFlags().StringVar(&config.Timeout, "timeout", "", "--timeout=30s timeout for connection establishment")
 	rootCmd.PersistentFlags().StringVar(&config.Password, "pass", "", "--pass=MyPassword")
 	rootCmd.PersistentFlags().StringVar(&config.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
 	rootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "--debug=true will print some debug information that are necessary for debugging")
