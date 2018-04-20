@@ -1,0 +1,264 @@
+package main
+
+import (
+	"github.com/landoop/lenses-go"
+
+	"github.com/spf13/cobra"
+)
+
+func init() {
+	rootCmd.AddCommand(newGetQuotasCommand())
+	rootCmd.AddCommand(newQuotaGroupCommand())
+}
+
+func newGetQuotasCommand() *cobra.Command {
+	cmd := cobra.Command{
+		Use:              "quotas",
+		Short:            "List of all available quotas",
+		Example:          exampleString("quotas"),
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			quotas, err := client.GetQuotas()
+			if err != nil {
+				return err
+			}
+
+			return printJSON(cmd.OutOrStdout(), quotas)
+		},
+	}
+
+	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
+	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+
+	return &cmd
+}
+
+func newQuotaGroupCommand() *cobra.Command {
+	root := cobra.Command{
+		Use:              "quota",
+		Short:            "Work with particular a quota, create a new quota or update and delete an existing one",
+		Example:          exampleString("quota users --config=`{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"RequestPercentage\": \"75\"}`"),
+		TraverseChildren: true,
+		SilenceErrors:    true,
+	}
+
+	root.AddCommand(newQuotaUsersSubGroupCommand())
+	root.AddCommand(newQuotaClientsSubGroupCommand())
+	return &root
+}
+
+type createQuotaPayload struct {
+	Config lenses.QuotaConfig `yaml:"Config"`
+	// for specific user and/or client.
+	User string `yaml:"User"`
+	// if "all" or "*" then means all clients.
+	// Minor note On quota clients set/create/update the Config and Client field are used only.
+	ClientID string `yaml:"Client"`
+}
+
+func newQuotaUsersSubGroupCommand() *cobra.Command {
+	var (
+		configRaw string
+		quota     createQuotaPayload
+	)
+
+	rootSub := cobra.Command{
+		Use:              "users",
+		Short:            "Work with users quotas",
+		Example:          exampleString("users"),
+		TraverseChildren: true,
+		SilenceErrors:    true,
+	}
+
+	setCommand := &cobra.Command{
+		Use:              "set",
+		Aliases:          []string{"create", "update"},
+		Short:            "Create or update quota for all users or for a specific user (and client)",
+		Example:          exampleString("quota users set --config=`{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"RequestPercentage\": \"75\"}`"),
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				// load from file.
+				if err := loadFile(cmd, args[0], &quota); err != nil {
+					return err
+				}
+
+			} else {
+				// try load only the config from flag or file if possible.
+				if err := tryReadFile(configRaw, &quota.Config); err != nil {
+					return err
+				}
+			}
+
+			if quota.User != "" {
+				if clientID := quota.ClientID; clientID != "" {
+					if clientID == "all" || clientID == "*" {
+						if err := client.CreateOrUpdateQuotaForUserAllClients(quota.User, quota.Config); err != nil {
+							return err
+						}
+
+						return echo(cmd, "Quota for user %s and all clients set", quota.User)
+
+					}
+
+					if err := client.CreateOrUpdateQuotaForUserClient(quota.User, clientID, quota.Config); err != nil {
+						return err
+					}
+
+					return echo(cmd, "Quota for user %s and client %s set", quota.User, clientID)
+				}
+
+				if err := client.CreateOrUpdateQuotaForUser(quota.User, quota.Config); err != nil {
+					return err
+				}
+
+				return echo(cmd, "Quota for user %s created", quota.User)
+			}
+
+			if err := client.CreateOrUpdateQuotaForAllUsers(quota.Config); err != nil {
+				return err
+			}
+
+			return echo(cmd, "Quota for all users created")
+		},
+	}
+
+	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
+	setCommand.MarkFlagRequired("quota-config")
+	setCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
+	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	rootSub.AddCommand(setCommand)
+
+	deleteCommand := &cobra.Command{
+		Use:              "delete",
+		Short:            "Delete default quota for all users or for a specific user (and client)",
+		Example:          exampleString("quota users delete"),
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var user, clientID = quota.User, quota.ClientID
+
+			if user != "" {
+				if clientID != "" {
+					if clientID == "all" || clientID == "*" {
+						if err := client.DeleteQuotaForUserAllClients(user); err != nil {
+							return err
+						}
+
+						return echo(cmd, "Quota for user %s deleted for all clients", user)
+					}
+
+					if err := client.DeleteQuotaForUserClient(user, clientID); err != nil {
+						return err
+					}
+
+					return echo(cmd, "Quota for user %s deleted for client %s", user, clientID)
+				}
+
+				if err := client.DeleteQuotaForUser(user); err != nil {
+					return err
+				}
+
+				return echo(cmd, "Quota for user %s deleted", user)
+			}
+
+			if err := client.DeleteQuotaForAllUsers(); err != nil {
+				return err
+			}
+
+			return echo(cmd, "Quota for all users deleted")
+		},
+	}
+
+	deleteCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
+	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	rootSub.AddCommand(deleteCommand)
+
+	return &rootSub
+}
+
+func newQuotaClientsSubGroupCommand() *cobra.Command {
+	var (
+		configRaw string
+		quota     createQuotaPayload
+	)
+
+	rootSub := cobra.Command{
+		Use:              "clients",
+		Short:            "Work with clients quotas",
+		Example:          exampleString("clients"),
+		TraverseChildren: true,
+		SilenceErrors:    true,
+	}
+
+	setCommand := &cobra.Command{
+		Use:              "set",
+		Aliases:          []string{"create", "update"},
+		Short:            "Create or update quota for all clients or for a specific one",
+		Example:          exampleString("quota users set --config=`{\"producer_byte_rate\": \"100000\"},\"consumer_byte_rate\": \"200000\"},\"RequestPercentage\": \"75\"}`"),
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				// load from file.
+				if err := loadFile(cmd, args[0], &quota); err != nil {
+					return err
+				}
+
+			} else {
+				// try load only the config from flag or file if possible.
+				if err := tryReadFile(configRaw, &quota.Config); err != nil {
+					return err
+				}
+			}
+
+			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
+				if err := client.CreateOrUpdateQuotaForClient(quota.ClientID, quota.Config); err != nil {
+					return err
+				}
+
+				return echo(cmd, "Quota for client %s created", quota.ClientID)
+			}
+
+			if err := client.CreateOrUpdateQuotaForAllClients(quota.Config); err != nil {
+				return err
+			}
+
+			return echo(cmd, "Quota for all clients created")
+		},
+	}
+	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
+	setCommand.MarkFlagRequired("quota-config")
+	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	rootSub.AddCommand(setCommand)
+
+	deleteCommand := &cobra.Command{
+		Use:              "delete",
+		Short:            "Delete default quota for all clients or for a specific one",
+		Example:          exampleString("quota users delete"),
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
+				if err := client.DeleteQuotaForClient(id); err != nil {
+					return err
+				}
+
+				return echo(cmd, "Quota for client %s deleted", id)
+			}
+
+			if err := client.DeleteQuotaForAllClients(); err != nil {
+				return err
+			}
+
+			return echo(cmd, "Quota for all clients deleted")
+		},
+	}
+
+	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	deleteCommand.MarkFlagRequired("quota-client")
+	rootSub.AddCommand(deleteCommand)
+
+	return &rootSub
+}
