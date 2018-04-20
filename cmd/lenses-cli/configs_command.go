@@ -54,7 +54,7 @@ const commandModeName = "mode"
 func newGetModeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:                   commandModeName,
-		Short:                 "Print the configuration's exeuction mode",
+		Short:                 "Print the configuration's execution mode",
 		Example:               exampleString(commandModeName),
 		DisableFlagParsing:    true,
 		DisableFlagsInUseLine: true,
