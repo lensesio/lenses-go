@@ -75,7 +75,7 @@ func tryLoadConfigurationFromCommonDirectories() {
 
 var rootCmd = &cobra.Command{
 	Use:                        "lenses-cli [command] [flags]",
-	Example:                    exampleString(`sql --offsets --stats=2s --stats-end "SELECT * FROM reddit_posts LIMIT 50"`),
+	Example:                    exampleString(`sql --offsets --stats=2s "SELECT * FROM reddit_posts LIMIT 50"`),
 	Short:                      "Lenses-cli is the command line client for the Landoop's Lenses REST API.",
 	Version:                    lenses.Version,
 	SilenceUsage:               true,

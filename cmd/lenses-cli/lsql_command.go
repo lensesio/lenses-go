@@ -29,16 +29,12 @@ func newLSQLCommand() *cobra.Command {
 		withOffsets bool
 		// only on execution: if not empty and > "1s" the client will accept LSQLStats every `statsEvery` duration, therefore they will be visible to the output.
 		statsEvery time.Duration
-		// only when --withStats, defaults to false but if true then shows the stats in the end of the query,
-		// it defaults to false because some querise never finish and return only stats,
-		// otherwise (if defaulted, false) show the stats records at their own time.
-		statsEnd bool
 	)
 
 	rootSub := cobra.Command{
 		Use:           "sql [--validate?] [query]",
 		Short:         "Execute or Validate Only Lenses query (LSQL) on the fly",
-		Example:       exampleString(`sql --offsets --stats=2s --stats-end "SELECT * FROM reddit_posts LIMIT 50"`),
+		Example:       exampleString(`sql --offsets --stats=2s "SELECT * FROM reddit_posts LIMIT 50"`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var query []byte
@@ -149,13 +145,7 @@ func newLSQLCommand() *cobra.Command {
 				return fmt.Errorf(errRecord.Message)
 			}
 
-			var stats lenses.LSQLStats
-			printStatsNow := func() error {
-				fmt.Fprintln(out, "Stats")
-				return printJSON(out, stats)
-			}
-
-			statsHandler := func(statsRecord lenses.LSQLStats) error {
+			statsHandler := func(stats lenses.LSQLStats) error {
 				/* Output (with --stats):
 				Stats
 				{
@@ -167,34 +157,21 @@ func newLSQLCommand() *cobra.Command {
 				  "currentSize": 144875
 				}
 				*/
-				stats = statsRecord
-
-				if !statsEnd {
-					return printStatsNow() // print now
-				}
-				return nil
+				fmt.Fprintln(out, "Stats")
+				return printJSON(out, stats)
 			}
 
 			if statsEvery <= 0 {
 				statsHandler = nil
 			}
 
-			if err = client.LSQL(string(query), withOffsets, statsEvery, recordHandler, stopHandler, stopErrHandler, statsHandler); err != nil {
-				return err
-			}
-
-			if statsEvery.Seconds() > 1 && statsEnd {
-				return printStatsNow()
-			}
-
-			return nil
+			return client.LSQL(string(query), withOffsets, statsEvery, recordHandler, stopHandler, stopErrHandler, statsHandler)
 		},
 	}
 
 	rootSub.Flags().BoolVar(&validate, "validate", false, "--validate") // if --validate exists in the flags then it's true.
 	rootSub.Flags().BoolVar(&withOffsets, "offsets", false, "--offsets if true then the stop output will contain the 'offsets' information as well")
 	rootSub.Flags().DurationVar(&statsEvery, "stats", 0, "--stats=2s if not empty the client will accept stats records every 'stats' duration, therefore they will be visible to the output")
-	rootSub.Flags().BoolVar(&statsEnd, "stats-end", false, "--stats-end can be used only with '--stats' flag. If true then stats will be visible when the query finished, always in the end of the overall output")
 	rootSub.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
 	rootSub.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
 
