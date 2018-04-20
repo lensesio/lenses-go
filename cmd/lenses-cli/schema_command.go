@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -151,8 +152,11 @@ func getSchemaByID(cmd *cobra.Command, id int) error {
 		return err
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "%s", result)
-	return nil
+	schemaRawJSON, err := lenses.JSONAvroSchema(result)
+	if err != nil {
+		return err
+	}
+	return printJSON(cmd.OutOrStderr(), schemaRawJSON)
 }
 
 // the only valid version string is the "latest"
@@ -172,8 +176,8 @@ func latestOrInt(name, versionStringOrInt string, str func(versionString string)
 }
 
 func getSchemaByVersion(cmd *cobra.Command, name, versionStringOrInt string, pretty bool) error {
-	readSchema := func(versionStringOrInt string) (schema lenses.Schema, err error) {
 
+	readSchema := func(versionStringOrInt string) (schema lenses.Schema, err error) {
 		err = latestOrInt(name, versionStringOrInt, func(_ string) error {
 			schema, err = client.GetLatestSchema(name)
 			return err
@@ -190,7 +194,15 @@ func getSchemaByVersion(cmd *cobra.Command, name, versionStringOrInt string, pre
 		return err
 	}
 
-	return printJSON(cmd.OutOrStdout(), schema)
+	rawJSONSchema, err := lenses.JSONAvroSchema(schema.AvroSchema)
+	if err != nil {
+		return err
+	}
+
+	return printJSON(cmd.OutOrStdout(), struct {
+		lenses.Schema
+		JSONSchema json.RawMessage `json:"schema"`
+	}{schema, rawJSONSchema})
 }
 
 func newRegisterSchemaCommand() *cobra.Command {

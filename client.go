@@ -1779,12 +1779,22 @@ func (c *Client) GetSchema(subjectID int) (string, error) {
 }
 
 type Schema struct {
+	ID int `json:"id,omitempty" yaml:"ID,omitempty"`
 	// Name is the name of the schema is registered under.
 	Name string `json:"name,omitempty" yaml:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
 	// Version of the returned schema.
 	Version int `json:"version"`
 	// AvroSchema is the Avro schema string.
 	AvroSchema string `json:"schema" yaml:"AvroSchema"`
+}
+
+func JSONAvroSchema(avroSchema string) (json.RawMessage, error) {
+	var raw json.RawMessage
+	err := json.Unmarshal(json.RawMessage(avroSchema), &raw)
+	if err != nil {
+		return nil, err
+	}
+	return raw, err
 }
 
 // SchemaLatestVersion is the only one valid string for the "versionID", it's the "latest" version string and it's used on `GetLatestSchema`.
