@@ -62,6 +62,10 @@ func newCreateOrUpdateACLCommand() *cobra.Command {
 				}
 			}
 
+			if err := checkRequiredFlags(flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
+				return err
+			}
+
 			if err := client.CreateOrUpdateACL(acl); err != nil {
 				return err
 			}
@@ -74,7 +78,7 @@ func newCreateOrUpdateACLCommand() *cobra.Command {
 	cmd.Flags().StringVar(&acl.ResourceName, "resourceName", "", "--resourceName The name of the resource")
 	cmd.Flags().StringVar(&acl.Principal, "principal", "", "--principal The name of the principal")
 	cmd.Flags().Var(newVarFlag(&acl.PermissionType), "permissionType", "--permissionType ALLOW or deny")
-	cmd.Flags().StringVar(&acl.Host, "host", "", "--host")
+	cmd.Flags().StringVar(&acl.Host, "host", "", "--host") // optional, defaults to "*".
 	cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "--operation The allowed operation, ALL, READ, WRITE, DELETE, DESCRIBECONFIGS, ALTERCONFIGS, IDEMPOTENTWRITE")
 
 	return &cmd
@@ -94,6 +98,10 @@ func newDeleteACLCommand() *cobra.Command {
 				if err := loadFile(cmd, args[0], &acl); err != nil {
 					return err
 				}
+			}
+
+			if err := checkRequiredFlags(flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
+				return err
 			}
 
 			if err := client.DeleteACL(acl); err != nil {
