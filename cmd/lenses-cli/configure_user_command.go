@@ -25,7 +25,7 @@ func init() {
 	rootCmd.AddCommand(newConfigureCommand())
 	rootCmd.AddCommand(newLoginCommand())
 	rootCmd.AddCommand(newGetUserInfoCommand())
-	rootCmd.AddCommand(newLogoutCommand())
+	// remove `logout` command (at least for the moment) rootCmd.AddCommand(newLogoutCommand())
 }
 
 // Note that configure will never be called if home configuration is already exists, even if `lenses-cli configure`,
@@ -357,22 +357,22 @@ func newGetUserInfoCommand() *cobra.Command {
 
 const logoutCmdName = "logout"
 
-func newLogoutCommand() *cobra.Command {
-	cmd := cobra.Command{
-		Use:              logoutCmdName,
-		Short:            "Revoke the access token",
-		Example:          exampleString(logoutCmdName),
-		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := client.Logout(); err != nil {
-				return err // first re-voke the access token.
-			}
+// func newLogoutCommand() *cobra.Command {
+// 	cmd := cobra.Command{
+// 		Use:              logoutCmdName,
+// 		Short:            "Revoke the access token",
+// 		Example:          exampleString(logoutCmdName),
+// 		TraverseChildren: true,
+// 		RunE: func(cmd *cobra.Command, args []string) error {
+// 			if err := client.Logout(); err != nil {
+// 				return err // first re-voke the access token.
+// 			}
 
-			// after remove the token from the configuration.
-			config.Token = ""
-			return saveConfiguration()
-		},
-	}
+// 			// after remove the token from the configuration.
+// 			config.Token = ""
+// 			return saveConfiguration()
+// 		},
+// 	}
 
-	return &cmd
-}
+// 	return &cmd
+// }
