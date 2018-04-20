@@ -55,7 +55,6 @@ func UsingClient(httpClient *http.Client) ConnectionOption {
 
 		// config's timeout has priority if the httpClient passed has smaller or not-seted timeout.
 		timeout := getTimeout(httpClient, c.config.Timeout)
-		httpClient.Timeout = timeout
 
 		transport := getTransportLayer(httpClient, timeout)
 		httpClient.Transport = transport
