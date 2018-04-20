@@ -84,15 +84,6 @@ var rootCmd = &cobra.Command{
 	TraverseChildren:           true,
 	SuggestionsMinimumDistance: 1,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
-		if cmd.Name() == "docs" {
-			cmd.ResetFlags()
-			return nil // skip all that when in docs command.
-		}
-
-		if client != nil { // * client can be not empty in the future if we decide that we want sessions.
-			return nil
-		}
-
 		if err = tryLoadConfigurationFromFile(configFilepath); err != nil {
 			if cmd.Name() != "configure" {
 				return
@@ -103,7 +94,6 @@ var rootCmd = &cobra.Command{
 		if !config.IsValid() {
 			tryLoadConfigurationFromCommonDirectories()
 		}
-		//
 
 		// if command is "configure" and the configuration is invalid at this point, don't give a failure,
 		// let the configure command give a tutorial for user in order to create a configuration file.
