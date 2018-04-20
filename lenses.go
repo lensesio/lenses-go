@@ -145,15 +145,15 @@ func OpenConnection(config Configuration, options ...ConnectionOption) (*Client,
 		return nil, fmt.Errorf("http: token is undefinied")
 	}
 
+	if config.Debug {
+		golog.SetLevel("debug")
+		golog.Debugf("Connected on %s with token: %s.\nUser details: %#+v",
+			c.config.Host, loginData.Token, loginData.User)
+	}
+
 	// set the generated token and the user model retrieved from server.
 	c.config.Token = loginData.Token
 	c.user = loginData.User
-
-	if config.Debug {
-		golog.SetLevel("debug")
-		golog.Debugf("Connected on %s with token: %s.\nUser details: %#v",
-			c.config.Host, c.config.Timeout, c.config.Token, c.user)
-	}
 
 	return c, nil
 }
