@@ -320,10 +320,6 @@ func newDeleteSchemaVersionCommand() *cobra.Command {
 				return err
 			}
 
-			if len(args) < 1 {
-				return fmt.Errorf("version command is missing")
-			}
-
 			var (
 				err            error
 				deletedVersion int
