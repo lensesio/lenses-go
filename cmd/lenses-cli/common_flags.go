@@ -282,7 +282,7 @@ func readInPipe() (bool, []byte, error) {
 type flags map[string]interface{}
 
 // this function can be used to manually check for required flags, when the command does not specify a required flag (mostly because of file loading feature).
-func checkRequiredFlags(nameValuePairs flags) error {
+func checkRequiredFlags(cmd *cobra.Command, nameValuePairs flags) (err error) {
 	if nameValuePairs == nil {
 		return nil
 	}
@@ -290,24 +290,31 @@ func checkRequiredFlags(nameValuePairs flags) error {
 	var emptyFlags []string
 
 	for name, value := range nameValuePairs {
-		if value == reflect.Zero(reflect.TypeOf(value)).Interface() {
-			emptyFlags = append(emptyFlags, strconv.Quote(name))
+		if reflect.TypeOf(value).Comparable() {
+			if value == reflect.Zero(reflect.TypeOf(value)).Interface() {
+				emptyFlags = append(emptyFlags, strconv.Quote(name))
+			}
 		}
 	}
 
-	switch n := len(emptyFlags); n {
-	case 0:
-		return nil
-	case 1:
-		// required flag "flag 1" not set
-		return fmt.Errorf("required flag %s not set", emptyFlags[0])
-	default:
-		// required flags "flag 1" and "flag 2" not set
-		// required flags "flag 1", "flag 2" and "flag 3" not set
-		return fmt.Errorf("required flags %s and %s not set",
-			strings.Join(emptyFlags[0:n-1], ", "), emptyFlags[n-1])
+	if n := len(emptyFlags); n > 0 {
+		if n == 1 {
+			// required flag "flag 1" not set
+			err = fmt.Errorf("required flag %s not set", emptyFlags[0])
+		} else {
+			// required flags "flag 1" and "flag 2" not set
+			// required flags "flag 1", "flag 2" and "flag 3" not set
+			err = fmt.Errorf("required flags %s and %s not set",
+				strings.Join(emptyFlags[0:n-1], ", "), emptyFlags[n-1])
+		}
+
+		if len(nameValuePairs) == n {
+			// if all required flags are not passed, then show an example in the end.
+			err = fmt.Errorf("%s\nexample:\n\t%s", err, cmd.Example)
+		}
 	}
 
+	return
 }
 
 // This is a self-crafted hack to convert custom types to a compatible cobra flag.

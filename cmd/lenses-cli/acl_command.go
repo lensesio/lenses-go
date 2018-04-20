@@ -62,7 +62,7 @@ func newCreateOrUpdateACLCommand() *cobra.Command {
 				}
 			}
 
-			if err := checkRequiredFlags(flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
 				return err
 			}
 
@@ -100,7 +100,7 @@ func newDeleteACLCommand() *cobra.Command {
 				}
 			}
 
-			if err := checkRequiredFlags(flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
 				return err
 			}
 

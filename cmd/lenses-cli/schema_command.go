@@ -112,7 +112,7 @@ func newSchemaGroupCommand() *cobra.Command {
 			}
 
 			// from below and after, the name flag is required.
-			if err := checkRequiredFlags(flags{"name": name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": name}); err != nil {
 				return err
 			}
 
@@ -210,7 +210,7 @@ func newRegisterSchemaCommand() *cobra.Command {
 				}
 			}
 
-			if err := checkRequiredFlags(flags{"name": schema.Name, "avro": schema.AvroSchema}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": schema.Name, "avro": schema.AvroSchema}); err != nil {
 				return err
 			}
 
@@ -238,7 +238,7 @@ func newGetSchemaVersionsCommand() *cobra.Command {
 		Example:       exampleString(`schema --name="name" versions`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"name": name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": name}); err != nil {
 				return err
 			}
 
@@ -267,7 +267,7 @@ func newDeleteSchemaCommand() *cobra.Command {
 		Example:       exampleString(`schema delete --name="name"`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"name": name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": name}); err != nil {
 				return err
 			}
 
@@ -300,7 +300,7 @@ func newDeleteSchemaVersionCommand() *cobra.Command {
 		Example:       exampleString(`schema delete-version --name="name" --version="latest or numeric"`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"name": name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": name}); err != nil {
 				return err
 			}
 
@@ -360,7 +360,7 @@ func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"name": name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": name}); err != nil {
 				return err
 			}
 
@@ -388,7 +388,7 @@ func newUpdateSchemaCompatibilityLevelCommand() *cobra.Command {
 		Example:       exampleString(`schema --name="name" compatibility set FULL`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"name": name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": name}); err != nil {
 				return err
 			}
 

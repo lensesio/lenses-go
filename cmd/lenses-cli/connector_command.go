@@ -208,7 +208,7 @@ func newConnectorGroupCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": clusterName, "name": name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -277,7 +277,7 @@ func newConnectorCreateCommand(clusterName *string, name *string) *cobra.Command
 				return err
 			}
 
-			if err := checkRequiredFlags(flags{"clusterName": connector.ClusterAlias, "name": connector.Name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": connector.ClusterAlias, "name": connector.Name}); err != nil {
 				return err
 			}
 
@@ -331,7 +331,7 @@ func newConnectorUpdateCommand(clusterName *string, name *string) *cobra.Command
 				return err
 			}
 
-			if err := checkRequiredFlags(flags{"clusterName": connector.ClusterAlias, "name": connector.Name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": connector.ClusterAlias, "name": connector.Name}); err != nil {
 				return err
 			}
 
@@ -377,7 +377,7 @@ func newConnectorGetConfigCommand(clusterName *string, name *string) *cobra.Comm
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 
@@ -404,7 +404,7 @@ func newConnectorGetStatusCommand(clusterName *string, name *string) *cobra.Comm
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 
@@ -431,7 +431,7 @@ func newConnectorPauseCommand(clusterName *string, name *string) *cobra.Command 
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 
@@ -455,7 +455,7 @@ func newConnectorResumeCommand(clusterName *string, name *string) *cobra.Command
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 
@@ -479,7 +479,7 @@ func newConnectorRestartCommand(clusterName *string, name *string) *cobra.Comman
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 
@@ -502,7 +502,7 @@ func newConnectorGetTasksCommand(clusterName *string, name *string) *cobra.Comma
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 
@@ -547,7 +547,7 @@ func newConnectorGetCurrentTaskStatusCommand(clusterName *string, name *string, 
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 
@@ -575,7 +575,7 @@ func newConnectorTaskRestartCommand(clusterName *string, name *string, taskID *i
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 
@@ -599,7 +599,7 @@ func newConnectorDeleteCommand(clusterName *string, name *string) *cobra.Command
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
 				return err
 			}
 

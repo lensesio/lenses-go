@@ -110,7 +110,7 @@ func newTopicCreateCommand() *cobra.Command {
 				}
 			}
 
-			if err := checkRequiredFlags(flags{"name": topic.TopicName}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": topic.TopicName}); err != nil {
 				return err
 			}
 
@@ -185,7 +185,7 @@ func newTopicUpdateCommand() *cobra.Command {
 				}
 			}
 
-			if err := checkRequiredFlags(flags{"name": topic.Name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": topic.Name}); err != nil {
 				return err
 			}
 

@@ -112,7 +112,7 @@ func newProcessorCreateCommand() *cobra.Command {
 				}
 			}
 
-			if err := checkRequiredFlags(flags{"name": processor.Name, "sql": processor.SQL}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"name": processor.Name, "sql": processor.SQL}); err != nil {
 				return err
 			}
 
