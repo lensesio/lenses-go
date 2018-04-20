@@ -363,19 +363,3 @@ func (f flagVar) Set(v string) error {
 func (f flagVar) Type() string {
 	return f.value.Elem().Kind().String() // reflect/type.go#605
 }
-
-type resourceErrorMessages map[error]string
-
-// resourceError will be
-func resourceError(err error, messages resourceErrorMessages) error {
-	if messages == nil {
-		return err
-	}
-
-	if errMsg, ok := messages[err]; ok {
-		return fmt.Errorf(errMsg)
-	}
-
-	return err // otherwise just print the error as it's.
-
-}

@@ -195,7 +195,24 @@ func buildVersionTmpl() string {
 		fmt.Sprintf("%s go       %s\n", tab, runtime.Version())
 }
 
-var errResourceNotFoundMessage string
+var (
+	errResourceNotFoundMessage string
+	// more may come.
+)
+
+type errorMap map[error]string
+
+func mapError(err error, messages errorMap) error {
+	if messages == nil {
+		return err
+	}
+
+	if errMsg, ok := messages[err]; ok {
+		return fmt.Errorf(errMsg)
+	}
+
+	return err // otherwise just print the error as it's.
+}
 
 func main() {
 	rootCmd.SetVersionTemplate(buildVersionTmpl())
@@ -213,7 +230,7 @@ func main() {
 		// catch any errors that should be described by the command that gave that error.
 		// each errResourceXXXMessage should be declared inside the command,
 		// they are global variables and that's because we don't want to get dirdy on each resource command, don't change it unless discussion.
-		err = resourceError(err, resourceErrorMessages{
+		err = mapError(err, errorMap{
 			lenses.ErrResourceNotFound: errResourceNotFoundMessage,
 		})
 
