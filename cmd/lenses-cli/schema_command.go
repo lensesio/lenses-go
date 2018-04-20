@@ -258,6 +258,7 @@ func newGetSchemaVersionsCommand() *cobra.Command {
 
 			versions, err := client.GetSubjectVersions(name)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("schema with name: '%s` does not exist", name)
 				return err
 			}
 
@@ -287,6 +288,7 @@ func newDeleteSchemaCommand() *cobra.Command {
 
 			deletedVersions, err := client.DeleteSubject(name)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("schema with name: '%s` does not exist", name)
 				return err
 			}
 
@@ -331,11 +333,13 @@ func newDeleteSchemaVersionCommand() *cobra.Command {
 				deletedVersion, err = client.DeleteLatestSubjectVersion(name)
 				return err
 			}, func(version int) error {
+
 				deletedVersion, err = client.DeleteSubjectVersion(name, version)
 				return err
 			})
 
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to delete version of the schema with name: '%s' and version: '%s', it does not exist", name, versionStringOrInt)
 				return err
 			}
 
@@ -380,6 +384,7 @@ func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 
 			lv, err := client.GetSubjectCompatibilityLevel(name)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable retrieve compatibility level of schema with name: '%s`, it does not exist", name)
 				return err
 			}
 
@@ -416,6 +421,7 @@ func newUpdateSchemaCompatibilityLevelCommand() *cobra.Command {
 			}
 
 			if err := client.UpdateSubjectCompatibilityLevel(name, lenses.CompatibilityLevel(lv)); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to change the compatibility level of schema with name: '%s`, it does not exist", name)
 				return err
 			}
 
