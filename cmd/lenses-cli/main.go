@@ -195,6 +195,8 @@ func buildVersionTmpl() string {
 		fmt.Sprintf("%s go       %s\n", tab, runtime.Version())
 }
 
+var errResourceNotFoundMessage string
+
 func main() {
 	rootCmd.SetVersionTemplate(buildVersionTmpl())
 
@@ -208,6 +210,13 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&configFilepath, "config", "", "--config loads/save the host, user, pass and debug options from a configuration file (yaml, toml or json)")
 
 	if err := rootCmd.Execute(); err != nil {
+		// catch any errors that should be described by the command that gave that error.
+		// each errResourceXXXMessage should be declared inside the command,
+		// they are global variables and that's because we don't want to get dirdy on each resource command, don't change it unless discussion.
+		err = resourceError(err, resourceErrorMessages{
+			lenses.ErrResourceNotFound: errResourceNotFoundMessage,
+		})
+
 		// always new line because of the unix terminal.
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)

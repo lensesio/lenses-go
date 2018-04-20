@@ -109,6 +109,7 @@ func newSchemaGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if id > 0 {
+				errResourceNotFoundMessage = fmt.Sprintf("schema with id: %d does not exist", id)
 				return getSchemaByID(cmd, id)
 			}
 
@@ -119,6 +120,7 @@ func newSchemaGroupCommand() *cobra.Command {
 
 			// it's not empty, always, so it's called latest.
 			if versionStringOrInt != "" {
+				errResourceNotFoundMessage = fmt.Sprintf("schema with name: '%s' and version: '%s' does not exist", name, versionStringOrInt)
 				return getSchemaByVersion(cmd, name, versionStringOrInt, !noPretty)
 			}
 

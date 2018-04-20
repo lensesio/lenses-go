@@ -76,6 +76,10 @@ var schemaAPIOption = func(r *http.Request) {
 	r.Header.Add(acceptHeaderKey, contentTypeSchemaJSON)
 }
 
+// ErrResourceNotFound is being fired from all API calls when a 404 not found error code is received.
+// It's a static error message of just `404`, therefore it can be used to add addional info messages based on the caller's action.
+var ErrResourceNotFound = fmt.Errorf("%d", http.StatusNotFound)
+
 func (c *Client) do(method, path, contentType string, send []byte, options ...requestOption) (*http.Response, error) {
 	if path[0] == '/' { // remove beginning slash, if any.
 		path = path[1:]
@@ -140,6 +144,10 @@ func (c *Client) do(method, path, contentType string, send []byte, options ...re
 			defer resp.Body.Close()
 		}
 
+		if resp.StatusCode == http.StatusNotFound {
+			// if status code is 404, then we set a static error instead of a full message, so front-ends can check.
+			return nil, ErrResourceNotFound
+		}
 		return nil, fmt.Errorf("client: (%s: %s) failed with status code %d%s",
 			method, unescapedURI, resp.StatusCode, errBody)
 	}
