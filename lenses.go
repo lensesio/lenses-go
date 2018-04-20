@@ -38,15 +38,8 @@ func getTransportLayer(httpClient *http.Client, timeout time.Duration) (t http.R
 	}
 
 	if timeout > 0 {
-		httpClient.Timeout = timeout
 		httpTransport.Dial = func(network string, addr string) (net.Conn, error) {
-			conn, err := net.DialTimeout(network, addr, timeout)
-			if err != nil {
-				return nil, err
-			}
-
-			err = conn.SetDeadline(time.Now().Add(timeout))
-			return conn, err
+			return net.DialTimeout(network, addr, timeout)
 		}
 	}
 
