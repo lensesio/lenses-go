@@ -1780,7 +1780,7 @@ func (c *Client) GetSchema(subjectID int) (string, error) {
 
 type Schema struct {
 	// Name is the name of the schema is registered under.
-	Name string `json:"name" yaml:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
+	Name string `json:"name,omitempty" yaml:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
 	// Version of the returned schema.
 	Version int `json:"version"`
 	// AvroSchema is the Avro schema string.
