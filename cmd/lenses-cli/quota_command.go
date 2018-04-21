@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/landoop/lenses-go"
 
 	"github.com/spf13/cobra"
@@ -146,6 +148,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				if clientID != "" {
 					if clientID == "all" || clientID == "*" {
 						if err := client.DeleteQuotaForUserAllClients(user); err != nil {
+							errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for user: '%s' does not exist", user)
 							return err
 						}
 
@@ -153,6 +156,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 					}
 
 					if err := client.DeleteQuotaForUserClient(user, clientID); err != nil {
+						errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for user: '%s' and client: '%s' does not exist", user, clientID)
 						return err
 					}
 
@@ -160,6 +164,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				}
 
 				if err := client.DeleteQuotaForUser(user); err != nil {
+					errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for user: '%s' does not exist", user)
 					return err
 				}
 
@@ -253,6 +258,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.DeleteQuotaForClient(id); err != nil {
+					errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for client: '%s' does not exist", id)
 					return err
 				}
 
