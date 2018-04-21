@@ -214,6 +214,7 @@ func newConnectorGroupCommand() *cobra.Command {
 
 			connector, err := client.GetConnector(clusterName, name)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 			return printJSON(cmd.OutOrStdout(), connector)
@@ -338,6 +339,7 @@ func newConnectorUpdateCommand(clusterName *string, name *string) *cobra.Command
 			// for any case.
 			existingConnector, err := client.GetConnector(connector.ClusterAlias, connector.Name)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 
@@ -383,6 +385,7 @@ func newConnectorGetConfigCommand(clusterName *string, name *string) *cobra.Comm
 
 			cfg, err := client.GetConnectorConfig(*clusterName, *name)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve config, connector '%s:%s' does not exist", *clusterName, *name)
 				return err
 			}
 
@@ -410,6 +413,7 @@ func newConnectorGetStatusCommand(clusterName *string, name *string) *cobra.Comm
 
 			cs, err := client.GetConnectorStatus(*clusterName, *name)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve status, connector '%s:%s' does not exist", *clusterName, *name)
 				return err
 			}
 
@@ -436,6 +440,7 @@ func newConnectorPauseCommand(clusterName *string, name *string) *cobra.Command 
 			}
 
 			if err := client.PauseConnector(*clusterName, *name); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to pause, connector '%s:%s' does not exist", *clusterName, *name)
 				return err
 			}
 
@@ -460,6 +465,7 @@ func newConnectorResumeCommand(clusterName *string, name *string) *cobra.Command
 			}
 
 			if err := client.ResumeConnector(*clusterName, *name); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to resume, connector '%s:%s' does not exist", *clusterName, *name)
 				return err
 			}
 
@@ -484,6 +490,7 @@ func newConnectorRestartCommand(clusterName *string, name *string) *cobra.Comman
 			}
 
 			if err := client.RestartConnector(*clusterName, *name); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to restart, connector '%s:%s' does not exist", *clusterName, *name)
 				return err
 			}
 
@@ -508,6 +515,7 @@ func newConnectorGetTasksCommand(clusterName *string, name *string) *cobra.Comma
 
 			tasksMap, err := client.GetConnectorTasks(*clusterName, *name)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve tasks, connector '%s:%s' does not exist", *clusterName, *name)
 				return err
 			}
 
@@ -553,6 +561,7 @@ func newConnectorGetCurrentTaskStatusCommand(clusterName *string, name *string, 
 
 			cst, err := client.GetConnectorTaskStatus(*clusterName, *name, *taskID)
 			if err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("task does not exist")
 				return err
 			}
 
@@ -580,6 +589,7 @@ func newConnectorTaskRestartCommand(clusterName *string, name *string, taskID *i
 			}
 
 			if err := client.RestartConnectorTask(*clusterName, *name, *taskID); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("task does not exist")
 				return err
 			}
 
@@ -604,6 +614,7 @@ func newConnectorDeleteCommand(clusterName *string, name *string) *cobra.Command
 			}
 
 			if err := client.DeleteConnector(*clusterName, *name); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, connector '%s:%s' does not exist", *clusterName, *name)
 				return err
 			}
 

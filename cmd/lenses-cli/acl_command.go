@@ -105,6 +105,7 @@ func newDeleteACLCommand() *cobra.Command {
 			}
 
 			if err := client.DeleteACL(acl); err != nil {
+				errResourceNotFoundMessage = "unable to delete, acl does not exist"
 				return err
 			}
 
