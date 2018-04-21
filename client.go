@@ -144,7 +144,7 @@ func (c *Client) do(method, path, contentType string, send []byte, options ...re
 			defer resp.Body.Close()
 		}
 
-		if resp.StatusCode == http.StatusNotFound {
+		if !c.config.Debug && resp.StatusCode == http.StatusNotFound {
 			// if status code is 404, then we set a static error instead of a full message, so front-ends can check.
 			return nil, ErrResourceNotFound
 		}

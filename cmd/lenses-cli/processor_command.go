@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/landoop/lenses-go"
@@ -151,6 +152,7 @@ func newProcessorPauseCommand() *cobra.Command {
 			}
 
 			if err := client.PauseProcessor(identifier); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to pause, processor '%s' does not exist", identifier)
 				return err
 			}
 
@@ -182,6 +184,7 @@ func newProcessorResumeCommand() *cobra.Command {
 			}
 
 			if err := client.ResumeProcessor(identifier); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to resume, processor '%s' does not exist", identifier)
 				return err
 			}
 
@@ -221,6 +224,7 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 			}
 
 			if err := client.UpdateProcessorRunners(identifier, runners); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to scale to %d runners, processor '%s' does not exist", runners, identifier)
 				return err
 			}
 
@@ -255,6 +259,7 @@ func newProcessorDeleteCommand() *cobra.Command {
 
 			// delete the processor based on the identifier, based on the current running mode.
 			if err := client.DeleteProcessor(identifier); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, processor '%s' does not exist", identifier)
 				return err
 			}
 
