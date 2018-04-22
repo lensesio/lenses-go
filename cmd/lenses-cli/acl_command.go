@@ -80,6 +80,7 @@ func newCreateOrUpdateACLCommand() *cobra.Command {
 	cmd.Flags().Var(newVarFlag(&acl.PermissionType), "permissionType", "--permissionType ALLOW or deny")
 	cmd.Flags().StringVar(&acl.Host, "host", "", "--host") // optional, defaults to "*".
 	cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "--operation The allowed operation, ALL, READ, WRITE, DELETE, DESCRIBECONFIGS, ALTERCONFIGS, IDEMPOTENTWRITE")
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -119,6 +120,7 @@ func newDeleteACLCommand() *cobra.Command {
 	cmd.Flags().Var(newVarFlag(&acl.PermissionType), "permissionType", "--permissionType ALLOW or deny")
 	cmd.Flags().StringVar(&acl.Host, "host", "", "--host")
 	cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "--operation The allowed operation, ALL, READ, WRITE, DELETE, DESCRIBECONFIGS, ALTERCONFIGS, IDEMPOTENTWRITE")
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }

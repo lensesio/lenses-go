@@ -87,6 +87,7 @@ func newUpdateGlobalCompatibilityLevelCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 	return &cmd
 }
 
@@ -239,6 +240,7 @@ func newRegisterSchemaCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&schema.Name, "name", "", `--name="name"`)
 	cmd.Flags().StringVar(&schema.AvroSchema, "avro", schema.AvroSchema, "--avro=")
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -345,6 +347,7 @@ func newDeleteSchemaVersionCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
 	cmd.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "--version=latest or numeric value")
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -426,5 +429,7 @@ func newUpdateSchemaCompatibilityLevelCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+
 	return &cmd
 }

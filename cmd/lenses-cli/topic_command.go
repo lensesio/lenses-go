@@ -129,13 +129,14 @@ func newTopicCreateCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&topic.TopicName, "name", "", "--name=topic1")
-	cmd.Flags().BoolVar(&silent, "silent", false, `--silent`)
 	cmd.Flags().IntVar(&topic.Replication, "replication", topic.Replication, "--relication=1")
 	cmd.Flags().IntVar(&topic.Partitions, "partitions", topic.Partitions, "--partitions=1")
 
 	// max.message.bytes has 1000012 is the default, which is the recommending maximum value
 	// if we make it larger we may have fetch issues(?), so keep that in mind.
 	cmd.Flags().StringVar(&configsRaw, "configs", "", `--configs="{\"max.message.bytes\": \"1000010\"}"`)
+
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -164,6 +165,7 @@ func newTopicDeleteCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&topicName, "name", "", "--name=topic1")
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -210,6 +212,7 @@ func newTopicUpdateCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&topic.Name, "name", "", "--name=topic1")
 	cmd.Flags().StringVar(&configsArrayRaw, "configs", "", `--configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]"`)
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }

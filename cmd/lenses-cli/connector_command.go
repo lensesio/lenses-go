@@ -160,7 +160,11 @@ func newConnectorsCommand() *cobra.Command {
 }
 
 func newGetConnectorsClustersCommand() *cobra.Command {
-	var namesOnly bool
+	var (
+		namesOnly bool
+		noNewLine bool // matters when namesOnly is true.
+	)
+
 	cmd := cobra.Command{
 		Use:           "clusters",
 		Short:         "List of available connectors' clusters",
@@ -193,7 +197,7 @@ func newGetConnectorsClustersCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&namesOnly, "names", false, `--names`)
-
+	cmd.Flags().BoolVar(&noNewLine, "no-newline", false, "--no-newline Disables line breakers between names, if --names is enabled, defaults to false")
 	return &cmd
 
 }
@@ -296,6 +300,7 @@ func newConnectorCreateCommand(clusterName *string, name *string) *cobra.Command
 	}
 
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -339,7 +344,7 @@ func newConnectorUpdateCommand(clusterName *string, name *string) *cobra.Command
 			// for any case.
 			existingConnector, err := client.GetConnector(connector.ClusterAlias, connector.Name)
 			if err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("connector '%s:%s' does not exist", clusterName, name)
+				errResourceNotFoundMessage = fmt.Sprintf("connector '%s:%s' does not exist", connector.ClusterAlias, connector.Name)
 				return err
 			}
 
@@ -448,6 +453,8 @@ func newConnectorPauseCommand(clusterName *string, name *string) *cobra.Command 
 		},
 	}
 
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+
 	return &cmd
 }
 
@@ -473,6 +480,8 @@ func newConnectorResumeCommand(clusterName *string, name *string) *cobra.Command
 		},
 	}
 
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+
 	return &cmd
 }
 
@@ -497,6 +506,8 @@ func newConnectorRestartCommand(clusterName *string, name *string) *cobra.Comman
 			return echo(cmd, "Connector %s:%s restarted", *clusterName, *name)
 		},
 	}
+
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -597,6 +608,8 @@ func newConnectorTaskRestartCommand(clusterName *string, name *string, taskID *i
 		},
 	}
 
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+
 	return &cmd
 }
 
@@ -621,6 +634,8 @@ func newConnectorDeleteCommand(clusterName *string, name *string) *cobra.Command
 			return echo(cmd, "Connector %s:%s deleted", *clusterName, *name)
 		},
 	}
+
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }

@@ -133,6 +133,8 @@ func newProcessorCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&processor.SQL, "sql", "", `--sql="SET autocreate=true;INSERT INTO topic1 SELECT * FROM topicA WHERE  _ktype='BYTES' AND _vtype='AVRO'"`)
 	cmd.Flags().IntVar(&processor.Runners, "runners", 1, "--runners=1")
 	cmd.Flags().StringVar(&processor.Pipeline, "pipeline", "", `--pipeline="pipeline A label to apply to kubernetes processors, defaults to processor name"`)
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+
 	return &cmd
 }
 
@@ -164,6 +166,7 @@ func newProcessorPauseCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -196,6 +199,7 @@ func newProcessorResumeCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -238,6 +242,7 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }
@@ -274,6 +279,7 @@ func newProcessorDeleteCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
+	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
 	return &cmd
 }

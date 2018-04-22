@@ -16,30 +16,23 @@ import (
 )
 
 var (
-	noNewLine bool
-	noList    = true // hard change only.
 	// if true then it doesn't prints json result(s) with indent.
 	// Defaults to false.
 	// It's not a global flag, but it's a common one, all commands that return results
 	// use that via command flag binding.
 	noPretty bool
 	// if true then commands will not output info messages, like "Processor ___ created".
-	// Look the `echo` func for more.
+	// Look the `echo` func for more, it's not a global flag but it's a common one, all commands that return info messages
+	// set that via command flag binding.
 	//
 	// Defaults to false.
 	silent bool
 
 	// jmespathQuery query to further filter any results, if any.
 	// It's not a global flag, but it's a common one, all commands that return results
-	// use that via command flag binding.
+	// set that via command flag binding.
 	jmespathQuery string
 )
-
-func init() {
-	rootCmd.PersistentFlags().BoolVar(&noNewLine, "no-newline", false, "--no-newline Disables line breakers between string results, defaults to false")
-	// rootCmd.PersistentFlags().BoolVar(&noList, "no-list", true, "--no-list If disabled the string results will be begin with '[' and end with ']', defaults to true")
-	rootCmd.PersistentFlags().BoolVar(&silent, "silent", false, "run in silent mode. No printing for CRUD commands except errors, defaults to false")
-}
 
 func echo(cmd *cobra.Command, /* io.Writer is more generic, let's make it explicit use within commands */
 	format string, args ...interface{}) error {
@@ -55,46 +48,6 @@ func echo(cmd *cobra.Command, /* io.Writer is more generic, let's make it explic
 	_, err := fmt.Fprintf(cmd.OutOrStdout(), format, args...)
 	return err
 }
-
-// for common slice results.
-
-// func printStringResults(out io.Writer, results []string) error {
-// 	if !noNewLine || noList {
-// 		maxIdx := len(results) - 1
-// 		for i := range results {
-// 			// if no list, then print each entry until the end and EXIT.
-// 			if noList {
-// 				// we could wait and do:
-// 				// strings.Trim(fmt.Sprint(results), "[]"))
-// 				// instead but that would be slower, so we just print them whenever
-// 				// are available.
-// 				fmt.Fprintln(out, results[i])
-// 				if maxIdx == i {
-// 					return nil
-// 				}
-// 				continue
-// 			}
-
-// 			results[i] = fmt.Sprintf("\n%s", results[i])
-// 			if i == maxIdx { // this is for the --no-newline=false.
-// 				results[i] += "\n"
-// 			}
-// 		}
-// 	}
-
-// 	// need of new line, everywhere because of unix terminals.
-// 	_, err := fmt.Fprintf(out, "%s\n", results) //strings.Join(results, ","))
-// 	return err
-// }
-
-// func printIntResults(out io.Writer, results []int) error {
-// 	asStrings := make([]string, len(results), len(results))
-// 	for i, v := range results {
-// 		asStrings[i] = strconv.Itoa(v)
-// 	}
-
-// 	return printStringResults(out, asStrings)
-// }
 
 /*
 	Below we have two identical functions, keep them separate there are limits on the final output otherwise.
