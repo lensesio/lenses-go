@@ -107,13 +107,6 @@ func newProcessorCreateCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &processor); err != nil {
-					return err
-				}
-			}
-
 			if err := checkRequiredFlags(cmd, flags{"name": processor.Name, "sql": processor.SQL}); err != nil {
 				return err
 			}
@@ -134,7 +127,9 @@ func newProcessorCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&processor.SQL, "sql", "", `--sql="SET autocreate=true;INSERT INTO topic1 SELECT * FROM topicA WHERE  _ktype='BYTES' AND _vtype='AVRO'"`)
 	cmd.Flags().IntVar(&processor.Runners, "runners", 1, "--runners=1")
 	cmd.Flags().StringVar(&processor.Pipeline, "pipeline", "", `--pipeline="pipeline A label to apply to kubernetes processors, defaults to processor name"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+
+	shouldTryLoadFile(cmd, &processor)
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -167,7 +162,7 @@ func newProcessorPauseCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -200,7 +195,7 @@ func newProcessorResumeCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -243,7 +238,7 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -280,7 +275,7 @@ func newProcessorDeleteCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }

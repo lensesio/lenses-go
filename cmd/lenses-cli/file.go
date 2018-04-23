@@ -12,34 +12,58 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func shouldLoadFile(cmd *cobra.Command, outPtr interface{}, from func(cmd *cobra.Command, args []string) string) error {
-	if reflect.TypeOf(outPtr).Kind() != reflect.Ptr {
-		return fmt.Errorf("outPtr is not a pointer")
+type (
+	fileLoader struct {
+		elseFunc     func() error
+		pathResolver pathResolver
 	}
 
-	if from == nil {
-		from = func(c *cobra.Command, args []string) string {
-			if len(args) == 0 {
-				return ""
-			}
+	pathResolver func(cmd *cobra.Command, args []string) string
+)
 
-			return args[0]
+func (fl *fileLoader) Else(fn func() error) *fileLoader {
+	fl.elseFunc = fn
+	return fl
+}
+
+func (fl *fileLoader) WithPathResolve(fn pathResolver) *fileLoader {
+	fl.pathResolver = fn
+	return fl
+}
+
+func shouldTryLoadFile(cmd *cobra.Command, outPtr interface{}) *fileLoader {
+	if reflect.TypeOf(outPtr).Kind() != reflect.Ptr {
+		panic("outPtr is not a pointer")
+	}
+
+	fl := new(fileLoader)
+	fl.pathResolver = func(c *cobra.Command, args []string) string {
+		if len(args) == 0 {
+			return ""
 		}
+
+		return args[0]
 	}
 
 	oldRunE := cmd.RunE
 
 	cmd.RunE = func(c *cobra.Command, args []string) error {
-		if path := from(c, args); path != "" {
+		if path := fl.pathResolver(c, args); path != "" {
 			if err := loadFile(c, path, outPtr); err != nil {
 				return err
+			}
+		} else {
+			if fl.elseFunc != nil {
+				if err := fl.elseFunc(); err != nil {
+					return err
+				}
 			}
 		}
 
 		return oldRunE(c, args)
 	}
 
-	return nil
+	return fl
 }
 
 // loadFile same as `tryReadFile` but it should be used for operations that we read the whole object from file,
@@ -70,7 +94,14 @@ func tryReadFile(flagValue string, outPtr interface{}) (err error) {
 	default:
 		return json.Unmarshal(result, outPtr)
 	}
+}
 
+func allowEmptyFlag(err error) error {
+	if err == nil || err.Error() == errFlagMissing.Error() {
+		return nil
+	}
+
+	return err
 }
 
 const flagFilePrefix = '@'

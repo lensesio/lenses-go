@@ -83,7 +83,6 @@ func newTopicGroupCommand() *cobra.Command {
 }
 
 func newTopicCreateCommand() *cobra.Command {
-
 	var (
 		configsRaw string
 		topic      = lenses.CreateTopicPayload{
@@ -100,20 +99,6 @@ func newTopicCreateCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &topic); err != nil {
-					return err
-				}
-
-			} else {
-				// try load only the config from flag or file if possible.
-				if err := tryReadFile(configsRaw, &topic.Configs); err != nil &&
-					err.Error() != errFlagMissing.Error() { // allow empty.
-					return err
-				}
-			}
-
 			if err := checkRequiredFlags(cmd, flags{"name": topic.TopicName}); err != nil {
 				return err
 			}
@@ -122,7 +107,7 @@ func newTopicCreateCommand() *cobra.Command {
 				return err
 			}
 
-			return echo(cmd, "Created topic %s", topic.TopicName)
+			return echo(cmd, "Topic '%s' created", topic.TopicName)
 		},
 	}
 
@@ -130,11 +115,10 @@ func newTopicCreateCommand() *cobra.Command {
 	cmd.Flags().IntVar(&topic.Replication, "replication", topic.Replication, "--relication=1")
 	cmd.Flags().IntVar(&topic.Partitions, "partitions", topic.Partitions, "--partitions=1")
 
-	// max.message.bytes has 1000012 is the default, which is the recommending maximum value
-	// if we make it larger we may have fetch issues(?), so keep that in mind.
 	cmd.Flags().StringVar(&configsRaw, "configs", "", `--configs="{\"max.message.bytes\": \"1000010\"}"`)
+	canBeSilent(cmd)
 
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	shouldTryLoadFile(cmd, &topic).Else(func() error { return allowEmptyFlag(tryReadFile(configsRaw, &topic.Configs)) })
 
 	return cmd
 }
@@ -163,7 +147,7 @@ func newTopicDeleteCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&topicName, "name", "", "--name=topic1")
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -183,18 +167,6 @@ func newTopicUpdateCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &topic); err != nil {
-					return err
-				}
-			} else {
-				// load only the configs from file.
-				if err := tryReadFile(configsArrayRaw, &topic.Configs); err != nil {
-					return err
-				}
-			}
-
 			if err := checkRequiredFlags(cmd, flags{"name": topic.Name}); err != nil {
 				return err
 			}
@@ -210,7 +182,9 @@ func newTopicUpdateCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&topic.Name, "name", "", "--name=topic1")
 	cmd.Flags().StringVar(&configsArrayRaw, "configs", "", `--configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
+
+	shouldTryLoadFile(cmd, &topic).Else(func() error { return tryReadFile(configsArrayRaw, &topic.Configs) })
 
 	return cmd
 }

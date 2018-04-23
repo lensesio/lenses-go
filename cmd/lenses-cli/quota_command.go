@@ -80,19 +80,6 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &quota); err != nil {
-					return err
-				}
-
-			} else {
-				// try load only the config from flag or file if possible.
-				if err := tryReadFile(configRaw, &quota.Config); err != nil {
-					return err
-				}
-			}
-
 			if err := checkRequiredFlags(cmd, flags{"quota-config": configRaw}); err != nil {
 				return err
 			}
@@ -133,6 +120,9 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
 	setCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
 	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+
+	shouldTryLoadFile(setCommand, &quota).Else(func() error { return tryReadFile(configRaw, &quota.Config) })
+
 	rootSub.AddCommand(setCommand)
 
 	deleteCommand := &cobra.Command{
@@ -208,19 +198,6 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &quota); err != nil {
-					return err
-				}
-
-			} else {
-				// try load only the config from flag or file if possible.
-				if err := tryReadFile(configRaw, &quota.Config); err != nil {
-					return err
-				}
-			}
-
 			if err := checkRequiredFlags(cmd, flags{"quota-config": configRaw}); err != nil {
 				return err
 			}
@@ -243,6 +220,9 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 
 	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
 	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+
+	shouldTryLoadFile(setCommand, &quota).Else(func() error { return tryReadFile(configRaw, &quota.Config) })
+
 	rootSub.AddCommand(setCommand)
 
 	deleteCommand := &cobra.Command{

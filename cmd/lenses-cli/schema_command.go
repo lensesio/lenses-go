@@ -95,7 +95,7 @@ func newUpdateGlobalCompatibilityLevelCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -220,20 +220,13 @@ func getSchemaByVersion(cmd *cobra.Command, name, versionStringOrInt string, pre
 func newRegisterSchemaCommand() *cobra.Command {
 	var schema lenses.Schema
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "register",
 		Short:            "Register a new schema under a particular name and print the new schema identifier",
 		Example:          exampleString(`schema register --name="name" --avro="..."`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &schema); err != nil {
-					return err
-				}
-			}
-
 			if err := checkRequiredFlags(cmd, flags{"name": schema.Name, "avro": schema.AvroSchema}); err != nil {
 				return err
 			}
@@ -249,9 +242,11 @@ func newRegisterSchemaCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&schema.Name, "name", "", `--name="name"`)
 	cmd.Flags().StringVar(&schema.AvroSchema, "avro", schema.AvroSchema, "--avro=")
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	shouldTryLoadFile(cmd, &schema)
+	canBeSilent(cmd)
+
+	return cmd
 }
 
 func newGetSchemaVersionsCommand() *cobra.Command {
@@ -355,7 +350,7 @@ func newDeleteSchemaVersionCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
 	cmd.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "--version=latest or numeric value")
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -438,7 +433,7 @@ func newUpdateSchemaCompatibilityLevelCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }

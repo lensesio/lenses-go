@@ -61,17 +61,15 @@ func newCreateOrUpdateACLCommand() *cobra.Command {
 		},
 	}
 
-	if err := shouldLoadFile(cmd, &acl, nil); err != nil {
-		panic(err)
-	}
-
 	cmd.Flags().Var(newVarFlag(&acl.ResourceType), "resourceType", "--resourceType The resource type, TOPIC, CLUSTER, GROUP, TRANSACTIONALID")
 	cmd.Flags().StringVar(&acl.ResourceName, "resourceName", "", "--resourceName The name of the resource")
 	cmd.Flags().StringVar(&acl.Principal, "principal", "", "--principal The name of the principal")
 	cmd.Flags().Var(newVarFlag(&acl.PermissionType), "permissionType", "--permissionType ALLOW or deny")
 	cmd.Flags().StringVar(&acl.Host, "host", "", "--host") // optional, defaults to "*".
 	cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "--operation The allowed operation, ALL, READ, WRITE, DELETE, DESCRIBECONFIGS, ALTERCONFIGS, IDEMPOTENTWRITE")
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+
+	shouldTryLoadFile(cmd, &acl)
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -85,13 +83,6 @@ func newDeleteACLCommand() *cobra.Command {
 		Example:          exampleString(`acl delete ./acl_to_be_deleted.json or .yml or acl delete --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --host="*" --operation="Read"`),
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &acl); err != nil {
-					return err
-				}
-			}
-
 			if err := checkRequiredFlags(cmd, flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
 				return err
 			}
@@ -111,7 +102,9 @@ func newDeleteACLCommand() *cobra.Command {
 	cmd.Flags().Var(newVarFlag(&acl.PermissionType), "permissionType", "--permissionType ALLOW or deny")
 	cmd.Flags().StringVar(&acl.Host, "host", "", "--host")
 	cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "--operation The allowed operation, ALL, READ, WRITE, DELETE, DESCRIBECONFIGS, ALTERCONFIGS, IDEMPOTENTWRITE")
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+
+	shouldTryLoadFile(cmd, &acl)
+	canBeSilent(cmd)
 
 	return cmd
 }

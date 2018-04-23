@@ -240,7 +240,10 @@ func newConnectorGroupCommand() *cobra.Command {
 }
 
 func newConnectorCreateCommand() *cobra.Command {
-	var clusterName, name, configRaw string
+	var (
+		configRaw string
+		connector = lenses.CreateUpdateConnectorPayload{Config: make(lenses.ConnectorConfig)}
+	)
 
 	cmd := &cobra.Command{
 		Use:              "create",
@@ -249,24 +252,6 @@ func newConnectorCreateCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			connector := lenses.CreateUpdateConnectorPayload{
-				ClusterAlias: clusterName,
-				Name:         name,
-				Config:       make(lenses.ConnectorConfig),
-			}
-
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &connector); err != nil {
-					return err
-				}
-			} else {
-				// try load only the config from flag or file if possible.
-				if err := tryReadFile(configRaw, &connector.Config); err != nil {
-					return err
-				}
-			}
-
 			if err := connector.ApplyAndValidateName(); err != nil {
 				return err
 			}
@@ -288,16 +273,21 @@ func newConnectorCreateCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&connector.ClusterAlias, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
+
+	shouldTryLoadFile(cmd, &connector).Else(func() error { return tryReadFile(configRaw, &connector.Config) })
 
 	return cmd
 }
 
 func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConnectorCreateCommand` but keep them separate, in future this may change.
-	var clusterName, name, configRaw string
+	var (
+		configRaw string
+		connector = lenses.CreateUpdateConnectorPayload{Config: make(lenses.ConnectorConfig)}
+	)
 
 	cmd := &cobra.Command{
 		Use:              "update",
@@ -306,24 +296,6 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			connector := lenses.CreateUpdateConnectorPayload{
-				ClusterAlias: clusterName,
-				Name:         name,
-				Config:       make(lenses.ConnectorConfig),
-			}
-
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &connector); err != nil {
-					return err
-				}
-			} else {
-				// try load only the config from flag or file if possible.
-				if err := tryReadFile(configRaw, &connector.Config); err != nil {
-					return err
-				}
-			}
-
 			if err := connector.ApplyAndValidateName(); err != nil {
 				return err
 			}
@@ -360,9 +332,11 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&connector.ClusterAlias, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
+
+	shouldTryLoadFile(cmd, &connector).Else(func() error { return tryReadFile(configRaw, &connector.Config) })
 
 	canPrintJSON(cmd)
 
@@ -458,7 +432,7 @@ func newConnectorPauseCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -488,7 +462,7 @@ func newConnectorResumeCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -518,7 +492,7 @@ func newConnectorRestartCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -638,7 +612,7 @@ func newConnectorTaskRestartCommand() *cobra.Command {
 	cmd.MarkFlagRequired("task")
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }
@@ -668,7 +642,7 @@ func newConnectorDeleteCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
-	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	canBeSilent(cmd)
 
 	return cmd
 }

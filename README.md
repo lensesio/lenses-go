@@ -2,6 +2,8 @@
 
 The [Landoop's](http://www.landoop.com) Lenses [REST API](http://lenses.stream/developers-guide/rest-api/index.html) client written in Go.
 
+[![build status](https://img.shields.io/travis/landoop/lenses-go/master.svg?style=flat-square)](https://travis-ci.org/landoop/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/landoop/lenses-go)[![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/landoop-community)
+
 ## Installation
 
 The only requirement is the [Go Programming Language](https://golang.org/dl) and a [Lenses Box](http://www.landoop.com/kafka-lenses/) of version **2.0 at least** .
