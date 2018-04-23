@@ -16,8 +16,9 @@ var (
 	silent bool
 )
 
-func canBeSilent(cmd *cobra.Command) {
+func canBeSilent(cmd *cobra.Command) *cobra.Command {
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
+	return cmd
 }
 
 func echo(cmd *cobra.Command, format string, args ...interface{}) error {

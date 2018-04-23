@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -93,7 +94,7 @@ func newLSQLCommand() *cobra.Command {
 			recordHandler := func(r lenses.LSQLRecord) error {
 				b := []byte(r.Value) // we care for the value here, which is a json raw string.
 				var in interface{}
-				if errR := DefaultTranscoder.Decode(b, &in); errR != nil {
+				if errR := json.Unmarshal(b, &in); errR != nil {
 					return errR // fail on first error.
 				}
 

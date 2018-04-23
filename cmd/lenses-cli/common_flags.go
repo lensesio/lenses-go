@@ -148,3 +148,13 @@ func (f flagVar) Set(v string) error {
 func (f flagVar) Type() string {
 	return f.value.Elem().Kind().String() // reflect/type.go#605
 }
+
+func visitChildren(root *cobra.Command, visitor func(*cobra.Command)) *cobra.Command {
+	if root.HasSubCommands() {
+		for _, cmd := range root.Commands() {
+			visitor(cmd)
+		}
+	}
+
+	return root
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -95,7 +96,7 @@ func newLiveLSQLCommand() *cobra.Command {
 			errorReporter := func(_ lenses.LivePublisher, resp lenses.LiveResponse) error {
 				// parse it, otherwise it shows it very ungly.
 				var errStr string
-				DefaultTranscoder.Decode(resp.Content, &errStr)
+				json.Unmarshal(resp.Content, &errStr)
 				_, err = fmt.Fprintf(cmd.OutOrStderr(), "%s: %s\n", resp.Type, errStr)
 				os.Exit(1)
 				return err
@@ -113,18 +114,18 @@ func newLiveLSQLCommand() *cobra.Command {
 				}
 
 				var data []lenses.LSQLRecord
-				if err = DefaultTranscoder.Decode(b, &data); err != nil {
+				if err = json.Unmarshal(b, &data); err != nil {
 					return err
 				}
 
 				for i := range data {
 					b := []byte(data[i].Value)
 					var in interface{}
-					if err := DefaultTranscoder.Decode(b, &in); err != nil {
+					if err := json.Unmarshal(b, &in); err != nil {
 						return err // fail on first error.
 					}
 
-					bb, err := DefaultTranscoder.EncodeIndent(in, "", "    ")
+					bb, err := json.MarshalIndent(in, "", "    ")
 					if err != nil {
 						return err // fail on first error.
 					}
@@ -145,7 +146,7 @@ func newLiveLSQLCommand() *cobra.Command {
 					// print the topic(s) name.
 
 					var name string
-					if err := DefaultTranscoder.Decode(resp.Content, &name); err != nil {
+					if err := json.Unmarshal(resp.Content, &name); err != nil {
 						return err
 					}
 
