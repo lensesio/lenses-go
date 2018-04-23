@@ -2,7 +2,7 @@
 
 The [Landoop's](http://www.landoop.com) Lenses [REST API](http://lenses.stream/developers-guide/rest-api/index.html) client written in Go.
 
-[![build status](https://img.shields.io/travis/landoop/lenses-go/master.svg?style=flat-square)](https://travis-ci.org/Landoop/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/Landoop/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/landoop-community)
+[![build status](https://img.shields.io/travis/Landoop/lenses-go/master.svg?style=flat-square)](https://travis-ci.org/Landoop/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/Landoop/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/landoop-community)
 
 ## Installation
 
