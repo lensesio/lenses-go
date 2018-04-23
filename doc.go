@@ -184,7 +184,7 @@
 // limitations under the License.
 
 /*
-Package lenses-go is the Landoop's Lenses client API for Gophers.
+Package lenses is the Landoop's Lenses client API for Gophers.
 
 Source code and other details for the project are available at GitHub:
 

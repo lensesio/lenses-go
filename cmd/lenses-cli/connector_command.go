@@ -79,11 +79,7 @@ func newConnectorsCommand() *cobra.Command {
 				}
 			}
 
-			if err := printJSON(cmd, connectors); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(cmd, connectors)
 		},
 	}
 

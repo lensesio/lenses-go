@@ -77,7 +77,7 @@ var schemaAPIOption = func(r *http.Request) {
 }
 
 // ErrResourceNotFound is being fired from all API calls when a 404 not found error code is received.
-// It's a static error message of just `404`, therefore it can be used to add addional info messages based on the caller's action.
+// It's a static error message of just `404`, therefore it can be used to add additional info messages based on the caller's action.
 var ErrResourceNotFound = fmt.Errorf("%d", http.StatusNotFound)
 
 func (c *Client) do(method, path, contentType string, send []byte, options ...requestOption) (*http.Response, error) {
@@ -999,6 +999,7 @@ func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 
 const processorsPath = "api/streams"
 
+// CreateProcessorPayload holds the data to be sent from `CreateProcessor`.
 type CreateProcessorPayload struct {
 	Name        string `json:"name" yaml:"Name"` // required
 	SQL         string `json:"sql" yaml:"SQL"`   // required
@@ -1008,6 +1009,7 @@ type CreateProcessorPayload struct {
 	Pipeline    string `json:"pipeline" yaml:"Pipeline"` // defaults to Name if not set.
 }
 
+// CreateProcessor creates a new LSQL processor.
 func (c *Client) CreateProcessor(name string, sql string, runners int, clusterName, namespace, pipeline string) error {
 	if name == "" {
 		return errRequired("name")
@@ -1048,17 +1050,22 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 }
 
 type (
+	// ProcessorsResult describes the data that are being received from the `GetProcessors`.
 	ProcessorsResult struct {
 		Targets []ProcessorTarget `json:"targets"`
 		Streams []ProcessorStream `json:"streams"`
 	}
 
+	// ProcessorTarget describes the processor target,
+	// see `ProcessorResult`.
 	ProcessorTarget struct {
 		Cluster    string   `json:"cluster"`
 		Version    string   `json:"version,omitempty"`
 		Namespaces []string `json:"namespaces"`
 	}
 
+	// ProcessorStream describes the processor stream,
+	// see `ProcessorResult`.
 	ProcessorStream struct {
 		ID          string `json:"id"`
 		Name        string `json:"name"`
@@ -1080,7 +1087,8 @@ type (
 
 		RunnerState map[string]ProcessorRunnerState `json:"runnerState"`
 	}
-
+	// ProcessorRunnerState describes the processor stream,
+	// see `ProcessorStream` and `ProcessorResult.
 	ProcessorRunnerState struct {
 		ID           string `json:"id"`
 		Worker       string `json:"worker"`
@@ -1089,7 +1097,7 @@ type (
 	}
 )
 
-// GetProcessors returns a list of all available (L)SQL processors.
+// GetProcessors returns a list of all available LSQL processors.
 func (c *Client) GetProcessors() (ProcessorsResult, error) {
 	var res ProcessorsResult
 
@@ -1298,12 +1306,14 @@ func (c *Client) GetConnectors(clusterAlias string) (names []string, err error) 
 	return
 }
 
+// CreateUpdateConnectorPayload can be used to hold the data for creating or updating a connector.
 type CreateUpdateConnectorPayload struct {
 	ClusterAlias string          `yaml:"ClusterAlias"`
 	Name         string          `yaml:"Name"`
 	Config       ConnectorConfig `yaml:"Config"`
 }
 
+// ApplyAndValidateName applies some rules to make sure that the connector's data are setup correctly.
 func (c *CreateUpdateConnectorPayload) ApplyAndValidateName() error {
 	if c.Config != nil {
 		value, found := c.Config["name"]
@@ -1485,6 +1495,7 @@ const (
 )
 
 type (
+	// ConnectorStatus describes the data that are being received from the `GetConnectorStatus`.
 	ConnectorStatus struct {
 		// Name is the name of the connector.
 		Name      string                        `json:"name"`
@@ -1492,11 +1503,15 @@ type (
 		Tasks     []ConnectorStatusTask         `json:"tasks,omitempty"`
 	}
 
+	// ConnectorStatusConnectorField describes a connector's status,
+	// see `ConnectorStatus`.
 	ConnectorStatusConnectorField struct {
 		State    string `json:"state"`     // i.e RUNNING
 		WorkerID string `json:"worker_id"` // i.e fakehost:8083
 	}
 
+	// ConnectorStatusTask describes a connector task's status,
+	// see `ConnectorStatus`.
 	ConnectorStatusTask struct {
 		ID       int    `json:"id"`              // i.e 1
 		State    string `json:"state"`           // i.e FAILED
@@ -1695,6 +1710,7 @@ func (c *Client) RestartConnectorTask(clusterAlias, name string, taskID int) err
 	return resp.Body.Close()
 }
 
+// ConnectorPlugin describes the entry data of the list that are being received from the `GetConnectorPlugins`.
 type ConnectorPlugin struct {
 	// Class is the connector class name.
 	Class string `json:"class"`
@@ -1736,6 +1752,7 @@ const contentTypeSchemaJSON = "application/vnd.schemaregistry." + schemaAPIVersi
 
 const subjectsPath = "api/proxy-sr/subjects"
 
+// GetSubjects returns a list of the available subjects(schemas).
 // https://docs.confluent.io/current/schema-registry/docs/api.html#subjects
 func (c *Client) GetSubjects() (subjects []string, err error) {
 	// # List all available subjects
@@ -1752,6 +1769,7 @@ func (c *Client) GetSubjects() (subjects []string, err error) {
 
 const subjectPath = subjectsPath + "/%s"
 
+// GetSubjectVersions returns all the versions of a subject(schema) based on its name.
 func (c *Client) GetSubjectVersions(subject string) (versions []int, err error) {
 	if subject == "" {
 		err = errRequired("subject")
@@ -1817,6 +1835,7 @@ func (c *Client) GetSchema(subjectID int) (string, error) {
 	return res.Schema, nil
 }
 
+// Schema describes a schema, look `GetSchema` for more.
 type Schema struct {
 	ID int `json:"id,omitempty" yaml:"ID,omitempty"`
 	// Name is the name of the schema is registered under.
@@ -1827,6 +1846,7 @@ type Schema struct {
 	AvroSchema string `json:"schema" yaml:"AvroSchema"`
 }
 
+// JSONAvroSchema converts and returns the json form of the "avroSchema" as []byte.
 func JSONAvroSchema(avroSchema string) (json.RawMessage, error) {
 	var raw json.RawMessage
 	err := json.Unmarshal(json.RawMessage(avroSchema), &raw)
@@ -1999,19 +2019,33 @@ func (c *Client) DeleteLatestSubjectVersion(subject string) (int, error) {
 	return c.deleteSubjectSchemaVersion(subject, SchemaLatestVersion)
 }
 
+// CompatibilityLevel describes the valid compatibility levels' type, it's just a string.
+// Valid values are:
+// `CompatibilityLevelNone`, `CompatibilityLevelFull`, `CompatibilityLevelForward`, `CompatibilityLevelBackward`
+// `CompatibilityLevelFullTransitive`, `CompatibilityLevelForwardTransitive`, `CompatibilityLevelBackwardTransitive`.
+//
+// Read https://docs.confluent.io/current/schema-registry/docs/api.html#compatibility for more.
 type CompatibilityLevel string
 
 const (
-	CompatibilityLevelNone     CompatibilityLevel = "NONE"
-	CompatibilityLevelFull     CompatibilityLevel = "FULL"
-	CompatibilityLevelForward  CompatibilityLevel = "FORWARD"
+	// CompatibilityLevelNone is the "NONE" compatibility level.
+	CompatibilityLevelNone CompatibilityLevel = "NONE"
+	// CompatibilityLevelFull is the "FULL" compatibility level.
+	CompatibilityLevelFull CompatibilityLevel = "FULL"
+	// CompatibilityLevelForward is the "FORWARD" compatibility level.
+	CompatibilityLevelForward CompatibilityLevel = "FORWARD"
+	// CompatibilityLevelBackward is the "BACKWARD" compatibility level.
 	CompatibilityLevelBackward CompatibilityLevel = "BACKWARD"
-
-	CompatibilityLevelFullTransitive     CompatibilityLevel = "FULL_TRANSITIVE"
-	CompatibilityLevelForwardTransitive  CompatibilityLevel = "FORWARD_TRANSITIVE"
+	// CompatibilityLevelFullTransitive is the "FULL_TRANSITIVE" compatibility level.
+	CompatibilityLevelFullTransitive CompatibilityLevel = "FULL_TRANSITIVE"
+	// CompatibilityLevelForwardTransitive is the "FORWARD_TRANSITIVE" compatibility level.
+	CompatibilityLevelForwardTransitive CompatibilityLevel = "FORWARD_TRANSITIVE"
+	// CompatibilityLevelBackwardTransitive is the "BACKWARD_TRANSITIVE" compatibility level.
 	CompatibilityLevelBackwardTransitive CompatibilityLevel = "BACKWARD_TRANSITIVE"
 )
 
+// ValidCompatibilityLevels holds a list of the valid compatibility levels,
+// see `CompatibilityLevel` type.
 var ValidCompatibilityLevels = []CompatibilityLevel{
 	CompatibilityLevelNone,
 	CompatibilityLevelFull,
@@ -2022,7 +2056,8 @@ var ValidCompatibilityLevels = []CompatibilityLevel{
 	CompatibilityLevelBackwardTransitive,
 }
 
-// IsValidCompatibilityLevel checks for compatibility level validation.
+// IsValidCompatibilityLevel checks if a compatibility of string form is a valid compatibility level value.
+// See `ValidCompatibilityLevels` too.
 func IsValidCompatibilityLevel(compatibility string) bool {
 	for _, lv := range ValidCompatibilityLevels {
 		if string(lv) == compatibility {
@@ -2092,6 +2127,7 @@ func (c *Client) GetGlobalCompatibilityLevel() (level CompatibilityLevel, err er
 
 const subjectCompatibilityLevelPath = compatibilityLevelPath + "/%s"
 
+// UpdateSubjectCompatibilityLevel modifies a specific subject(schema)'s compatibility level.
 func (c *Client) UpdateSubjectCompatibilityLevel(subject string, level CompatibilityLevel) error {
 	if subject == "" {
 		return errRequired("subject")
@@ -2121,6 +2157,7 @@ func (c *Client) UpdateSubjectCompatibilityLevel(subject string, level Compatibi
 	return resp.Body.Close()
 }
 
+// GetSubjectCompatibilityLevel returns the compatibility level of a specific subject(schema) name.
 func (c *Client) GetSubjectCompatibilityLevel(subject string) (level CompatibilityLevel, err error) {
 	if subject == "" {
 		err = errRequired("subject")
@@ -2389,6 +2426,8 @@ func (c *Client) GetQuotas() ([]Quota, error) {
 // /api/quotas/users
 const quotasPathAllUsers = quotasPath + "/users"
 
+// CreateOrUpdateQuotaForAllUsers sets the default quota for all users.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForAllUsers(config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -2404,6 +2443,7 @@ func (c *Client) CreateOrUpdateQuotaForAllUsers(config QuotaConfig) error {
 }
 
 // DeleteQuotaForAllUsers deletes the default for all users.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
 func (c *Client) DeleteQuotaForAllUsers() error {
 	resp, err := c.do(http.MethodDelete, quotasPathAllUsers, "", nil)
 	if err != nil {
@@ -2416,6 +2456,8 @@ func (c *Client) DeleteQuotaForAllUsers() error {
 // /api/quotas/users/{user}
 const quotasPathUser = quotasPathAllUsers + "/%s"
 
+// CreateOrUpdateQuotaForUser sets a quota for a user.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForUser(user string, config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -2445,6 +2487,8 @@ func (c *Client) DeleteQuotaForUser(user string) error {
 // /api/quotas/users/{user}/clients
 const quotasPathUserAllClients = quotasPathUser + "/clients"
 
+// CreateOrUpdateQuotaForUserAllClients sets a quota for a user for all clients.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForUserAllClients(user string, config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -2474,6 +2518,8 @@ func (c *Client) DeleteQuotaForUserAllClients(user string) error {
 // /api/quotas/users/{user}/clients/{client-id}
 const quotasPathUserClient = quotasPathUserAllClients + "/%s"
 
+// CreateOrUpdateQuotaForUserClient sets the quota for a user/client pair.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForUserClient(user, clientID string, config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -2489,7 +2535,7 @@ func (c *Client) CreateOrUpdateQuotaForUserClient(user, clientID string, config 
 	return resp.Body.Close()
 }
 
-// DeleteQuotaForUserClient deletes quotas for a user and client id pair.
+// DeleteQuotaForUserClient deletes the quota for a user/client pair.
 func (c *Client) DeleteQuotaForUserClient(user, clientID string) error {
 	path := fmt.Sprintf(quotasPathUserClient, user, clientID)
 	resp, err := c.do(http.MethodDelete, path, "", nil)
@@ -2503,6 +2549,8 @@ func (c *Client) DeleteQuotaForUserClient(user, clientID string) error {
 // /api/quotas/clients
 const quotasPathAllClients = quotasPath + "/clients"
 
+// CreateOrUpdateQuotaForAllClients sets the default quota for all clients.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForAllClients(config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -2517,7 +2565,7 @@ func (c *Client) CreateOrUpdateQuotaForAllClients(config QuotaConfig) error {
 	return resp.Body.Close()
 }
 
-// DeleteQuotaForAllClients deletes defaults for all clients.
+// DeleteQuotaForAllClients deletes the default quota for all clients.
 func (c *Client) DeleteQuotaForAllClients() error {
 	resp, err := c.do(http.MethodDelete, quotasPathAllClients, "", nil)
 	if err != nil {
@@ -2530,6 +2578,8 @@ func (c *Client) DeleteQuotaForAllClients() error {
 // /api/quotas/clients/{client-id}
 const quotasPathClient = quotasPathAllClients + "/%s"
 
+// CreateOrUpdateQuotaForClient sets the quota for a specific client.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForClient(clientID string, config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
