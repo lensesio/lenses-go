@@ -31,7 +31,7 @@ func newLSQLCommand() *cobra.Command {
 		statsEvery time.Duration
 	)
 
-	rootSub := cobra.Command{
+	rootSub := &cobra.Command{
 		Use:           "sql [--validate?] [query]",
 		Short:         "Execute or Validate Only Lenses query (LSQL) on the fly",
 		Example:       exampleString(`sql --offsets --stats=2s "SELECT * FROM reddit_posts LIMIT 50"`),
@@ -90,8 +90,6 @@ func newLSQLCommand() *cobra.Command {
 				return nil
 			}
 
-			out := cmd.OutOrStdout()
-
 			recordHandler := func(r lenses.LSQLRecord) error {
 				b := []byte(r.Value) // we care for the value here, which is a json raw string.
 				var in interface{}
@@ -99,7 +97,7 @@ func newLSQLCommand() *cobra.Command {
 					return errR // fail on first error.
 				}
 
-				return printJSON(out, in) // if != nil then it will exit(1) and print the error.
+				return printJSON(cmd, in) // if != nil then it will exit(1) and print the error.
 			}
 
 			stopHandler := func(stopRecord lenses.LSQLStop) error {
@@ -134,13 +132,13 @@ func newLSQLCommand() *cobra.Command {
 				}
 				*/
 				// here we stop but it's not an error, so we can't return a non-nil error.
-				fmt.Fprintln(out, "Stop")
-				printJSON(out, stopRecord)
+				cmd.Println("Stop")
+				printJSON(cmd, stopRecord)
 				return nil
 			}
 
 			stopErrHandler := func(errRecord lenses.LSQLError) error {
-				fmt.Fprintln(out, "Stop:Error")
+				cmd.Println("Stop:Error")
 				// this error will be catched by the err = client.LSQL(...) below, same with the rest of the handlers.
 				return fmt.Errorf(errRecord.Message)
 			}
@@ -157,8 +155,8 @@ func newLSQLCommand() *cobra.Command {
 				  "currentSize": 144875
 				}
 				*/
-				fmt.Fprintln(out, "Stats")
-				return printJSON(out, stats)
+				cmd.Println("Stats")
+				return printJSON(cmd, stats)
 			}
 
 			if statsEvery <= 0 {
@@ -174,19 +172,18 @@ func newLSQLCommand() *cobra.Command {
 	rootSub.Flags().BoolVar(&validate, "validate", false, "--validate") // if --validate exists in the flags then it's true.
 	rootSub.Flags().BoolVar(&withOffsets, "offsets", false, "--offsets if true then the stop output will contain the 'offsets' information as well")
 	rootSub.Flags().DurationVar(&statsEvery, "stats", 0, "--stats=2s if not empty the client will accept stats records every 'stats' duration, therefore they will be visible to the output")
-	rootSub.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	rootSub.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(rootSub)
 
 	rootSub.AddCommand(
 		newGetRunningQueriesCommand(),
 		newCancelQueryCommand(),
 	)
 
-	return &rootSub
+	return rootSub
 }
 
 func newGetRunningQueriesCommand() *cobra.Command {
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "running",
 		Short:         "Print the current running queries, if any",
 		Example:       exampleString("sql running"),
@@ -197,16 +194,17 @@ func newGetRunningQueriesCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), queries)
+			return printJSON(cmd, queries)
 		},
 	}
 
-	return &cmd
+	return cmd
 }
 
 func newCancelQueryCommand() *cobra.Command {
 	var id int64
-	cmd := cobra.Command{
+
+	cmd := &cobra.Command{
 		Use:           "cancel",
 		Short:         "Cancels a running query by its ID. It returns true whether it was cancelled otherwise false or error",
 		Example:       exampleString("sql cancel 42 or sql cancel --id=42"),
@@ -233,5 +231,6 @@ func newCancelQueryCommand() *cobra.Command {
 	}
 
 	cmd.Flags().Int64Var(&id, "id", 0, "--id=42")
-	return &cmd
+
+	return cmd
 }

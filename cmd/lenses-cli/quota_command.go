@@ -14,7 +14,7 @@ func init() {
 }
 
 func newGetQuotasCommand() *cobra.Command {
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "quotas",
 		Short:            "List of all available quotas",
 		Example:          exampleString("quotas"),
@@ -25,18 +25,17 @@ func newGetQuotasCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), quotas)
+			return printJSON(cmd, quotas)
 		},
 	}
 
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(cmd)
 
-	return &cmd
+	return cmd
 }
 
 func newQuotaGroupCommand() *cobra.Command {
-	root := cobra.Command{
+	root := &cobra.Command{
 		Use:              "quota",
 		Short:            "Work with particular a quota, create a new quota or update and delete an existing one",
 		Example:          exampleString("quota users --config=`{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"RequestPercentage\": \"75\"}`"),
@@ -46,7 +45,8 @@ func newQuotaGroupCommand() *cobra.Command {
 
 	root.AddCommand(newQuotaUsersSubGroupCommand())
 	root.AddCommand(newQuotaClientsSubGroupCommand())
-	return &root
+
+	return root
 }
 
 type createQuotaPayload struct {
@@ -64,7 +64,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 		quota     createQuotaPayload
 	)
 
-	rootSub := cobra.Command{
+	rootSub := &cobra.Command{
 		Use:              "users",
 		Short:            "Work with users quotas",
 		Example:          exampleString("users"),
@@ -183,7 +183,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
 	rootSub.AddCommand(deleteCommand)
 
-	return &rootSub
+	return rootSub
 }
 
 func newQuotaClientsSubGroupCommand() *cobra.Command {
@@ -192,7 +192,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		quota     createQuotaPayload
 	)
 
-	rootSub := cobra.Command{
+	rootSub := &cobra.Command{
 		Use:              "clients",
 		Short:            "Work with clients quotas",
 		Example:          exampleString("clients"),
@@ -274,7 +274,8 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 	}
 
 	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+
 	rootSub.AddCommand(deleteCommand)
 
-	return &rootSub
+	return rootSub
 }

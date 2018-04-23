@@ -239,6 +239,8 @@ func HomeDir() (homeDir string) {
 	return
 }
 
+// DefaultConfigurationHomeDir is the default configuration system directory,
+// by default it's the $HOME/.lenses directory.
 var DefaultConfigurationHomeDir = filepath.Join(HomeDir(), ".lenses")
 
 // TryReadConfigurationFromHome will try to read the `Configuration`

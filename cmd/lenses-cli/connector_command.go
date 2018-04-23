@@ -21,11 +21,11 @@ func newConnectorsCommand() *cobra.Command {
 		namesOnly bool // if true then print only the connector names and not the details as json.
 	)
 
-	root := cobra.Command{
+	root := &cobra.Command{
 		Use:              "connectors",
 		Short:            "List of active connectors' names",
 		Aliases:          []string{"connect"},
-		Example:          exampleString(`connectors or connectors --clusterName="cluster_name"`),
+		Example:          exampleString(`connectors or connectors --clusterName="cluster_name" or --clusterName="*"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -61,7 +61,7 @@ func newConnectorsCommand() *cobra.Command {
 					names = append(names, cNames...)
 				}
 
-				return printJSON(cmd.OutOrStdout(), outlineStringResults("name", names))
+				return printJSON(cmd, outlineStringResults("name", names))
 			}
 
 			connectors := make(map[string][]lenses.Connector, len(connectorNames))
@@ -79,7 +79,7 @@ func newConnectorsCommand() *cobra.Command {
 				}
 			}
 
-			if err := printJSON(cmd.OutOrStdout(), connectors); err != nil {
+			if err := printJSON(cmd, connectors); err != nil {
 				return err
 			}
 
@@ -88,12 +88,23 @@ func newConnectorsCommand() *cobra.Command {
 	}
 
 	root.Flags().BoolVar(&namesOnly, "names", false, `--names`)
+	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
 
-	// shared flags.
-	root.PersistentFlags().StringVar(&clusterName, "clusterName", "*", `--clusterName="cluster_name"`)
-	root.PersistentFlags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(root)
+
 	// plugins subcommand.
-	root.AddCommand(&cobra.Command{
+	root.AddCommand(newGetConnectorsPluginsCommand())
+
+	// clusters subcommand.
+	root.AddCommand(newGetConnectorsClustersCommand())
+
+	return root
+}
+
+func newGetConnectorsPluginsCommand() *cobra.Command {
+	var clusterName string
+
+	cmd := &cobra.Command{
 		Use:           "plugins",
 		Short:         "List of available connectors' plugins",
 		Example:       exampleString(`connectors plugins --clusterName="cluster_name"`),
@@ -123,40 +134,21 @@ func newConnectorsCommand() *cobra.Command {
 				}
 			}
 
-			// var b strings.Builder
-
-			// for i, p := range plugins {
-			// 	if p.Version == "null" || p.Version == "" {
-			// 		p.Version = "X.X.X"
-			// 	}
-
-			// 	b.WriteString(fmt.Sprintf("Class name: %s, Type: %s, Version: %s", p.Class, p.Type, p.Version))
-
-			// 	if !noNewLine && len(plugins)-1 != i {
-			// 		// add new line if enabled and not last, note that we use the fmt.Println below
-			// 		// even if newLine is disabled (for unix terminals mostly).
-			// 		b.WriteString("\n")
-			// 	}
-			// }
-
-			// _, err := fmt.Fprintln(cmd.OutOrStdout(), b.String())
-			// return err
-
 			for _, p := range plugins {
 				if p.Version == "null" || p.Version == "" {
 					p.Version = "X.X.X"
 				}
 			}
 
-			return printJSON(cmd.OutOrStdout(), plugins)
+			return printJSON(cmd, plugins)
 		},
-	})
+	}
 
-	// clusters subcommand.
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
 
-	root.AddCommand(newGetConnectorsClustersCommand())
+	canPrintJSON(cmd)
 
-	return &root
+	return cmd
 }
 
 func newGetConnectorsClustersCommand() *cobra.Command {
@@ -165,7 +157,7 @@ func newGetConnectorsClustersCommand() *cobra.Command {
 		noNewLine bool // matters when namesOnly is true.
 	)
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "clusters",
 		Short:         "List of available connectors' clusters",
 		Example:       exampleString(`connectors clusters`),
@@ -192,20 +184,20 @@ func newGetConnectorsClustersCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), clusters)
+			return printJSON(cmd, clusters)
 		},
 	}
 
 	cmd.Flags().BoolVar(&namesOnly, "names", false, `--names`)
 	cmd.Flags().BoolVar(&noNewLine, "no-newline", false, "--no-newline Disables line breakers between names, if --names is enabled, defaults to false")
-	return &cmd
 
+	return cmd
 }
 
 func newConnectorGroupCommand() *cobra.Command {
 	var clusterName, name string
 
-	root := cobra.Command{
+	root := &cobra.Command{
 		Use:              "connector",
 		Short:            "Get information about a particular connector based on its name",
 		Example:          exampleString(`connector --clusterName="cluster_name" --name="connector_name"`),
@@ -221,39 +213,35 @@ func newConnectorGroupCommand() *cobra.Command {
 				errResourceNotFoundMessage = fmt.Sprintf("connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
-			return printJSON(cmd.OutOrStdout(), connector)
+			return printJSON(cmd, connector)
 		},
 	}
 
-	root.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	root.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(root)
 
-	// shared flags.
-	root.PersistentFlags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	// root.MarkPersistentFlagRequired("clusterName") -> because of file loading, we must not require them.
-
-	root.PersistentFlags().StringVar(&name, "name", "", `--name="connector_name"`)
-	// root.MarkPersistentFlagRequired("name") -> because of file loading, we must not require them.
+	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	root.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 
 	// subcommands.
-	root.AddCommand(newConnectorCreateCommand(&clusterName, &name))
-	root.AddCommand(newConnectorUpdateCommand(&clusterName, &name))
-	root.AddCommand(newConnectorGetConfigCommand(&clusterName, &name))
-	root.AddCommand(newConnectorGetStatusCommand(&clusterName, &name))
-	root.AddCommand(newConnectorPauseCommand(&clusterName, &name))
-	root.AddCommand(newConnectorResumeCommand(&clusterName, &name))
-	root.AddCommand(newConnectorRestartCommand(&clusterName, &name))
-	root.AddCommand(newConnectorGetTasksCommand(&clusterName, &name))
-	root.AddCommand(newConnectorDeleteCommand(&clusterName, &name))
+	root.AddCommand(newConnectorCreateCommand())
+	root.AddCommand(newConnectorUpdateCommand())
+	root.AddCommand(newConnectorGetConfigCommand())
+	root.AddCommand(newConnectorGetStatusCommand())
+	root.AddCommand(newConnectorPauseCommand())
+	root.AddCommand(newConnectorResumeCommand())
+	root.AddCommand(newConnectorRestartCommand())
+	root.AddCommand(newConnectorGetTasksCommand())
+	root.AddCommand(newConnectorDeleteCommand())
 	// connector.task subcommands.
-	root.AddCommand(newConnectorTaskGroupCommand(&clusterName, &name))
-	return &root
+	root.AddCommand(newConnectorTaskGroupCommand())
+
+	return root
 }
 
-func newConnectorCreateCommand(clusterName *string, name *string) *cobra.Command {
-	var configRaw string
+func newConnectorCreateCommand() *cobra.Command {
+	var clusterName, name, configRaw string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Create a new connector",
 		Example:          exampleString(`connector create --clusterName="cluster_name" --name="connector_name" --config="{\"key\": \"value\"}" or connector create ./connector.yml`),
@@ -261,8 +249,8 @@ func newConnectorCreateCommand(clusterName *string, name *string) *cobra.Command
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			connector := lenses.CreateUpdateConnectorPayload{
-				ClusterAlias: *clusterName,
-				Name:         *name,
+				ClusterAlias: clusterName,
+				Name:         name,
 				Config:       make(lenses.ConnectorConfig),
 			}
 
@@ -299,16 +287,18 @@ func newConnectorCreateCommand(clusterName *string, name *string) *cobra.Command
 		},
 	}
 
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
-func newConnectorUpdateCommand(clusterName *string, name *string) *cobra.Command { // almost the same as `newConnectorCreateCommand` but keep them separate, in future this may change.
-	var configRaw string
+func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConnectorCreateCommand` but keep them separate, in future this may change.
+	var clusterName, name, configRaw string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "update",
 		Short:            "Update a connector's configuration",
 		Example:          exampleString(`connector update --clusterName="cluster_name" --name="connector_name" --config="{\"key\": \"value\"}" or connector update ./connector.yml`),
@@ -316,8 +306,8 @@ func newConnectorUpdateCommand(clusterName *string, name *string) *cobra.Command
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			connector := lenses.CreateUpdateConnectorPayload{
-				ClusterAlias: *clusterName,
-				Name:         *name,
+				ClusterAlias: clusterName,
+				Name:         name,
 				Config:       make(lenses.ConnectorConfig),
 			}
 
@@ -365,183 +355,207 @@ func newConnectorUpdateCommand(clusterName *string, name *string) *cobra.Command
 
 			echo(cmd, "Connector %s updated\n\n", connector.Name)
 
-			return printJSON(cmd.OutOrStdout(), updatedConnector) // why we print it back? Because of the connector.Tasks.
+			return printJSON(cmd, updatedConnector) // why we print it back? Because of the connector.Tasks.
 		},
 	}
 
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
 
-	return &cmd
+	canPrintJSON(cmd)
+
+	return cmd
 }
 
-func newConnectorGetConfigCommand(clusterName *string, name *string) *cobra.Command {
-	cmd := cobra.Command{
+func newConnectorGetConfigCommand() *cobra.Command {
+	var clusterName, name string
+
+	cmd := &cobra.Command{
 		Use:              "config",
 		Short:            "Get connector config",
 		Example:          exampleString(`connector config --clusterName="cluster_name" --name="connector_name"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			cfg, err := client.GetConnectorConfig(*clusterName, *name)
+			cfg, err := client.GetConnectorConfig(clusterName, name)
 			if err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve config, connector '%s:%s' does not exist", *clusterName, *name)
+				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve config, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), cfg)
+			return printJSON(cmd, cfg)
 		},
 	}
 
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 
-	return &cmd
+	canPrintJSON(cmd)
+
+	return cmd
 }
 
-func newConnectorGetStatusCommand(clusterName *string, name *string) *cobra.Command {
-	cmd := cobra.Command{
+func newConnectorGetStatusCommand() *cobra.Command {
+	var clusterName, name string
+
+	cmd := &cobra.Command{
 		Use:              "status",
 		Short:            "Get connector status",
 		Example:          exampleString(`connector status --clusterName="cluster_name" --name="connector_name"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			cs, err := client.GetConnectorStatus(*clusterName, *name)
+			cs, err := client.GetConnectorStatus(clusterName, name)
 			if err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve status, connector '%s:%s' does not exist", *clusterName, *name)
+				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve status, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), cs)
+			return printJSON(cmd, cs)
 		},
 	}
 
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
-	return &cmd
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+
+	canPrintJSON(cmd)
+
+	return cmd
 }
 
-func newConnectorPauseCommand(clusterName *string, name *string) *cobra.Command {
+func newConnectorPauseCommand() *cobra.Command {
+	var clusterName, name string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "pause",
 		Short:            "Pause a connector",
 		Example:          exampleString(`connector pause --clusterName="cluster_name" --name="connector_name"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			if err := client.PauseConnector(*clusterName, *name); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to pause, connector '%s:%s' does not exist", *clusterName, *name)
+			if err := client.PauseConnector(clusterName, name); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to pause, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 
-			return echo(cmd, "Connector %s:%s paused", *clusterName, *name)
+			return echo(cmd, "Connector %s:%s paused", clusterName, name)
 		},
 	}
 
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
-func newConnectorResumeCommand(clusterName *string, name *string) *cobra.Command {
+func newConnectorResumeCommand() *cobra.Command {
+	var clusterName, name string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "resume",
 		Short:            "Resume a paused connector",
 		Example:          exampleString(`connector resume --clusterName="cluster_name" --name="connector_name"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			if err := client.ResumeConnector(*clusterName, *name); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to resume, connector '%s:%s' does not exist", *clusterName, *name)
+			if err := client.ResumeConnector(clusterName, name); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to resume, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 
-			return echo(cmd, "Connector %s:%s resumed", *clusterName, *name)
+			return echo(cmd, "Connector %s:%s resumed", clusterName, name)
 		},
 	}
 
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
-func newConnectorRestartCommand(clusterName *string, name *string) *cobra.Command {
+func newConnectorRestartCommand() *cobra.Command {
+	var clusterName, name string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "restart",
 		Short:            "Restart a connector",
 		Example:          exampleString(`connector restart --clusterName="cluster_name" --name="connector_name"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			if err := client.RestartConnector(*clusterName, *name); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to restart, connector '%s:%s' does not exist", *clusterName, *name)
+			if err := client.RestartConnector(clusterName, name); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to restart, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 
-			return echo(cmd, "Connector %s:%s restarted", *clusterName, *name)
+			return echo(cmd, "Connector %s:%s restarted", clusterName, name)
 		},
 	}
 
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
-func newConnectorGetTasksCommand(clusterName *string, name *string) *cobra.Command {
-	cmd := cobra.Command{
+func newConnectorGetTasksCommand() *cobra.Command {
+	var clusterName, name string
+
+	cmd := &cobra.Command{
 		Use:              "tasks",
 		Short:            "List of connector tasks",
 		Example:          exampleString(`connector tasks --clusterName="cluster_name" --name="connector_name"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			tasksMap, err := client.GetConnectorTasks(*clusterName, *name)
+			tasksMap, err := client.GetConnectorTasks(clusterName, name)
 			if err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve tasks, connector '%s:%s' does not exist", *clusterName, *name)
+				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve tasks, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), tasksMap)
+			return printJSON(cmd, tasksMap)
 		},
 	}
 
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, `--no-pretty`)
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 
-	return &cmd
+	canPrintJSON(cmd)
+
+	return cmd
 }
 
-func newConnectorTaskGroupCommand(clusterName *string, name *string) *cobra.Command {
-	rootSub := cobra.Command{
+func newConnectorTaskGroupCommand() *cobra.Command {
+	rootSub := &cobra.Command{
 		Use:              "task",
 		Short:            "Work with a particular connector task, see connector task --help for details",
 		Example:          exampleString(`connector task status --clusterName="cluster_name" --name="connector_name" --task=1`),
@@ -549,93 +563,111 @@ func newConnectorTaskGroupCommand(clusterName *string, name *string) *cobra.Comm
 		TraverseChildren: true,
 	}
 
-	taskID := rootSub.PersistentFlags().Int("task", 0, "--task=1 The Task ID")
-	rootSub.MarkPersistentFlagRequired("task")
+	rootSub.AddCommand(newConnectorGetCurrentTaskStatusCommand())
+	rootSub.AddCommand(newConnectorTaskRestartCommand())
 
-	rootSub.AddCommand(newConnectorGetCurrentTaskStatusCommand(clusterName, name, taskID))
-	rootSub.AddCommand(newConnectorTaskRestartCommand(clusterName, name, taskID))
-
-	return &rootSub
+	return rootSub
 }
 
-func newConnectorGetCurrentTaskStatusCommand(clusterName *string, name *string, taskID *int) *cobra.Command {
-	cmd := cobra.Command{
+func newConnectorGetCurrentTaskStatusCommand() *cobra.Command {
+	var (
+		clusterName, name string
+		taskID            int
+	)
+
+	cmd := &cobra.Command{
 		Use:              "status",
 		Short:            "Get current status of a task",
 		Example:          exampleString(`connector task status --clusterName="cluster_name" --name="connector_name" --task=1`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			cst, err := client.GetConnectorTaskStatus(*clusterName, *name, *taskID)
+			cst, err := client.GetConnectorTaskStatus(clusterName, name, taskID)
 			if err != nil {
 				errResourceNotFoundMessage = fmt.Sprintf("task does not exist")
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), cst)
+			return printJSON(cmd, cst)
 		},
 	}
 
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, `--no-pretty`)
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	cmd.Flags().IntVar(&taskID, "task", 0, "--task=1 The Task ID")
+	cmd.MarkFlagRequired("task")
 
-	return &cmd
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+
+	canPrintJSON(cmd)
+
+	return cmd
 }
 
-func newConnectorTaskRestartCommand(clusterName *string, name *string, taskID *int) *cobra.Command {
+func newConnectorTaskRestartCommand() *cobra.Command {
+	var (
+		clusterName, name string
+		taskID            int
+	)
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "restart",
 		Short:            "Restart a connector task",
 		Example:          exampleString(`connector task restart --clusterName="cluster_name" --name="connector_name" --task=1`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			if err := client.RestartConnectorTask(*clusterName, *name, *taskID); err != nil {
+			if err := client.RestartConnectorTask(clusterName, name, taskID); err != nil {
 				errResourceNotFoundMessage = fmt.Sprintf("task does not exist")
 				return err
 			}
 
-			return echo(cmd, "Connector task %s:%s:%d restarted", *clusterName, *name, *taskID)
+			return echo(cmd, "Connector task %s:%s:%d restarted", clusterName, name, taskID)
 		},
 	}
 
+	cmd.Flags().IntVar(&taskID, "task", 0, "--task=1 The Task ID")
+	cmd.MarkFlagRequired("task")
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
-func newConnectorDeleteCommand(clusterName *string, name *string) *cobra.Command {
+func newConnectorDeleteCommand() *cobra.Command {
+	var clusterName, name string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete a running connector",
 		Example:          exampleString(`connector delete --clusterName="" --name="connector_name"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"clusterName": *clusterName, "name": *name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "name": name}); err != nil {
 				return err
 			}
 
-			if err := client.DeleteConnector(*clusterName, *name); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, connector '%s:%s' does not exist", *clusterName, *name)
+			if err := client.DeleteConnector(clusterName, name); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
 
-			return echo(cmd, "Connector %s:%s deleted", *clusterName, *name)
+			return echo(cmd, "Connector %s:%s deleted", clusterName, name)
 		},
 	}
 
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }

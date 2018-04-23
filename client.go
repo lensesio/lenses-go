@@ -474,6 +474,7 @@ type (
 		Value     string `json:"value"` // represents a json object, in raw string.
 	}
 
+	// LSQLStop the form of the stop record data that LSQL call returns once.
 	LSQLStop struct {
 		// If false `max.time` was reached.
 		IsTimeRemaining bool `json:"isTimeRemaining"`
@@ -497,12 +498,14 @@ type (
 		Offsets []LSQLOffset `json:"offsets"`
 	}
 
+	// LSQLOffset the form of the offset record data that LSQL call returns once.
 	LSQLOffset struct {
 		Partition int   `json:"partition"`
 		Min       int64 `json:"min"`
 		Max       int64 `json:"max"`
 	}
 
+	// LSQLError the form of the error record data that LSQL call returns once.
 	LSQLError struct {
 		FromLine   int    `json:"fromLine"`
 		ToLine     int    `json:"toLine"`
@@ -511,6 +514,7 @@ type (
 		Message    string `json:"error"`
 	}
 
+	// LSQLStats the form of the stats record data that LSQL call returns.
 	LSQLStats struct {
 		// Number of records read from Kafka so far.
 		TotalRecords int `json:"totalRecords"`
@@ -531,10 +535,13 @@ type (
 	// LSQLRecordHandler and LSQLStopHandler and LSQLStopErrorHandler and optionally LSQLStatsHandler
 	// describe type of functions that accepts LSQLRecord, LSQLStop, LSQLError and LSQLStats respectfully, and return an error if error not nil then client stops reading from SSE.
 	// It's used by the `LSQL` function.
-	LSQLRecordHandler    func(LSQLRecord) error
-	LSQLStopHandler      func(LSQLStop) error
+	LSQLRecordHandler func(LSQLRecord) error
+	// LSQLStopHandler describes the form of the function that should be registered to accept stop record data from the LSQL call once.
+	LSQLStopHandler func(LSQLStop) error
+	// LSQLStopErrorHandler describes the form of the function that should be registered to accept error record data from the LSQL call once.
 	LSQLStopErrorHandler func(LSQLError) error
-	LSQLStatsHandler     func(LSQLStats) error
+	// LSQLStatsHandler describes the form of the function that should be registered to accept stats record data from the LSQL call.
+	LSQLStatsHandler func(LSQLStats) error
 )
 
 func (err LSQLError) Error() string {
@@ -688,7 +695,6 @@ func (c *Client) LSQL(
 			return fmt.Errorf("client: sse: unknown event received: %s", string(line))
 		}
 	}
-	return nil
 }
 
 // LSQLWait same as `LSQL` but waits until stop or error to return the query's results records, the stats and the stop information.
@@ -717,6 +723,7 @@ func (c *Client) LSQLWait(sql string, withOffsets bool, statsEvery time.Duration
 
 const queriesPath = "api/sql/queries"
 
+// LSQLRunningQuery is the form of the data that the `GetRunningQueries` returns.
 type LSQLRunningQuery struct {
 	ID        int64  `json:"id"`
 	SQL       string `json:"sql"`
@@ -755,6 +762,7 @@ func (c *Client) CancelQuery(id int64) (bool, error) {
 // Follow the instructions on http://lenses.stream/developers-guide/rest-api/index.html and read
 // the call comments for a deeper understanding.
 
+// KV is just a keyvalue map, a form of map[string]interface{}.
 type KV map[string]interface{}
 
 var errRequired = func(field string) error {
@@ -793,6 +801,7 @@ func (c *Client) GetTopicsNames() ([]string, error) {
 	return topicNames, nil
 }
 
+// CreateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
 type CreateTopicPayload struct {
 	TopicName   string `json:"topicName" yaml:"Name"`
 	Replication int    `json:"replication" yaml:"Replication"`
@@ -855,6 +864,7 @@ func (c *Client) DeleteTopic(topicName string) error {
 
 const updateTopicConfigPath = topicsPath + "/config/%s"
 
+// UpdateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
 type UpdateTopicPayload struct {
 	Name    string `json:"name,omitempty" yaml:"Name"` // empty for request send, filled for cli.
 	Configs []KV   `json:"configs,omitempty" yaml:"Configs"`
@@ -886,6 +896,7 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	return resp.Body.Close()
 }
 
+// Topic describes the data that the `CreateTopic` returns.
 type Topic struct {
 	TopicName            string             `json:"topicName"`
 	KeyType              string             `json:"keyType"`   // maybe string-based enum?
@@ -904,6 +915,7 @@ type Topic struct {
 	MessagesPerPartition []PartitionMessage `json:"messagesPerPartition"`
 }
 
+// ConsumersGroup describes the data that the `Topic`'s  `ConsumersGroup` field contains.
 type ConsumersGroup struct {
 	ID          string              `json:"id"`
 	Coordinator ConsumerCoordinator `json:"coordinator"`
@@ -913,19 +925,28 @@ type ConsumersGroup struct {
 	Consumers []Consumer         `json:"consumers"`
 }
 
-// Note: it's string-based, i,e "Unknown"
+// ConsumerGroupState describes the valid values of a `ConsumerGroupState`:
+// `StateUnknown`,`StateStable`,`StateRebalancing`,`StateDead`,`StateNoActiveMembers`,`StateExistsNot`,`StateCoordinatorNotFound`.
 type ConsumerGroupState string
 
 const (
-	StateUnknown             ConsumerGroupState = "Unknown"
-	StateStable              ConsumerGroupState = "Stable"
-	StateRebalancing         ConsumerGroupState = "Rebalancing"
-	StateDead                ConsumerGroupState = "Dead"
-	StateNoActiveMembers     ConsumerGroupState = "NoActiveMembers"
-	StateExistsNot           ConsumerGroupState = "ExistsNot"
+	// StateUnknown is a valid `ConsumerGroupState` value of "Unknown".
+	StateUnknown ConsumerGroupState = "Unknown"
+	// StateStable is a valid `ConsumerGroupState` value of "Stable".
+	StateStable ConsumerGroupState = "Stable"
+	// StateRebalancing is a valid `ConsumerGroupState` value of "Rebalancing".
+	StateRebalancing ConsumerGroupState = "Rebalancing"
+	// StateDead is a valid `ConsumerGroupState` value of "Dead".
+	StateDead ConsumerGroupState = "Dead"
+	// StateNoActiveMembers is a valid `ConsumerGroupState` value of "NoActiveMembers".
+	StateNoActiveMembers ConsumerGroupState = "NoActiveMembers"
+	// StateExistsNot is a valid `ConsumerGroupState` value of "ExistsNot".
+	StateExistsNot ConsumerGroupState = "ExistsNot"
+	// StateCoordinatorNotFound is a valid `ConsumerGroupState` value of "CoordinatorNotFound".
 	StateCoordinatorNotFound ConsumerGroupState = "CoordinatorNotFound"
 )
 
+// Consumer describes the consumer valid response data.
 type Consumer struct {
 	Topic                     string `json:"topic"`
 	CurrentOffset             int64  `json:"currentOffset"`
@@ -938,6 +959,7 @@ type Consumer struct {
 	ProducerMessagesPerSecond int64  `json:"producerMessagesPerSecond"`
 }
 
+// ConsumerCoordinator describes the consumer coordinator's valid response data.
 type ConsumerCoordinator struct {
 	ID   int    `json:"id"`
 	Host string `json:"host"`
@@ -945,6 +967,7 @@ type ConsumerCoordinator struct {
 	Rack string `json:"rack"`
 }
 
+// PartitionMessage describes a partition's message response data.
 type PartitionMessage struct {
 	Partition int   `json:"partition"`
 	Messages  int64 `json:"messages"`
@@ -1143,6 +1166,8 @@ const processorPath = processorsPath + "/%s"
 
 const processorPausePath = processorPath + "/pause"
 
+// PauseProcessor pauses a processor.
+// See `LookupProcessorIdentifier`.
 func (c *Client) PauseProcessor(processorID string) error {
 	if processorID == "" {
 		return errRequired("processorID")
@@ -1158,6 +1183,8 @@ func (c *Client) PauseProcessor(processorID string) error {
 
 const processorResumePath = processorPath + "/resume"
 
+// ResumeProcessor resumes a processor.
+// See `LookupProcessorIdentifier`.
 func (c *Client) ResumeProcessor(processorID string) error {
 	if processorID == "" {
 		return errRequired("processorID")
@@ -1173,6 +1200,8 @@ func (c *Client) ResumeProcessor(processorID string) error {
 
 const processorUpdateRunnersPath = processorPath + "/scale/%d"
 
+// UpdateProcessorRunners scales a processor to "numberOfRunners".
+// See `LookupProcessorIdentifier`.
 func (c *Client) UpdateProcessorRunners(processorID string, numberOfRunners int) error {
 	if processorID == "" {
 		return errRequired("processorID")
@@ -1190,6 +1219,8 @@ func (c *Client) UpdateProcessorRunners(processorID string, numberOfRunners int)
 	return resp.Body.Close()
 }
 
+// DeleteProcessor removes a processor based on its name or the full id,
+// it depends on lenses execution mode, use the `LookupProcessorIdentifier`.
 func (c *Client) DeleteProcessor(processorNameOrID string) error {
 	if processorNameOrID == "" {
 		return errRequired("processorNameOrID")
@@ -1862,11 +1893,13 @@ func (c *Client) getSubjectSchemaAtVersion(subject string, versionID interface{}
 	return
 }
 
+// GetLatestSchema returns the latest version of a schema.
 // See `GetSchemaAtVersion` to retrieve a subject schema by a specific version.
 func (c *Client) GetLatestSchema(subject string) (Schema, error) {
 	return c.getSubjectSchemaAtVersion(subject, SchemaLatestVersion)
 }
 
+// GetSchemaAtVersion returns a specific version of a schema.
 // See `GetLatestSchema` to retrieve the latest schema.
 func (c *Client) GetSchemaAtVersion(subject string, versionID int) (Schema, error) {
 	return c.getSubjectSchemaAtVersion(subject, versionID)
@@ -1876,6 +1909,7 @@ type idOnlyJSON struct {
 	ID int `json:"id"`
 }
 
+// RegisterSchema registers a schema.
 // The returned identifier should be used to retrieve
 // this schema from the schemas resource and is different from
 // the schema’s version which is associated with that name.
@@ -1988,6 +2022,7 @@ var ValidCompatibilityLevels = []CompatibilityLevel{
 	CompatibilityLevelBackwardTransitive,
 }
 
+// IsValidCompatibilityLevel checks for compatibility level validation.
 func IsValidCompatibilityLevel(compatibility string) bool {
 	for _, lv := range ValidCompatibilityLevels {
 		if string(lv) == compatibility {
@@ -2201,6 +2236,8 @@ type ACL struct {
 	Operation      ACLOperation      `json:"operation" yaml:"Operation"`           // required.
 }
 
+// Validate force validates the acl's resource type, permission type and operation.
+// It returns an error if the operation is not valid for the resource type.
 func (acl *ACL) Validate() error {
 	// upper the first letter here on the resourceType, permissionType and operation before any action.
 	acl.ResourceType = ACLResourceType(strings.Title(string(acl.ResourceType)))

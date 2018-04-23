@@ -16,7 +16,7 @@ func init() {
 func newTopicsCommand() *cobra.Command {
 	var namesOnly bool
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "topics",
 		Short:         "List all available topic names",
 		Example:       exampleString("topics"),
@@ -28,7 +28,7 @@ func newTopicsCommand() *cobra.Command {
 					return err
 				}
 
-				return printJSON(cmd.OutOrStdout(), outlineStringResults("name", topicNames))
+				return printJSON(cmd, outlineStringResults("name", topicNames))
 			}
 
 			topics, err := client.GetTopics()
@@ -36,21 +36,20 @@ func newTopicsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), topics)
+			return printJSON(cmd, topics)
 		},
 	}
 
 	cmd.Flags().BoolVar(&namesOnly, "names", false, "--names")
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(cmd)
 
-	return &cmd
+	return cmd
 }
 
 func newTopicGroupCommand() *cobra.Command {
 	var topicName string
 
-	root := cobra.Command{
+	root := &cobra.Command{
 		Use:              "topic",
 		Short:            "Work with a particular topic based on the topic name, retrieve it or create a new one",
 		Example:          exampleString(`topic --name="existing_topic_name" or topic create --name="topic1" --replication=1 --partitions=1 --configs="{\"key\": \"value\"}"`),
@@ -68,20 +67,19 @@ func newTopicGroupCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), topic)
+			return printJSON(cmd, topic)
 		},
 	}
 
-	root.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	root.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
 	root.Flags().StringVar(&topicName, "name", "", "--name=topic1")
+	canPrintJSON(root)
 
 	// subcommands
 	root.AddCommand(newTopicCreateCommand())
 	root.AddCommand(newTopicDeleteCommand())
 	root.AddCommand(newTopicUpdateCommand())
 
-	return &root
+	return root
 }
 
 func newTopicCreateCommand() *cobra.Command {
@@ -95,7 +93,7 @@ func newTopicCreateCommand() *cobra.Command {
 		}
 	)
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Creates a new topic",
 		Example:          exampleString(`topic create --name="topic1" --replication=1 --partitions=1 --configs="{\"max.message.bytes\": \"1000010\"}"`),
@@ -138,13 +136,13 @@ func newTopicCreateCommand() *cobra.Command {
 
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
 func newTopicDeleteCommand() *cobra.Command {
 	var topicName string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Deletes a topic",
 		Example:          exampleString(`topic delete --name="topic1"`),
@@ -167,7 +165,7 @@ func newTopicDeleteCommand() *cobra.Command {
 	cmd.Flags().StringVar(&topicName, "name", "", "--name=topic1")
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
 func newTopicUpdateCommand() *cobra.Command {
@@ -178,7 +176,7 @@ func newTopicUpdateCommand() *cobra.Command {
 		}
 	)
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "update",
 		Short:            "Updates a topic's configs (as an array of config key-value map)",
 		Example:          exampleString(`topic update --name="topic1" --configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]" or topic update ./topic.yml`),
@@ -214,5 +212,5 @@ func newTopicUpdateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&configsArrayRaw, "configs", "", `--configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }

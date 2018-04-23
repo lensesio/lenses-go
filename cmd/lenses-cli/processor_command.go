@@ -17,7 +17,7 @@ func init() {
 func newGetProcessorsCommand() *cobra.Command {
 	var name, clusterName, namespace string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "processors",
 		Short:            "List of all available processors",
 		Example:          exampleString(`processors`),
@@ -62,23 +62,23 @@ func newGetProcessorsCommand() *cobra.Command {
 				processor.SQL = strings.Replace(processor.SQL, "   ", "", -1)
 			}
 
-			return printJSON(cmd.OutOrStdout(), result.Streams)
+			return printJSON(cmd, result.Streams)
 		},
 	}
-
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty if declared then the result will be not be prettified for humans")
 
 	// select by name (maybe more than one in CONNECT and KUBERNETES mode) and cluster and namespace or name or cluster or namespace only.
 	cmd.Flags().StringVar(&name, "name", "", "--name=processorName select by processor name, available only in CONNECT and KUBERNETES mode")
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", "--clusterName=clusterName select by cluster name, available only in CONNECT and KUBERNETES mode")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "--namespace=namespace select by namespace, available only in KUBERNETES mode")
+
 	// example: lenses-cli processors --query="[?ClusterName == 'IN_PROC'].Name | sort(@) | {Processor_Names_IN_PROC: join(', ', @)}"
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
-	return &cmd
+	canPrintJSON(cmd)
+
+	return cmd
 }
 
 func newProcessorGroupCommand() *cobra.Command {
-	root := cobra.Command{
+	root := &cobra.Command{
 		Use:              "processor",
 		Short:            "Work with a particular processor based on the processor id, pause, resume, update runners, delete a processor or create an entirely new processor",
 		Example:          exampleString(`processor pause --id="existing_processor_id" or processor create --name="processor_name" --sql="" --runners=1 --clusterName="" --namespace="" pipeline=""`),
@@ -92,14 +92,15 @@ func newProcessorGroupCommand() *cobra.Command {
 	root.AddCommand(newProcessorResumeCommand())
 	root.AddCommand(newProcessorUpdateRunnersCommand())
 	root.AddCommand(newProcessorDeleteCommand())
-	return &root
+
+	return root
 }
 
 func newProcessorCreateCommand() *cobra.Command {
 	// the processorName and sql are the required.
 	var processor lenses.CreateProcessorPayload
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Create a processor",
 		Example:          exampleString(`processor create --name="processor_name" --sql="" --runners=1 --clusterName="" --namespace="" pipeline=""`),
@@ -135,13 +136,13 @@ func newProcessorCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&processor.Pipeline, "pipeline", "", `--pipeline="pipeline A label to apply to kubernetes processors, defaults to processor name"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
 func newProcessorPauseCommand() *cobra.Command {
 	var processorID, processorName, clusterName, namespace string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "pause",
 		Short:            "Pause a processor",
 		Example:          exampleString(`processor pause --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
@@ -168,13 +169,13 @@ func newProcessorPauseCommand() *cobra.Command {
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
 func newProcessorResumeCommand() *cobra.Command {
 	var processorID, processorName, clusterName, namespace string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "resume",
 		Short:            "Resume a processor",
 		Example:          exampleString(`processor resume --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
@@ -201,7 +202,7 @@ func newProcessorResumeCommand() *cobra.Command {
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
 func newProcessorUpdateRunnersCommand() *cobra.Command {
@@ -211,7 +212,7 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 		processorID, processorName, clusterName, namespace string
 	)
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "update",
 		Short:            "Update processor runners",
 		Example:          exampleString(`processor update --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
@@ -244,13 +245,13 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
 func newProcessorDeleteCommand() *cobra.Command {
 	var processorID, processorName, clusterName, namespace string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete a processor",
 		Example:          exampleString(`processor delete --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
@@ -281,5 +282,5 @@ func newProcessorDeleteCommand() *cobra.Command {
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }

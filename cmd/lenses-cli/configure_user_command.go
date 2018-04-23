@@ -35,7 +35,7 @@ func newConfigureCommand() *cobra.Command {
 		reset bool
 	)
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "configure",
 		Short:         "Setup your environment for extensive CLI use. Create and save the required CLI configuration and client credentials",
 		Example:       exampleString(`configure`),
@@ -118,7 +118,7 @@ func newConfigureCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&reset, "reset", false, "--reset to reset the previous configuration, normally configure will exit if valid configuration is already saved. Please make sure you want to reset first")
-	return &cmd
+	return cmd
 }
 
 func toHash(plain string) []byte {
@@ -224,7 +224,7 @@ func saveConfiguration() error {
 }
 
 func newLoginCommand() *cobra.Command {
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "login",
 		Short:            "Login, generate the access token using the generated configuration via the 'configure' command. ",
 		Example:          exampleString(`login`),
@@ -332,11 +332,11 @@ func newLoginCommand() *cobra.Command {
 
 		}}
 
-	return &cmd
+	return cmd
 }
 
 func newGetUserInfoCommand() *cobra.Command {
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "user",
 		Short:            "Print some information about the authenticated logged user such as the given roles given by the lenses administrator",
 		Example:          exampleString("user"),
@@ -345,20 +345,20 @@ func newGetUserInfoCommand() *cobra.Command {
 			if user := client.User(); user.ID != "" {
 				// if logged in using the user password, then we have those info,
 				// let's print it as well.
-				return printJSON(cmd.OutOrStdout(), user)
+				return printJSON(cmd, user)
 			}
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
-	return &cmd
+	return cmd
 }
 
 const logoutCmdName = "logout"
 
 // func newLogoutCommand() *cobra.Command {
-// 	cmd := cobra.Command{
+// 	cmd := &cobra.Command{
 // 		Use:              logoutCmdName,
 // 		Short:            "Revoke the access token",
 // 		Example:          exampleString(logoutCmdName),
@@ -374,5 +374,5 @@ const logoutCmdName = "logout"
 // 		},
 // 	}
 
-// 	return &cmd
+// 	return cmd
 // }

@@ -51,7 +51,7 @@ func readAndQuoteQueries(args []string) ([]string, error) {
 }
 
 func newLiveLSQLCommand() *cobra.Command {
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "live sql [query]",
 		Short:            "Live sql provides \"real-time\" sql queries with your lenses box",
 		Example:          `lenses-cli --host=https://example.com --user=MyUser --pass=MyPassword live sql "SELECT * FROM cc_payments WHERE _vtype='AVRO' AND _ktype='STRING' AND _sample=2 AND _sampleWindow=200" "query2" "query3"`,
@@ -185,5 +185,5 @@ func newLiveLSQLCommand() *cobra.Command {
 		},
 	}
 
-	return &cmd
+	return cmd
 }

@@ -12,7 +12,7 @@ func init() {
 }
 
 func newGetConfigsCommand() *cobra.Command {
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "configs",
 		Short:            "Print the whole lenses box configs",
 		Example:          exampleString("config"),
@@ -29,7 +29,7 @@ func newGetConfigsCommand() *cobra.Command {
 
 				var value interface{}
 				if err := client.GetConfigEntry(&value, args[0]); err == nil {
-					return printJSON(cmd.OutOrStdout(), value)
+					return printJSON(cmd, value)
 					// if error or no valid key then continue with printing the whole lenses configuration.
 				}
 
@@ -40,13 +40,13 @@ func newGetConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), config)
+			return printJSON(cmd, config)
 		},
 	}
 
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
-	return &cmd
+	canPrintJSON(cmd)
+
+	return cmd
 }
 
 const commandModeName = "mode"

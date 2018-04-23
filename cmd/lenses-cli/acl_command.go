@@ -12,28 +12,22 @@ func init() {
 }
 
 func newGetACLsCommand() *cobra.Command {
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "acls",
 		Short:            "Print the list of the available Apache Kafka Access Control Lists",
 		Example:          exampleString("acls"),
 		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			acls, err := client.GetACLs()
-			if err != nil {
-				return err
-			}
-
-			return printJSON(cmd.OutOrStdout(), acls)
-		},
 	}
 
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
-	return &cmd
+	shouldReturnJSON(cmd, func() (interface{}, error) {
+		return client.GetACLs()
+	})
+
+	return cmd
 }
 
 func newACLGroupCommand() *cobra.Command {
-	root := cobra.Command{
+	root := &cobra.Command{
 		Use:              "acl",
 		Short:            "Work with an Apache Kafka Access Control Lists",
 		Example:          exampleString("acl"),
@@ -42,26 +36,19 @@ func newACLGroupCommand() *cobra.Command {
 	root.AddCommand(newCreateOrUpdateACLCommand())
 	root.AddCommand(newDeleteACLCommand())
 
-	return &root
+	return root
 }
 
 func newCreateOrUpdateACLCommand() *cobra.Command {
 	var acl lenses.ACL
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"}, // acl create or acl update or acl set.
 		Short:            "Sets, create or update, an Apache Kafka Access Control List",
 		Example:          exampleString(`acl set --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --host="*" --operation="Read"`),
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				// load from file.
-				if err := loadFile(cmd, args[0], &acl); err != nil {
-					return err
-				}
-			}
-
 			if err := checkRequiredFlags(cmd, flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
 				return err
 			}
@@ -74,6 +61,10 @@ func newCreateOrUpdateACLCommand() *cobra.Command {
 		},
 	}
 
+	if err := shouldLoadFile(cmd, &acl, nil); err != nil {
+		panic(err)
+	}
+
 	cmd.Flags().Var(newVarFlag(&acl.ResourceType), "resourceType", "--resourceType The resource type, TOPIC, CLUSTER, GROUP, TRANSACTIONALID")
 	cmd.Flags().StringVar(&acl.ResourceName, "resourceName", "", "--resourceName The name of the resource")
 	cmd.Flags().StringVar(&acl.Principal, "principal", "", "--principal The name of the principal")
@@ -82,13 +73,13 @@ func newCreateOrUpdateACLCommand() *cobra.Command {
 	cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "--operation The allowed operation, ALL, READ, WRITE, DELETE, DESCRIBECONFIGS, ALTERCONFIGS, IDEMPOTENTWRITE")
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
 func newDeleteACLCommand() *cobra.Command {
 	var acl lenses.ACL
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete an Apache Kafka Access Control List",
 		Example:          exampleString(`acl delete ./acl_to_be_deleted.json or .yml or acl delete --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --host="*" --operation="Read"`),
@@ -122,5 +113,5 @@ func newDeleteACLCommand() *cobra.Command {
 	cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "--operation The allowed operation, ALL, READ, WRITE, DELETE, DESCRIBECONFIGS, ALTERCONFIGS, IDEMPOTENTWRITE")
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }

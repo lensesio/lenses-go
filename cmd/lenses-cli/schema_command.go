@@ -17,7 +17,9 @@ func init() {
 }
 
 func newSchemasGroupCommand() *cobra.Command {
-	rootCmd := cobra.Command{
+	var noJSON bool
+
+	root := &cobra.Command{
 		Use:           "schemas",
 		Short:         "List all available schemas",
 		Example:       exampleString("schemas"),
@@ -28,20 +30,27 @@ func newSchemasGroupCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), outlineStringResults("name", subjects))
+			if noJSON {
+				for _, name := range subjects {
+					cmd.Println(name)
+				}
+				return nil
+			}
+
+			return printJSON(cmd, outlineStringResults("name", subjects))
 		},
 	}
 
-	rootCmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	rootCmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(root)
 
-	rootCmd.AddCommand(newGlobalCompatibilityLevelGroupCommand())
+	root.Flags().BoolVar(&noJSON, "no-json", false, "no-json to disable json printing, prints only the names as a list of strings")
+	root.AddCommand(newGlobalCompatibilityLevelGroupCommand())
 
-	return &rootCmd
+	return root
 }
 
 func newGlobalCompatibilityLevelGroupCommand() *cobra.Command {
-	rootSub := cobra.Command{
+	rootSub := &cobra.Command{
 		Use:              "compatibility [?set [compatibility]]",
 		Short:            "Get the global compatibility level",
 		Example:          exampleString(`compatibility`),
@@ -59,13 +68,12 @@ func newGlobalCompatibilityLevelGroupCommand() *cobra.Command {
 	}
 
 	rootSub.AddCommand(newUpdateGlobalCompatibilityLevelCommand())
-	return &rootSub
+	return rootSub
 
 }
 
 func newUpdateGlobalCompatibilityLevelCommand() *cobra.Command {
-
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "set",
 		Short:         "Change the global compatibility level",
 		Example:       exampleString(`compatibility set FULL`),
@@ -88,7 +96,8 @@ func newUpdateGlobalCompatibilityLevelCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
-	return &cmd
+
+	return cmd
 }
 
 // --id=
@@ -102,7 +111,7 @@ func newSchemaGroupCommand() *cobra.Command {
 		id                 int
 	)
 
-	root := cobra.Command{
+	root := &cobra.Command{
 		Use:              "schema",
 		Short:            "Work with a particular schema based on its name, get a schema based on the ID or register a new one",
 		Example:          exampleString(`schema --id=1 or schema --name="name" [flags] or schema register --name="name" --avro="..."`),
@@ -136,8 +145,7 @@ func newSchemaGroupCommand() *cobra.Command {
 	// it's not required, the default is "latest", get a schema based on a specific version.
 	root.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "--version=latest or numeric value lookup schema based on a specific  version")
 	// if true then the schema will be NOT printed with indent.
-	root.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	root.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(root)
 
 	// subcommands.
 	root.AddCommand(newRegisterSchemaCommand())
@@ -146,7 +154,7 @@ func newSchemaGroupCommand() *cobra.Command {
 	root.AddCommand(newDeleteSchemaVersionCommand())
 	root.AddCommand(newSchemaCompatibilityLevelGroupCommand()) // includes subcommands.
 
-	return &root
+	return root
 }
 
 func getSchemaByID(cmd *cobra.Command, id int) error {
@@ -159,7 +167,8 @@ func getSchemaByID(cmd *cobra.Command, id int) error {
 	if err != nil {
 		return err
 	}
-	return printJSON(cmd.OutOrStderr(), schemaRawJSON)
+
+	return printJSON(cmd, schemaRawJSON)
 }
 
 // the only valid version string is the "latest"
@@ -202,7 +211,7 @@ func getSchemaByVersion(cmd *cobra.Command, name, versionStringOrInt string, pre
 		return err
 	}
 
-	return printJSON(cmd.OutOrStdout(), struct {
+	return printJSON(cmd, struct {
 		lenses.Schema
 		JSONSchema json.RawMessage `json:"schema"`
 	}{schema, rawJSONSchema})
@@ -248,7 +257,7 @@ func newRegisterSchemaCommand() *cobra.Command {
 func newGetSchemaVersionsCommand() *cobra.Command {
 	var name string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "versions",
 		Short:         "List all versions of a particular schema",
 		Example:       exampleString(`schema --name="name" versions`),
@@ -264,21 +273,21 @@ func newGetSchemaVersionsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd.OutOrStdout(), outlineIntResults("version", versions))
+			return printJSON(cmd, outlineIntResults("version", versions))
 		},
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
 
-	return &cmd
+	canPrintJSON(cmd)
+
+	return cmd
 }
 
 func newDeleteSchemaCommand() *cobra.Command {
 	var name string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "delete",
 		Short:         "Delete a schema",
 		Example:       exampleString(`schema delete --name="name"`),
@@ -295,7 +304,7 @@ func newDeleteSchemaCommand() *cobra.Command {
 			}
 
 			if !silent {
-				return printJSON(cmd.OutOrStdout(), outlineIntResults("version", deletedVersions))
+				return printJSON(cmd, outlineIntResults("version", deletedVersions))
 			}
 
 			return nil
@@ -303,16 +312,15 @@ func newDeleteSchemaCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
-	cmd.Flags().BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(cmd)
 
-	return &cmd
+	return cmd
 }
 
 func newDeleteSchemaVersionCommand() *cobra.Command {
 	var name, versionStringOrInt string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "delete-version",
 		Short:         "Delete a specific version of the schema registered under this name. This command only deletes the version and the schema id remains intact making it still possible to decode data using the schema id. Returns the version of the deleted schema",
 		Example:       exampleString(`schema delete-version --name="name" --version="latest or numeric"`),
@@ -349,7 +357,7 @@ func newDeleteSchemaVersionCommand() *cobra.Command {
 	cmd.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "--version=latest or numeric value")
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
 
 func joinValidCompatibilityLevels(sep string) string {
@@ -370,7 +378,7 @@ func joinValidCompatibilityLevels(sep string) string {
 
 func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 	var name string
-	rootSub := cobra.Command{
+	rootSub := &cobra.Command{
 		Use:              "compatibility [?set [compatibility]]",
 		Short:            "Print or change the compatibility level of a schema",
 		Example:          exampleString(`schema --name="name" compatibility or compatibility set FULL`),
@@ -394,13 +402,14 @@ func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 	rootSub.Flags().StringVar(&name, "name", "", `--name="name"`)
 
 	rootSub.AddCommand(newUpdateSchemaCompatibilityLevelCommand())
-	return &rootSub
+
+	return rootSub
 }
 
 func newUpdateSchemaCompatibilityLevelCommand() *cobra.Command {
 	var name string
 
-	cmd := cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "set",
 		Short:         "Change compatibility level of a schema",
 		Example:       exampleString(`schema --name="name" compatibility set FULL`),
@@ -431,5 +440,5 @@ func newUpdateSchemaCompatibilityLevelCommand() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
 	cmd.Flags().BoolVar(&silent, "silent", false, "run in silent mode. No printing info messages for CRUD except errors, defaults to false")
 
-	return &cmd
+	return cmd
 }
