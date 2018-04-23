@@ -190,6 +190,7 @@ func newGetConnectorsClustersCommand() *cobra.Command {
 
 	cmd.Flags().BoolVar(&namesOnly, "names", false, `--names`)
 	cmd.Flags().BoolVar(&noNewLine, "no-newline", false, "--no-newline Disables line breakers between names, if --names is enabled, defaults to false")
+	canPrintJSON(cmd)
 
 	return cmd
 }
