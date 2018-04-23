@@ -40,12 +40,12 @@ func newACLGroupCommand() *cobra.Command {
 	root.AddCommand(newDeleteACLCommand(&acl))
 
 	return visitChildren(root, func(cmd *cobra.Command) {
-		cmd.Flags().Var(newVarFlag(&acl.ResourceType), "resourceType", "The resource type: Topic, Cluster, Group or TRANSACTIONALID")
-		cmd.Flags().StringVar(&acl.ResourceName, "resourceName", "", "The name of the resource")
-		cmd.Flags().StringVar(&acl.Principal, "principal", "", "The name of the principal")
+		cmd.Flags().Var(newVarFlag(&acl.ResourceType), "resourceType", "the resource type: Topic, Cluster, Group or TRANSACTIONALID")
+		cmd.Flags().StringVar(&acl.ResourceName, "resourceName", "", "the name of the resource")
+		cmd.Flags().StringVar(&acl.Principal, "principal", "", "the name of the principal")
 		cmd.Flags().Var(newVarFlag(&acl.PermissionType), "permissionType", "Allow or Deny")
-		cmd.Flags().StringVar(&acl.Host, "acl-host", "", "The acl host, can be empty to apply to all")
-		cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "The allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
+		cmd.Flags().StringVar(&acl.Host, "acl-host", "", "the acl host, can be empty to apply to all")
+		cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "the allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
 
 		shouldTryLoadFile(cmd, &acl)
 	})

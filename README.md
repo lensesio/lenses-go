@@ -34,8 +34,6 @@ The `lenses-go` package is made to be used by Go developers to communicate with 
 
 Detailed documentation can be found at [godocs](https://godoc.org/github.com/landoop/lenses-go).
 
-_TODO_
-
 ## Versioning
 
 Current: **v2.0**

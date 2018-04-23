@@ -209,12 +209,12 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVar(&config.Host, "host", "", "--host=https://example.com")
 	rootCmd.PersistentFlags().StringVar(&config.User, "user", "", "--user=MyUser")
-	rootCmd.PersistentFlags().StringVar(&config.Timeout, "timeout", "", "--timeout=30s timeout for connection establishment")
+	rootCmd.PersistentFlags().StringVar(&config.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
 	rootCmd.PersistentFlags().StringVar(&config.Password, "pass", "", "--pass=MyPassword")
 	rootCmd.PersistentFlags().StringVar(&config.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
-	rootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "--debug=true will print some debug information that are necessary for debugging")
+	rootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "print some information that are necessary for debugging")
 
-	rootCmd.PersistentFlags().StringVar(&configFilepath, "config", "", "--config loads/save the host, user, pass and debug options from a configuration file (yaml, toml or json)")
+	rootCmd.PersistentFlags().StringVar(&configFilepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml, toml or json)")
 
 	if err := rootCmd.Execute(); err != nil {
 		// catch any errors that should be described by the command that gave that error.

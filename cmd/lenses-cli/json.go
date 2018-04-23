@@ -23,8 +23,8 @@ var (
 	jmespathQuery string
 
 	flagsetJSON = newFlagGroup("flagset.json", func(flags *pflag.FlagSet) {
-		flags.BoolVar(&noPretty, "no-pretty", noPretty, "--no-pretty")
-		flags.StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+		flags.BoolVar(&noPretty, "no-pretty", noPretty, "disable the pretty format for JSON output of commands (default false).")
+		flags.StringVarP(&jmespathQuery, "query", "q", "", "a jmespath query expression. This allows for querying the JSON output of commands")
 	})
 )
 

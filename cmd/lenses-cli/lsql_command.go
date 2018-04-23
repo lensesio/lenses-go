@@ -170,9 +170,9 @@ func newLSQLCommand() *cobra.Command {
 		},
 	}
 
-	rootSub.Flags().BoolVar(&validate, "validate", false, "--validate") // if --validate exists in the flags then it's true.
-	rootSub.Flags().BoolVar(&withOffsets, "offsets", false, "--offsets if true then the stop output will contain the 'offsets' information as well")
-	rootSub.Flags().DurationVar(&statsEvery, "stats", 0, "--stats=2s if not empty the client will accept stats records every 'stats' duration, therefore they will be visible to the output")
+	rootSub.Flags().BoolVar(&validate, "validate", false, "runs query validation only") // if --validate exists in the flags then it's true.
+	rootSub.Flags().BoolVar(&withOffsets, "offsets", false, "the stop output will contain the 'offsets' information as well")
+	rootSub.Flags().DurationVar(&statsEvery, "stats", 0, "--stats=2s if passed the client will accept stats records every 'stats' duration, therefore they will be visible to the output")
 	canPrintJSON(rootSub)
 
 	rootSub.AddCommand(
@@ -231,7 +231,7 @@ func newCancelQueryCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int64Var(&id, "id", 0, "--id=42")
+	cmd.Flags().Int64Var(&id, "id", 0, "--id=42 cancel by id")
 
 	return cmd
 }

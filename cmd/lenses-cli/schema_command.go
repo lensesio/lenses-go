@@ -43,7 +43,7 @@ func newSchemasGroupCommand() *cobra.Command {
 
 	canPrintJSON(root)
 
-	root.Flags().BoolVar(&noJSON, "no-json", false, "no-json to disable json printing, prints only the names as a list of strings")
+	root.Flags().BoolVar(&noJSON, "no-json", false, "disable json printing, prints only the names as a list of strings")
 	root.AddCommand(newGlobalCompatibilityLevelGroupCommand())
 
 	return root

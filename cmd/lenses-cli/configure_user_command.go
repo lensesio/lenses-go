@@ -117,7 +117,7 @@ func newConfigureCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&reset, "reset", false, "--reset to reset the previous configuration, normally configure will exit if valid configuration is already saved. Please make sure you want to reset first")
+	cmd.Flags().BoolVar(&reset, "reset", false, "reset the current configuration")
 	return cmd
 }
 
