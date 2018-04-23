@@ -3,8 +3,6 @@ os:
   - linux
   - osx
 go:
-  - "go1.8"
-  - "go1.9"
   - "go1.10"
 go_import_path: github.com/landoop/lenses-go
 # we disable test caching via GOCACHE=off
