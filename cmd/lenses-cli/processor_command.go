@@ -80,7 +80,7 @@ func newGetProcessorsCommand() *cobra.Command {
 func newProcessorGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "processor",
-		Short:            "Work with a particular processor based on the processor id, pause, resume, update runners, delete a processor or create an entirely new processor",
+		Short:            "Work with a particular processor based on the processor id; pause, resume, update runners, delete or create a new processor",
 		Example:          exampleString(`processor pause --id="existing_processor_id" or processor create --name="processor_name" --sql="" --runners=1 --clusterName="" --namespace="" pipeline=""`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
