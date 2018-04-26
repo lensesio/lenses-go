@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/landoop/lenses-go"
+	"github.com/spf13/pflag"
 
 	"github.com/spf13/cobra"
 )
@@ -49,12 +50,12 @@ func newACLGroupCommand() *cobra.Command {
 	childrenFlagSet.StringVar(&acl.Host, "acl-host", "", "the acl host, can be empty to apply to all")
 	childrenFlagSet.Var(newVarFlag(&acl.Operation), "operation", "the allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
 
-	root.AddCommand(newCreateOrUpdateACLCommand(&acl, childrenRequiredFlags))
-	root.AddCommand(newDeleteACLCommand(&acl, childrenRequiredFlags))
+	root.AddCommand(newCreateOrUpdateACLCommand(&acl, childrenFlagSet, childrenRequiredFlags))
+	root.AddCommand(newDeleteACLCommand(&acl, childrenFlagSet, childrenRequiredFlags))
 	return root
 }
 
-func newCreateOrUpdateACLCommand(acl *lenses.ACL, requiredFlags func() flags) *cobra.Command {
+func newCreateOrUpdateACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet, requiredFlags func() flags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"}, // acl create or acl update or acl set.
@@ -70,6 +71,8 @@ func newCreateOrUpdateACLCommand(acl *lenses.ACL, requiredFlags func() flags) *c
 		},
 	}
 
+	cmd.Flags().AddFlagSet(childrenFlagSet)
+
 	canBeSilent(cmd)
 	shouldTryLoadFile(cmd, acl)
 	shouldCheckRequiredFlags(cmd, requiredFlags)
@@ -77,7 +80,7 @@ func newCreateOrUpdateACLCommand(acl *lenses.ACL, requiredFlags func() flags) *c
 	return cmd
 }
 
-func newDeleteACLCommand(acl *lenses.ACL, requiredFlags func() flags) *cobra.Command {
+func newDeleteACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet, requiredFlags func() flags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete an Apache Kafka Access Control List",
@@ -92,6 +95,8 @@ func newDeleteACLCommand(acl *lenses.ACL, requiredFlags func() flags) *cobra.Com
 			return echo(cmd, "ACL deleted")
 		},
 	}
+
+	cmd.Flags().AddFlagSet(childrenFlagSet)
 
 	canBeSilent(cmd)
 	shouldTryLoadFile(cmd, acl)
