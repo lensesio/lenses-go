@@ -129,20 +129,14 @@ type UnmarshalFunc func(in []byte, outPtr interface{}) error
 
 // ReadConfiguration reads and decodes Configuration from an io.Reader based on a custom unmarshaler.
 // This can be useful to read configuration via network or files (see `ReadConfigurationFromFile`).
-// Retruns a non-nil error and an empty `Configuration` on any unmarshaler's errors.
-func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc) (Configuration, error) {
-	c := Configuration{}
-
+// Sets the `outPtr`. Retruns a non-nil error on any unmarshaler's errors.
+func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc, outPtr interface{}) error {
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
-		return c, err
+		return err
 	}
 
-	if err := unmarshaler(data, &c); err != nil {
-		return c, err
-	}
-
-	return c, nil
+	return unmarshaler(data, outPtr)
 }
 
 // ReadConfigurationFromFile reads and decodes Configuration from a file based on a custom unmarshaler,
@@ -152,25 +146,23 @@ func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc) (Configuration, e
 // your decoder's properties.
 //
 // Accepts the absolute or the relative path of the configuration file.
-// Retruns a non-nil error and an empty `Configuration` if parsing or decoding the file failed or file doesn't exist.
-func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc) (Configuration, error) {
-	var c Configuration
-
+// Sets the `outPtr`. Retruns a non-nil error if parsing or decoding the file failed or file doesn't exist.
+func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc, outPtr interface{}) error {
 	// get the abs
 	// which will try to find the 'filename' from current working dir as well.
 	absPath, err := filepath.Abs(filename)
 	if err != nil {
-		return c, err
+		return err
 	}
 
 	f, err := os.Open(absPath)
 	if err != nil {
-		return c, err
+		return err
 	}
 
-	c, err = ReadConfiguration(f, unmarshaler)
+	err = ReadConfiguration(f, unmarshaler, outPtr)
 	f.Close()
-	return c, err
+	return err
 }
 
 // TryReadConfigurationFromFile will try to read a specific file and unmarshal to `Configuration`.
@@ -178,7 +170,7 @@ func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc) (Conf
 // 1. JSON
 // 2. YAML
 // 3. TOML
-func TryReadConfigurationFromFile(filename string) (c Configuration, err error) {
+func TryReadConfigurationFromFile(filename string, outPtr interface{}) (err error) {
 	tries := []UnmarshalFunc{
 		json.Unmarshal,
 		yaml.Unmarshal,
@@ -186,13 +178,13 @@ func TryReadConfigurationFromFile(filename string) (c Configuration, err error) 
 	}
 
 	for _, unmarshaler := range tries {
-		c, err = ReadConfigurationFromFile(filename, unmarshaler)
+		err = ReadConfigurationFromFile(filename, unmarshaler, outPtr)
 		if err == nil { // if decoded without any issues, then return that as soon as possible.
 			return
 		}
 	}
 
-	return c, fmt.Errorf("configuration file '%s' is not formatted to a compatible document: JSON, YAML, TOML", filename)
+	return fmt.Errorf("configuration file '%s' is not formatted to a compatible document: JSON, YAML, TOML", filename)
 }
 
 var configurationPossibleFilenames = []string{
@@ -201,16 +193,16 @@ var configurationPossibleFilenames = []string{
 	"lenses.yml", "lenses.yaml", "lenses.json", "lenses.tml",
 	".lenses.yml", ".lenses.yaml", ".lenses.json", ".lenses.tml"} // no patterns in order to be easier to remove or modify these.
 
-func lookupConfiguration(dir string) (Configuration, bool) {
+func lookupConfiguration(dir string, outPtr interface{}) bool {
 	for _, filename := range configurationPossibleFilenames {
 		fullpath := filepath.Join(dir, filename)
-		c, err := TryReadConfigurationFromFile(fullpath)
+		err := TryReadConfigurationFromFile(fullpath, outPtr)
 		if err == nil {
-			return c, true
+			return true
 		}
 	}
 
-	return Configuration{}, false
+	return false
 }
 
 // HomeDir returns the home directory for the current user on this specific host machine.
@@ -247,36 +239,36 @@ var DefaultConfigurationHomeDir = filepath.Join(HomeDir(), ".lenses")
 // from the current user's home directory/.lenses, the lookup is based on
 // the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromHome() (Configuration, bool) {
-	return lookupConfiguration(DefaultConfigurationHomeDir)
+func TryReadConfigurationFromHome(outPtr interface{}) bool {
+	return lookupConfiguration(DefaultConfigurationHomeDir, outPtr)
 }
 
 // TryReadConfigurationFromExecutable will try to read the `Configuration`
 // from the (client's caller's) executable path that started the current process.
 // The lookup is based on the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromExecutable() (Configuration, bool) {
+func TryReadConfigurationFromExecutable(outPtr interface{}) bool {
 	executablePath, err := os.Executable()
 	if err != nil {
-		return Configuration{}, false
+		return false
 	}
 
 	executablePath = filepath.Dir(executablePath)
 
-	return lookupConfiguration(executablePath)
+	return lookupConfiguration(executablePath, outPtr)
 }
 
 // TryReadConfigurationFromCurrentWorkingDir will try to read the `Configuration`
 // from the current working directory, note that it may differs from the executable path.
 // The lookup is based on the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromCurrentWorkingDir() (Configuration, bool) {
+func TryReadConfigurationFromCurrentWorkingDir(outPtr interface{}) bool {
 	workingDir, err := os.Getwd()
 	if err != nil {
-		return Configuration{}, false
+		return false
 	}
 
-	return lookupConfiguration(workingDir)
+	return lookupConfiguration(workingDir, outPtr)
 }
 
 // ReadConfigurationFromJSON reads and decodes Configuration from a json file, i.e `configuration.json`.
@@ -284,13 +276,8 @@ func TryReadConfigurationFromCurrentWorkingDir() (Configuration, bool) {
 // Accepts the absolute or the relative path of the configuration file.
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
-func ReadConfigurationFromJSON(filename string) Configuration {
-	c, err := ReadConfigurationFromFile(filename, json.Unmarshal)
-	if err != nil {
-		panic(err)
-	}
-
-	return c
+func ReadConfigurationFromJSON(filename string, outPtr interface{}) error {
+	return ReadConfigurationFromFile(filename, json.Unmarshal, outPtr)
 }
 
 // ReadConfigurationFromYAML reads and decodes Configuration from a yaml file, i.e `configuration.yml`.
@@ -298,13 +285,8 @@ func ReadConfigurationFromJSON(filename string) Configuration {
 // Accepts the absolute or the relative path of the configuration file.
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
-func ReadConfigurationFromYAML(filename string) Configuration {
-	c, err := ReadConfigurationFromFile(filename, yaml.Unmarshal)
-	if err != nil {
-		panic(err)
-	}
-
-	return c
+func ReadConfigurationFromYAML(filename string, outPtr interface{}) error {
+	return ReadConfigurationFromFile(filename, yaml.Unmarshal, outPtr)
 }
 
 // ReadConfigurationFromTOML reads and decodess Configuration from a toml-compatible document file.
@@ -315,11 +297,6 @@ func ReadConfigurationFromYAML(filename string) Configuration {
 // Accepts the absolute or the relative path of the configuration file.
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
-func ReadConfigurationFromTOML(filename string) Configuration {
-	c, err := ReadConfigurationFromFile(filename, toml.Unmarshal)
-	if err != nil {
-		panic(err)
-	}
-
-	return c
+func ReadConfigurationFromTOML(filename string, outPtr interface{}) error {
+	return ReadConfigurationFromFile(filename, toml.Unmarshal, outPtr)
 }

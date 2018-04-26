@@ -35,14 +35,19 @@ func makeTestFile(t *testing.T, filename string) (*os.File, func()) {
 	return f, teardown
 }
 
-func testConfigurationFile(t *testing.T, filename, contents string, reader func(string) lenses.Configuration) {
+func testConfigurationFile(t *testing.T, filename, contents string, reader func(string, interface{}) error) {
 	t.Parallel()
 	f, teardown := makeTestFile(t, filename)
 	defer teardown()
 
 	f.WriteString(contents)
 
-	if got := reader(f.Name()); !reflect.DeepEqual(got, expectedConfiguration) {
+	var got lenses.Configuration
+	if err := reader(f.Name(), &got); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(got, expectedConfiguration) {
 		// Output format:
 		/*
 			configuration_test.go:51: error reading configuration from file: 'C:\Users\kataras\AppData\Local\Temp\configuration.json373943803'

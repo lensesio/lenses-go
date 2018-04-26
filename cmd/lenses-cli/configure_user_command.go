@@ -232,7 +232,7 @@ func newLoginCommand() *cobra.Command {
 		TraverseChildren: true,
 		Hidden:           true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := setupClient(); err != nil {
+			if err := setupClient(config.Configuration); err != nil {
 				return err
 			}
 

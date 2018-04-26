@@ -25,9 +25,36 @@ var (
 	buildTime = ""
 )
 
+// configuration is the CLI's configuration, the lenses client configuration is embedded here as well.
+// An optional `Contexts` map of string and lenses client configuration values can be filled to map different environments.
+type configuration struct {
+	lenses.Configuration `yaml:",inline"`
+	Contexts             map[string]lenses.Configuration `yaml:"Contexts,omitempty"`
+}
+
+func prepareStoredPassword(cfg *lenses.Configuration) {
+	p, _ := decryptString(cfg.Password, cfg.Host)
+	cfg.Password = p
+}
+
+func (c *configuration) Fill(other configuration) bool {
+	if len(other.Contexts) > 0 {
+		if c.Contexts == nil {
+			c.Contexts = make(map[string]lenses.Configuration, len(other.Contexts))
+		}
+		for k, v := range other.Contexts {
+			prepareStoredPassword(&v)
+			c.Contexts[k] = v
+		}
+	}
+
+	prepareStoredPassword(&other.Configuration)
+	return c.Configuration.Fill(other.Configuration)
+}
+
 var (
 	configFilepath string
-	config         lenses.Configuration
+	config         configuration
 	client         *lenses.Client
 )
 
@@ -41,35 +68,32 @@ func tryLoadConfigurationFromFile(filename string) error {
 	if filename == "" {
 		return nil
 	}
-
-	cfg, err := lenses.TryReadConfigurationFromFile(filename)
-	if err != nil {
+	var cfg configuration
+	if err := lenses.TryReadConfigurationFromFile(filename, &cfg); err != nil {
 		// here we could check for flags but we don't, if --config given then read from it,
 		// otherwise fail in order to notify the user about that behavior.
 		return err
 	}
-	fillConfig(cfg)
+	config.Fill(cfg)
 	return nil
 }
 
-func fillConfig(cfg lenses.Configuration) {
-	p, _ := decryptString(cfg.Password, cfg.Host)
-	cfg.Password = p
-	config.Fill(cfg)
-}
-
 func tryLoadConfigurationFromCommonDirectories() {
+	var cfg configuration
+
+	var ok bool
 	// search from the current working directory,
 	// if not found then the executable's path
 	// and if not found then try lookup from the home dir.
 	// working directory and executable paths have priority over the home directory,
 	// in order to make folder-based projects work as expected.
-	if cfg, ok := lenses.TryReadConfigurationFromCurrentWorkingDir(); ok {
-		fillConfig(cfg)
-	} else if cfg, ok := lenses.TryReadConfigurationFromExecutable(); ok {
-		fillConfig(cfg)
-	} else if cfg, ok = lenses.TryReadConfigurationFromHome(); ok {
-		fillConfig(cfg)
+	if ok = lenses.TryReadConfigurationFromCurrentWorkingDir(&cfg); ok {
+	} else if ok = lenses.TryReadConfigurationFromExecutable(&cfg); ok {
+	} else if ok = lenses.TryReadConfigurationFromHome(&cfg); ok {
+	}
+
+	if ok {
+		config.Fill(cfg)
 	}
 }
 
@@ -128,6 +152,9 @@ var rootCmd = &cobra.Command{
 		// Note that the `lenses.OpenConnection` will give errors if credentials missing
 		// but let's catch them as soon as possible.
 		if !config.IsValid() {
+			if config.Debug {
+				fmt.Fprintf(cmd.OutOrStdout(), "%#+v\n", config)
+			}
 			return fmt.Errorf("cannot retrieve credentials, please setup using the '%s' command first", "configure")
 		}
 
@@ -140,12 +167,12 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		return setupClient()
+		return setupClient(config.Configuration)
 	},
 }
 
-func setupClient() (err error) {
-	client, err = lenses.OpenConnection(config)
+func setupClient(cfg lenses.Configuration) (err error) {
+	client, err = lenses.OpenConnection(cfg)
 	if err == nil {
 		config.Token = client.GetAccessToken()
 	}
