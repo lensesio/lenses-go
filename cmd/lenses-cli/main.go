@@ -37,6 +37,19 @@ func prepareStoredPassword(cfg *lenses.Configuration) {
 	cfg.Password = p
 }
 
+// IsValid overrides and wraps the lenses.Configuration#IsValid.
+func (c *configuration) IsValid() bool {
+	// for a whole configuration to be valid we need to check each contexts' configs as well.
+	for _, cfg := range c.Contexts {
+		if !cfg.IsValid() {
+			return false
+		}
+	}
+
+	return c.Configuration.IsValid()
+}
+
+// Fill overrides and wraps the lenses.Configuration#Fill.
 func (c *configuration) Fill(other configuration) bool {
 	if len(other.Contexts) > 0 {
 		if c.Contexts == nil {
