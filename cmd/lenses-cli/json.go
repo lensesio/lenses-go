@@ -22,7 +22,7 @@ var (
 	// set that via command flag binding.
 	jmespathQuery string
 
-	flagsetJSON = newFlagGroup("flagset.json", func(flags *pflag.FlagSet) {
+	jsonFlagSet = newFlagGroup("flagset.json", func(flags *pflag.FlagSet) {
 		flags.BoolVar(&noPretty, "no-pretty", noPretty, "disable the pretty format for JSON output of commands (default false).")
 		flags.StringVarP(&jmespathQuery, "query", "q", "", "a jmespath query expression. This allows for querying the JSON output of commands")
 	})
@@ -35,18 +35,23 @@ func newFlagGroup(name string, register func(flags *pflag.FlagSet)) *pflag.FlagS
 }
 
 func canPrintJSON(cmd *cobra.Command) {
-	cmd.Flags().AddFlagSet(flagsetJSON)
+	cmd.Flags().AddFlagSet(jsonFlagSet)
 }
 
-func shouldReturnJSON(cmd *cobra.Command, fn func() (interface{}, error)) {
+func shouldPrintJSON(cmd *cobra.Command, fn func() (interface{}, error)) *cobra.Command {
 	canPrintJSON(cmd)
 
-	cmd.RunE = func(c *cobra.Command, args []string) error {
+	cmd.RunE = returnJSON(fn)
+	return cmd
+}
+
+func returnJSON(fn func() (interface{}, error)) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
 		printValues, err := fn()
 		if err != nil {
 			return err
 		}
-		return printJSON(c, printValues)
+		return printJSON(cmd, printValues)
 	}
 }
 

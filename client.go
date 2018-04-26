@@ -1272,7 +1272,7 @@ type ConnectorTaskReadOnly struct {
 type Connector struct {
 	// https://docs.confluent.io/current/connect/restapi.html#get--connectors-(string-name)
 
-	ClusterAlias string `json:"clusterAlias,omitempty"` // internal use only, not set by response.
+	ClusterName string `json:"clusterName,omitempty"` // internal use only, not set by response.
 	// Name of the created (or received) connector.
 	Name string `json:"name"`
 	// Config parameters for the connector
@@ -1287,15 +1287,15 @@ const connectorsPath = "/api/proxy-connect/%s/connectors"
 //
 // Visit http://lenses.stream/developers-guide/rest-api/index.html#connector-api
 // and https://docs.confluent.io/current/connect/restapi.html for a deeper understanding.
-func (c *Client) GetConnectors(clusterAlias string) (names []string, err error) {
-	if clusterAlias == "" {
-		err = errRequired("clusterAlias")
+func (c *Client) GetConnectors(clusterName string) (names []string, err error) {
+	if clusterName == "" {
+		err = errRequired("clusterName")
 		return
 	}
 
 	// # List active connectors
-	// GET /api/proxy-connect/(string: clusterAlias)/connectors
-	path := fmt.Sprintf(connectorsPath, clusterAlias)
+	// GET /api/proxy-connect/(string: clusterName)/connectors
+	path := fmt.Sprintf(connectorsPath, clusterName)
 	resp, respErr := c.do(http.MethodGet, path, contentTypeJSON, nil)
 	if respErr != nil {
 		err = respErr
@@ -1308,9 +1308,9 @@ func (c *Client) GetConnectors(clusterAlias string) (names []string, err error) 
 
 // CreateUpdateConnectorPayload can be used to hold the data for creating or updating a connector.
 type CreateUpdateConnectorPayload struct {
-	ClusterAlias string          `yaml:"ClusterAlias"`
-	Name         string          `yaml:"Name"`
-	Config       ConnectorConfig `yaml:"Config"`
+	ClusterName string          `yaml:"ClusterName"`
+	Name        string          `yaml:"Name"`
+	Config      ConnectorConfig `yaml:"Config"`
 }
 
 // ApplyAndValidateName applies some rules to make sure that the connector's data are setup correctly.
@@ -1355,9 +1355,9 @@ func (c *CreateUpdateConnectorPayload) ApplyAndValidateName() error {
 // Read more at: https://docs.confluent.io/current/connect/restapi.html#post--connectors
 //
 // Look `UpdateConnector` too.
-func (c *Client) CreateConnector(clusterAlias, name string, config ConnectorConfig) (connector Connector, err error) {
-	if clusterAlias == "" {
-		err = errRequired("clusterAlias")
+func (c *Client) CreateConnector(clusterName, name string, config ConnectorConfig) (connector Connector, err error) {
+	if clusterName == "" {
+		err = errRequired("clusterName")
 		return
 	}
 
@@ -1375,8 +1375,8 @@ func (c *Client) CreateConnector(clusterAlias, name string, config ConnectorConf
 	}
 
 	// # Create new connector
-	// POST /api/proxy-connect/(string: clusterAlias)/connectors [CONNECTOR_CONFIG]
-	path := fmt.Sprintf(connectorsPath, clusterAlias)
+	// POST /api/proxy-connect/(string: clusterName)/connectors [CONNECTOR_CONFIG]
+	path := fmt.Sprintf(connectorsPath, clusterName)
 	resp, respErr := c.do(http.MethodPost, path, contentTypeJSON, send)
 	if respErr != nil {
 		err = respErr
@@ -1392,9 +1392,9 @@ func (c *Client) CreateConnector(clusterAlias, name string, config ConnectorConf
 //
 // It returns information about the connector after the change has been made
 // and an indicator if that connector was created or just configuration update.
-func (c *Client) UpdateConnector(clusterAlias, name string, config ConnectorConfig) (connector Connector, err error) {
-	if clusterAlias == "" {
-		err = errRequired("clusterAlias")
+func (c *Client) UpdateConnector(clusterName, name string, config ConnectorConfig) (connector Connector, err error) {
+	if clusterName == "" {
+		err = errRequired("clusterName")
 		return
 	}
 
@@ -1410,8 +1410,8 @@ func (c *Client) UpdateConnector(clusterAlias, name string, config ConnectorConf
 	}
 
 	// # Set connector config
-	// PUT /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)/config
-	path := fmt.Sprintf(connectorPath+"/config", clusterAlias, name)
+	// PUT /api/proxy-connect/(string: clusterName)/connectors/(string: name)/config
+	path := fmt.Sprintf(connectorPath+"/config", clusterName, name)
 	resp, respErr := c.do(http.MethodPut, path, contentTypeJSON, send)
 	if respErr != nil {
 		err = respErr
@@ -1428,9 +1428,9 @@ const connectorPath = connectorsPath + "/%s"
 
 // GetConnector returns the information about the connector.
 // See `Connector` type and read more at: https://docs.confluent.io/current/connect/restapi.html#get--connectors-(string-name)
-func (c *Client) GetConnector(clusterAlias, name string) (connector Connector, err error) {
-	if clusterAlias == "" {
-		err = errRequired("clusterAlias")
+func (c *Client) GetConnector(clusterName, name string) (connector Connector, err error) {
+	if clusterName == "" {
+		err = errRequired("clusterName")
 		return
 	}
 
@@ -1440,8 +1440,8 @@ func (c *Client) GetConnector(clusterAlias, name string) (connector Connector, e
 	}
 
 	// # Get information about a specific connector
-	// GET /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)
-	path := fmt.Sprintf(connectorPath, clusterAlias, name)
+	// GET /api/proxy-connect/(string: clusterName)/connectors/(string: name)
+	path := fmt.Sprintf(connectorPath, clusterName, name)
 	resp, respErr := c.do(http.MethodGet, path, contentTypeJSON, nil)
 	if respErr != nil {
 		err = respErr
@@ -1449,14 +1449,14 @@ func (c *Client) GetConnector(clusterAlias, name string) (connector Connector, e
 	}
 
 	err = c.readJSON(resp, &connector)
-	connector.ClusterAlias = clusterAlias
+	connector.ClusterName = clusterName
 	return
 }
 
 // GetConnectorConfig returns the configuration for the connector.
-func (c *Client) GetConnectorConfig(clusterAlias, name string) (cfg ConnectorConfig, err error) {
-	if clusterAlias == "" {
-		err = errRequired("clusterAlias")
+func (c *Client) GetConnectorConfig(clusterName, name string) (cfg ConnectorConfig, err error) {
+	if clusterName == "" {
+		err = errRequired("clusterName")
 		return
 	}
 
@@ -1466,8 +1466,8 @@ func (c *Client) GetConnectorConfig(clusterAlias, name string) (cfg ConnectorCon
 	}
 
 	// # Get connector config
-	// GET /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)/config
-	path := fmt.Sprintf(connectorPath, clusterAlias, name)
+	// GET /api/proxy-connect/(string: clusterName)/connectors/(string: name)/config
+	path := fmt.Sprintf(connectorPath, clusterName, name)
 	resp, respErr := c.do(http.MethodGet, path, contentTypeJSON, nil)
 	if respErr != nil {
 		err = respErr
@@ -1523,9 +1523,9 @@ type (
 // GetConnectorStatus returns the current status of the connector, including whether it is running,
 // failed or paused, which worker it is assigned to, error information if it has failed,
 // and the state of all its tasks.
-func (c *Client) GetConnectorStatus(clusterAlias, name string) (cs ConnectorStatus, err error) {
-	if clusterAlias == "" {
-		err = errRequired("clusterAlias")
+func (c *Client) GetConnectorStatus(clusterName, name string) (cs ConnectorStatus, err error) {
+	if clusterName == "" {
+		err = errRequired("clusterName")
 		return
 	}
 
@@ -1535,8 +1535,8 @@ func (c *Client) GetConnectorStatus(clusterAlias, name string) (cs ConnectorStat
 	}
 
 	// # Get connector status
-	// GET /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)/status
-	path := fmt.Sprintf(connectorPath+"/status", clusterAlias, name)
+	// GET /api/proxy-connect/(string: clusterName)/connectors/(string: name)/status
+	path := fmt.Sprintf(connectorPath+"/status", clusterName, name)
 	resp, respErr := c.do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
@@ -1549,9 +1549,9 @@ func (c *Client) GetConnectorStatus(clusterAlias, name string) (cs ConnectorStat
 
 // PauseConnector pauses the connector and its tasks, which stops message processing until the connector is resumed.
 // This call asynchronous and the tasks will not transition to PAUSED state at the same time.
-func (c *Client) PauseConnector(clusterAlias, name string) error {
-	if clusterAlias == "" {
-		return errRequired("clusterAlias")
+func (c *Client) PauseConnector(clusterName, name string) error {
+	if clusterName == "" {
+		return errRequired("clusterName")
 	}
 
 	if name == "" {
@@ -1559,8 +1559,8 @@ func (c *Client) PauseConnector(clusterAlias, name string) error {
 	}
 
 	// # Pause a connector
-	// PUT /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)/pause
-	path := fmt.Sprintf(connectorPath+"/pause", clusterAlias, name)
+	// PUT /api/proxy-connect/(string: clusterName)/connectors/(string: name)/pause
+	path := fmt.Sprintf(connectorPath+"/pause", clusterName, name)
 	resp, err := c.do(http.MethodPut, path, "", nil) // the success status is 202 Accepted.
 	if err != nil {
 		return err
@@ -1571,9 +1571,9 @@ func (c *Client) PauseConnector(clusterAlias, name string) error {
 
 // ResumeConnector resumes a paused connector or do nothing if the connector is not paused.
 // This call asynchronous and the tasks will not transition to RUNNING state at the same time.
-func (c *Client) ResumeConnector(clusterAlias, name string) error {
-	if clusterAlias == "" {
-		return errRequired("clusterAlias")
+func (c *Client) ResumeConnector(clusterName, name string) error {
+	if clusterName == "" {
+		return errRequired("clusterName")
 	}
 
 	if name == "" {
@@ -1581,8 +1581,8 @@ func (c *Client) ResumeConnector(clusterAlias, name string) error {
 	}
 
 	// # Resume a paused connector
-	// PUT /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)/resume
-	path := fmt.Sprintf(connectorPath+"/resume", clusterAlias, name)
+	// PUT /api/proxy-connect/(string: clusterName)/connectors/(string: name)/resume
+	path := fmt.Sprintf(connectorPath+"/resume", clusterName, name)
 	resp, err := c.do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
@@ -1593,9 +1593,9 @@ func (c *Client) ResumeConnector(clusterAlias, name string) error {
 
 // RestartConnector restarts the connector and its tasks.
 // It returns a 409 (Conflict) status code error if rebalance is in process.
-func (c *Client) RestartConnector(clusterAlias, name string) error {
-	if clusterAlias == "" {
-		return errRequired("clusterAlias")
+func (c *Client) RestartConnector(clusterName, name string) error {
+	if clusterName == "" {
+		return errRequired("clusterName")
 	}
 
 	if name == "" {
@@ -1603,8 +1603,8 @@ func (c *Client) RestartConnector(clusterAlias, name string) error {
 	}
 
 	// # Restart a connector
-	// POST /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)/restart
-	path := fmt.Sprintf(connectorPath+"/restart", clusterAlias, name)
+	// POST /api/proxy-connect/(string: clusterName)/connectors/(string: name)/restart
+	path := fmt.Sprintf(connectorPath+"/restart", clusterName, name)
 	resp, err := c.do(http.MethodPost, path, "", nil)
 	if err != nil {
 		return err
@@ -1615,9 +1615,9 @@ func (c *Client) RestartConnector(clusterAlias, name string) error {
 
 // DeleteConnector deletes a connector, halting all tasks and deleting its configuration.
 // It return a 409 (Conflict) status code error if rebalance is in process.
-func (c *Client) DeleteConnector(clusterAlias, name string) error {
-	if clusterAlias == "" {
-		return errRequired("clusterAlias")
+func (c *Client) DeleteConnector(clusterName, name string) error {
+	if clusterName == "" {
+		return errRequired("clusterName")
 	}
 
 	if name == "" {
@@ -1625,8 +1625,8 @@ func (c *Client) DeleteConnector(clusterAlias, name string) error {
 	}
 
 	// # Remove a running connector
-	// DELETE /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)
-	path := fmt.Sprintf(connectorPath, clusterAlias, name)
+	// DELETE /api/proxy-connect/(string: clusterName)/connectors/(string: name)
+	path := fmt.Sprintf(connectorPath, clusterName, name)
 	resp, err := c.do(http.MethodDelete, path, "", nil)
 	if err != nil {
 		return err
@@ -1642,9 +1642,9 @@ const (
 
 // GetConnectorTasks returns a list of tasks currently running for the connector.
 // Read more at: https://docs.confluent.io/current/connect/restapi.html#get--connectors-(string-name)-tasks.
-func (c *Client) GetConnectorTasks(clusterAlias, name string) (m []map[string]interface{}, err error) {
-	if clusterAlias == "" {
-		return nil, errRequired("clusterAlias")
+func (c *Client) GetConnectorTasks(clusterName, name string) (m []map[string]interface{}, err error) {
+	if clusterName == "" {
+		return nil, errRequired("clusterName")
 	}
 
 	if name == "" {
@@ -1652,8 +1652,8 @@ func (c *Client) GetConnectorTasks(clusterAlias, name string) (m []map[string]in
 	}
 
 	// # Get list of connector tasks
-	// GET /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)/tasks
-	path := fmt.Sprintf(tasksPath, clusterAlias, name)
+	// GET /api/proxy-connect/(string: clusterName)/connectors/(string: name)/tasks
+	path := fmt.Sprintf(tasksPath, clusterName, name)
 	resp, respErr := c.do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
@@ -1665,9 +1665,9 @@ func (c *Client) GetConnectorTasks(clusterAlias, name string) (m []map[string]in
 }
 
 // GetConnectorTaskStatus returns a task’s status.
-func (c *Client) GetConnectorTaskStatus(clusterAlias, name string, taskID int) (cst ConnectorStatusTask, err error) {
-	if clusterAlias == "" {
-		err = errRequired("clusterAlias")
+func (c *Client) GetConnectorTaskStatus(clusterName, name string, taskID int) (cst ConnectorStatusTask, err error) {
+	if clusterName == "" {
+		err = errRequired("clusterName")
 		return
 	}
 
@@ -1678,7 +1678,7 @@ func (c *Client) GetConnectorTaskStatus(clusterAlias, name string, taskID int) (
 
 	// # Get current status of a task
 	// GET /connectors/(string: name)/tasks/(int: taskid)/status in confluent
-	path := fmt.Sprintf(taskPath+"/status", clusterAlias, name, taskID)
+	path := fmt.Sprintf(taskPath+"/status", clusterName, name, taskID)
 	resp, respErr := c.do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
@@ -1690,9 +1690,9 @@ func (c *Client) GetConnectorTaskStatus(clusterAlias, name string, taskID int) (
 }
 
 // RestartConnectorTask restarts an individual task.
-func (c *Client) RestartConnectorTask(clusterAlias, name string, taskID int) error {
-	if clusterAlias == "" {
-		return errRequired("clusterAlias")
+func (c *Client) RestartConnectorTask(clusterName, name string, taskID int) error {
+	if clusterName == "" {
+		return errRequired("clusterName")
 	}
 
 	if name == "" {
@@ -1700,8 +1700,8 @@ func (c *Client) RestartConnectorTask(clusterAlias, name string, taskID int) err
 	}
 
 	// # Restart a connector task
-	// POST /api/proxy-connect/(string: clusterAlias)/connectors/(string: name)/tasks/(int: taskid)/restart
-	path := fmt.Sprintf(taskPath+"/restart", clusterAlias, name, taskID)
+	// POST /api/proxy-connect/(string: clusterName)/connectors/(string: name)/tasks/(int: taskid)/restart
+	path := fmt.Sprintf(taskPath+"/restart", clusterName, name, taskID)
 	resp, err := c.do(http.MethodPost, path, "", nil)
 	if err != nil {
 		return err
@@ -1726,14 +1726,14 @@ const pluginsPath = "/api/proxy-connect/%s/connector-plugins"
 // Note that the API only checks for connectors on the worker that handles the request,
 // which means it is possible to see inconsistent results,
 // especially during a rolling upgrade if you add new connector jars.
-func (c *Client) GetConnectorPlugins(clusterAlias string) (cp []ConnectorPlugin, err error) {
-	if clusterAlias == "" {
-		return nil, errRequired("clusterAlias")
+func (c *Client) GetConnectorPlugins(clusterName string) (cp []ConnectorPlugin, err error) {
+	if clusterName == "" {
+		return nil, errRequired("clusterName")
 	}
 
 	// # List available connector plugins
-	// GET /api/proxy-connect/(string: clusterAlias)/connector-plugins
-	path := fmt.Sprintf(pluginsPath, clusterAlias)
+	// GET /api/proxy-connect/(string: clusterName)/connector-plugins
+	path := fmt.Sprintf(pluginsPath, clusterName)
 	resp, respErr := c.do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr

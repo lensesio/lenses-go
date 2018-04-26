@@ -252,11 +252,11 @@ func newConnectorCreateCommand() *cobra.Command {
 				return err
 			}
 
-			if err := checkRequiredFlags(cmd, flags{"clusterName": connector.ClusterAlias, "name": connector.Name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": connector.ClusterName, "name": connector.Name}); err != nil {
 				return err
 			}
 
-			_, err := client.CreateConnector(connector.ClusterAlias, connector.Name, connector.Config)
+			_, err := client.CreateConnector(connector.ClusterName, connector.Name, connector.Config)
 			if err != nil {
 				return err
 			}
@@ -269,7 +269,7 @@ func newConnectorCreateCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&connector.ClusterAlias, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
 	canBeSilent(cmd)
@@ -296,14 +296,14 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 				return err
 			}
 
-			if err := checkRequiredFlags(cmd, flags{"clusterName": connector.ClusterAlias, "name": connector.Name}); err != nil {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": connector.ClusterName, "name": connector.Name}); err != nil {
 				return err
 			}
 
 			// for any case.
-			existingConnector, err := client.GetConnector(connector.ClusterAlias, connector.Name)
+			existingConnector, err := client.GetConnector(connector.ClusterName, connector.Name)
 			if err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("connector '%s:%s' does not exist", connector.ClusterAlias, connector.Name)
+				errResourceNotFoundMessage = fmt.Sprintf("connector '%s:%s' does not exist", connector.ClusterName, connector.Name)
 				return err
 			}
 
@@ -313,7 +313,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 				}
 			}
 
-			updatedConnector, err := client.UpdateConnector(connector.ClusterAlias, connector.Name, connector.Config)
+			updatedConnector, err := client.UpdateConnector(connector.ClusterName, connector.Name, connector.Config)
 			if err != nil {
 				return err
 			}
@@ -328,7 +328,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 		},
 	}
 
-	cmd.Flags().StringVar(&connector.ClusterAlias, "clusterName", "", `--clusterName="cluster_name"`)
+	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
 

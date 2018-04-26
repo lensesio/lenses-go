@@ -19,7 +19,7 @@ func newGetACLsCommand() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	shouldReturnJSON(cmd, func() (interface{}, error) {
+	shouldPrintJSON(cmd, func() (interface{}, error) {
 		return client.GetACLs()
 	})
 
@@ -29,29 +29,32 @@ func newGetACLsCommand() *cobra.Command {
 func newACLGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "acl",
-		Short:            "Work with an Apache Kafka Access Control Lists",
-		Example:          exampleString("acl --help "),
+		Short:            "Work with Apache Kafka Access Control List",
+		Example:          exampleString("acl -h"),
 		TraverseChildren: true,
 	}
 
-	var acl lenses.ACL
+	var (
+		acl                   lenses.ACL
+		childrenRequiredFlags = func() flags {
+			return flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}
+		}
+	)
 
-	root.AddCommand(newCreateOrUpdateACLCommand(&acl))
-	root.AddCommand(newDeleteACLCommand(&acl))
+	childrenFlagSet := newFlagSet("acl")
+	childrenFlagSet.Var(newVarFlag(&acl.ResourceType), "resourceType", "the resource type: Topic, Cluster, Group or TRANSACTIONALID")
+	childrenFlagSet.StringVar(&acl.ResourceName, "resourceName", "", "the name of the resource")
+	childrenFlagSet.StringVar(&acl.Principal, "principal", "", "the name of the principal")
+	childrenFlagSet.Var(newVarFlag(&acl.PermissionType), "permissionType", "Allow or Deny")
+	childrenFlagSet.StringVar(&acl.Host, "acl-host", "", "the acl host, can be empty to apply to all")
+	childrenFlagSet.Var(newVarFlag(&acl.Operation), "operation", "the allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
 
-	return visitChildren(root, func(cmd *cobra.Command) {
-		cmd.Flags().Var(newVarFlag(&acl.ResourceType), "resourceType", "the resource type: Topic, Cluster, Group or TRANSACTIONALID")
-		cmd.Flags().StringVar(&acl.ResourceName, "resourceName", "", "the name of the resource")
-		cmd.Flags().StringVar(&acl.Principal, "principal", "", "the name of the principal")
-		cmd.Flags().Var(newVarFlag(&acl.PermissionType), "permissionType", "Allow or Deny")
-		cmd.Flags().StringVar(&acl.Host, "acl-host", "", "the acl host, can be empty to apply to all")
-		cmd.Flags().Var(newVarFlag(&acl.Operation), "operation", "the allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
-
-		shouldTryLoadFile(cmd, &acl)
-	})
+	root.AddCommand(newCreateOrUpdateACLCommand(&acl, childrenRequiredFlags))
+	root.AddCommand(newDeleteACLCommand(&acl, childrenRequiredFlags))
+	return root
 }
 
-func newCreateOrUpdateACLCommand(acl *lenses.ACL) *cobra.Command {
+func newCreateOrUpdateACLCommand(acl *lenses.ACL, requiredFlags func() flags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"}, // acl create or acl update or acl set.
@@ -59,10 +62,6 @@ func newCreateOrUpdateACLCommand(acl *lenses.ACL) *cobra.Command {
 		Example:          exampleString(`acl set --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`),
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
-				return err
-			}
-
 			if err := client.CreateOrUpdateACL(*acl); err != nil {
 				return err
 			}
@@ -72,21 +71,19 @@ func newCreateOrUpdateACLCommand(acl *lenses.ACL) *cobra.Command {
 	}
 
 	canBeSilent(cmd)
+	shouldTryLoadFile(cmd, acl)
+	shouldCheckRequiredFlags(cmd, requiredFlags)
 
 	return cmd
 }
 
-func newDeleteACLCommand(acl *lenses.ACL) *cobra.Command {
+func newDeleteACLCommand(acl *lenses.ACL, requiredFlags func() flags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete an Apache Kafka Access Control List",
 		Example:          exampleString(`acl delete ./acl_to_be_deleted.json or .yml or acl delete --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`),
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}); err != nil {
-				return err
-			}
-
 			if err := client.DeleteACL(*acl); err != nil {
 				errResourceNotFoundMessage = "unable to delete, acl does not exist"
 				return err
@@ -97,6 +94,8 @@ func newDeleteACLCommand(acl *lenses.ACL) *cobra.Command {
 	}
 
 	canBeSilent(cmd)
+	shouldTryLoadFile(cmd, acl)
+	shouldCheckRequiredFlags(cmd, requiredFlags)
 
 	return cmd
 }

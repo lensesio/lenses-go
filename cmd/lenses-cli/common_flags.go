@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 /*
@@ -100,6 +101,22 @@ func checkRequiredFlags(cmd *cobra.Command, nameValuePairs flags) (err error) {
 	}
 
 	return
+}
+
+func newFlagSet(name string) *pflag.FlagSet {
+	return pflag.NewFlagSet(name, pflag.ExitOnError)
+}
+
+func shouldCheckRequiredFlags(cmd *cobra.Command, nameValuesGetter func() flags) {
+	oldRunE := cmd.RunE
+
+	cmd.RunE = func(c *cobra.Command, args []string) error {
+		if err := checkRequiredFlags(c, nameValuesGetter()); err != nil {
+			return err
+		}
+
+		return oldRunE(c, args)
+	}
 }
 
 // This is a self-crafted hack to convert custom types to a compatible cobra flag.

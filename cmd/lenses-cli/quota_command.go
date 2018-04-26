@@ -19,17 +19,11 @@ func newGetQuotasCommand() *cobra.Command {
 		Short:            "List of all available quotas",
 		Example:          exampleString("quotas"),
 		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			quotas, err := client.GetQuotas()
-			if err != nil {
-				return err
-			}
-
-			return printJSON(cmd, quotas)
-		},
 	}
 
-	canPrintJSON(cmd)
+	shouldPrintJSON(cmd, func() (interface{}, error) {
+		return client.GetQuotas()
+	})
 
 	return cmd
 }
