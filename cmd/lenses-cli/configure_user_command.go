@@ -63,7 +63,7 @@ func newConfigureCommand() *cobra.Command {
 						Name: "host",
 						Prompt: &survey.Input{
 							Message: "Host",
-							Default: config.Host,
+							Default: currentConfig.Host,
 							Help:    "This is your lenses box host full address, including the schema and the port. The address that this Client will be connected to.",
 						},
 						Validate: survey.Required,
@@ -72,7 +72,7 @@ func newConfigureCommand() *cobra.Command {
 						Name: "user",
 						Prompt: &survey.Input{
 							Message: "User",
-							Default: config.User,
+							Default: currentConfig.User,
 							Help:    "This is the user credential used for gain access to the API.",
 						},
 						Validate: survey.Required,
@@ -89,12 +89,12 @@ func newConfigureCommand() *cobra.Command {
 						Name: "debug",
 						Prompt: &survey.Confirm{
 							Message: "Enable debug mode?",
-							Default: config.Debug,
+							Default: currentConfig.Debug,
 						},
 					},
 				}
 
-				if err := survey.Ask(qs, &config); err != nil {
+				if err := survey.Ask(qs, &currentConfig); err != nil {
 					return err
 				} // else continue by saving the result to the desired system filepath.
 
@@ -107,6 +107,13 @@ func newConfigureCommand() *cobra.Command {
 						return err
 					}
 				}
+
+				if configCurrentContext != "" {
+					config.Contexts[configCurrentContext] = currentConfig
+				} else {
+					config.Configuration = currentConfig
+				}
+
 			} else if cmd.Root().Flags().NFlag() == 0 {
 				// flags given like --user and --pass and --host, then we don't want to save anything,
 				// user may need to re-configure, give a note about the --reset flag.
@@ -191,13 +198,33 @@ func decryptString(encryptedRaw string, keyBase string) (plainTextString string,
 
 var defaultConfigFilepath = filepath.Join(lenses.DefaultConfigurationHomeDir, "lenses-cli.yml")
 
-func saveConfiguration() error {
-	p, err := encryptString(config.Password, config.Host)
+func encryptPassword(cfg *lenses.Configuration) error {
+	if cfg.Password == "" {
+		return fmt.Errorf("empty password")
+	}
+
+	p, err := encryptString(cfg.Password, cfg.Host)
 	if err != nil {
 		return err
 	}
 
-	config.Password = p
+	cfg.Password = p
+	return nil
+}
+
+func saveConfiguration() error {
+	// we encrypt every password (main and contexts) because
+	// they are decrypted on load, even if user didn't select to update a specific context.
+	for k, v := range config.Contexts {
+		if err := encryptPassword(&v); err != nil {
+			return err
+		}
+		config.Contexts[k] = v
+	}
+
+	if err := encryptPassword(&config.Configuration); err != nil {
+		return err
+	}
 
 	out, err := yaml.Marshal(config)
 	if err != nil { // should never happen.
@@ -212,7 +239,7 @@ func saveConfiguration() error {
 	// create any necessary directories.
 	os.MkdirAll(filepath.Dir(configFilepath), directoryMode)
 
-	config.Token = "" // remove token
+	currentConfig.Token = "" // remove token
 
 	fileMode := os.FileMode(0600)
 	// if file exists it overrides it.
@@ -232,7 +259,7 @@ func newLoginCommand() *cobra.Command {
 		TraverseChildren: true,
 		Hidden:           true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := setupClient(config.Configuration); err != nil {
+			if err := setupClient(); err != nil {
 				return err
 			}
 
@@ -369,7 +396,7 @@ const logoutCmdName = "logout"
 // 			}
 
 // 			// after remove the token from the configuration.
-// 			config.Token = ""
+// 			currentConfig.Token = ""
 // 			return saveConfiguration()
 // 		},
 // 	}

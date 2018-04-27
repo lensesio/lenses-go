@@ -32,7 +32,7 @@ type configuration struct {
 	Contexts             map[string]lenses.Configuration `yaml:"Contexts,omitempty"`
 }
 
-func prepareStoredPassword(cfg *lenses.Configuration) {
+func decodePassword(cfg *lenses.Configuration) {
 	p, _ := decryptString(cfg.Password, cfg.Host)
 	cfg.Password = p
 }
@@ -56,19 +56,25 @@ func (c *configuration) Fill(other configuration) bool {
 			c.Contexts = make(map[string]lenses.Configuration, len(other.Contexts))
 		}
 		for k, v := range other.Contexts {
-			prepareStoredPassword(&v)
+			decodePassword(&v)
 			c.Contexts[k] = v
 		}
 	}
 
-	prepareStoredPassword(&other.Configuration)
+	decodePassword(&other.Configuration)
 	return c.Configuration.Fill(other.Configuration)
 }
 
 var (
 	configFilepath string
 	config         configuration
-	client         *lenses.Client
+	// the current context selected by the end-user with --context flag,
+	// we could also save it to configuration and start with the last used context.
+	configCurrentContext string
+	// the current configuration based on the `configCurrentContext`, this will be used for client setup and rest.
+	currentConfig lenses.Configuration
+
+	client *lenses.Client
 )
 
 const examplePrefix = `lenses-cli %s`
@@ -132,20 +138,39 @@ var rootCmd = &cobra.Command{
 			tryLoadConfigurationFromCommonDirectories()
 		}
 
+		// set the selected configuration.
+		// if from flags, currentConfig is not empty, it may contain just the `--debug`, we want to matter, so we declare an empty cfg variable,
+		// fill it with the current and set the current to it.
+		cfg := config.Configuration
+
+		if configCurrentContext != "" {
+			if config.Contexts == nil {
+				config.Contexts = make(map[string]lenses.Configuration)
+			}
+
+			if c, ok := config.Contexts[configCurrentContext]; ok {
+				cfg = c
+			}
+		}
+
+		cfg.Fill(currentConfig)
+		currentConfig = cfg
+		//
+
 		// if command is "configure" and the configuration is invalid at this point, don't give a failure,
 		// let the configure command give a tutorial for user in order to create a configuration file.
 		// Note that if clientConfig is valid and we are inside the configure command
 		// then the configure will normally continue and save the valid configuration (that normally came from flags).
-		if cmd.Name() == "configure" { // && !clientConfig.IsValid() {
+		if cmd.Name() == "configure" {
 			return nil
 		}
 
 		// if login, remove the token so setupClient will generate a new one and save it to the home dir/lenses-cli.yml.
 		if cmd.Name() == "login" {
-			config.Token = ""
+			currentConfig.Token = ""
 
 			//  and fire any errors if host or user or pass are not there.
-			if config.User == "" || config.Password == "" || config.Host == "" {
+			if currentConfig.User == "" || currentConfig.Password == "" || currentConfig.Host == "" {
 				// return fmt.Errorf("cannot retrieve credentials, please setup the configuration using the '%s' command first", "configure")
 				//
 				if err := newConfigureCommand().Execute(); err != nil {
@@ -165,7 +190,7 @@ var rootCmd = &cobra.Command{
 		// Note that the `lenses.OpenConnection` will give errors if credentials missing
 		// but let's catch them as soon as possible.
 		if !config.IsValid() {
-			if config.Debug {
+			if currentConfig.Debug {
 				fmt.Fprintf(cmd.OutOrStdout(), "%#+v\n", config)
 			}
 			return fmt.Errorf("cannot retrieve credentials, please setup using the '%s' command first", "configure")
@@ -180,14 +205,14 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		return setupClient(config.Configuration)
+		return setupClient()
 	},
 }
 
-func setupClient(cfg lenses.Configuration) (err error) {
-	client, err = lenses.OpenConnection(cfg)
+func setupClient() (err error) {
+	client, err = lenses.OpenConnection(currentConfig)
 	if err == nil {
-		config.Token = client.GetAccessToken()
+		currentConfig.Token = client.GetAccessToken()
 	}
 
 	return
@@ -247,12 +272,13 @@ func mapError(err error, messages errorMap) error {
 func main() {
 	rootCmd.SetVersionTemplate(buildVersionTmpl())
 
-	rootCmd.PersistentFlags().StringVar(&config.Host, "host", "", "--host=https://example.com")
-	rootCmd.PersistentFlags().StringVar(&config.User, "user", "", "--user=MyUser")
-	rootCmd.PersistentFlags().StringVar(&config.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
-	rootCmd.PersistentFlags().StringVar(&config.Password, "pass", "", "--pass=MyPassword")
-	rootCmd.PersistentFlags().StringVar(&config.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
-	rootCmd.PersistentFlags().BoolVar(&config.Debug, "debug", false, "print some information that are necessary for debugging")
+	rootCmd.PersistentFlags().StringVar(&configCurrentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
+	rootCmd.PersistentFlags().StringVar(&currentConfig.Host, "host", "", "--host=https://example.com")
+	rootCmd.PersistentFlags().StringVar(&currentConfig.User, "user", "", "--user=MyUser")
+	rootCmd.PersistentFlags().StringVar(&currentConfig.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
+	rootCmd.PersistentFlags().StringVar(&currentConfig.Password, "pass", "", "--pass=MyPassword")
+	rootCmd.PersistentFlags().StringVar(&currentConfig.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
+	rootCmd.PersistentFlags().BoolVar(&currentConfig.Debug, "debug", false, "print some information that are necessary for debugging")
 
 	rootCmd.PersistentFlags().StringVar(&configFilepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml, toml or json)")
 

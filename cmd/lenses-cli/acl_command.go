@@ -74,8 +74,8 @@ func newCreateOrUpdateACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet
 	cmd.Flags().AddFlagSet(childrenFlagSet)
 
 	canBeSilent(cmd)
-	shouldTryLoadFile(cmd, acl)
 	shouldCheckRequiredFlags(cmd, requiredFlags)
+	shouldTryLoadFile(cmd, acl)
 
 	return cmd
 }
@@ -99,8 +99,8 @@ func newDeleteACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet, requir
 	cmd.Flags().AddFlagSet(childrenFlagSet)
 
 	canBeSilent(cmd)
-	shouldTryLoadFile(cmd, acl)
 	shouldCheckRequiredFlags(cmd, requiredFlags)
+	shouldTryLoadFile(cmd, acl)
 
 	return cmd
 }

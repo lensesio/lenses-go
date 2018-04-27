@@ -14,7 +14,7 @@ func init() {
 }
 
 func newTopicsCommand() *cobra.Command {
-	var namesOnly bool
+	var namesOnly, noJSON bool
 
 	cmd := &cobra.Command{
 		Use:           "topics",
@@ -26,6 +26,13 @@ func newTopicsCommand() *cobra.Command {
 				topicNames, err := client.GetTopicsNames()
 				if err != nil {
 					return err
+				}
+
+				if noJSON {
+					for _, name := range topicNames {
+						fmt.Fprintln(cmd.OutOrStdout(), name)
+					}
+					return nil
 				}
 
 				return printJSON(cmd, outlineStringResults("name", topicNames))
@@ -41,6 +48,7 @@ func newTopicsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&namesOnly, "names", false, "--names")
+	cmd.Flags().BoolVar(&noJSON, "no-json", false, "--no-json")
 	canPrintJSON(cmd)
 
 	return cmd

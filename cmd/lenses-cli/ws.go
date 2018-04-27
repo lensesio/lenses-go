@@ -73,10 +73,10 @@ func newLiveLSQLCommand() *cobra.Command {
 			}
 
 			conn, err := lenses.OpenLiveConnection(lenses.LiveConfiguration{
-				User:     config.User,
-				Password: config.Password,
-				Host:     config.Host,
-				Debug:    config.Debug,
+				User:     currentConfig.User,
+				Password: currentConfig.Password,
+				Host:     currentConfig.Host,
+				Debug:    currentConfig.Debug,
 			})
 
 			if err != nil {
