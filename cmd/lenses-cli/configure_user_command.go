@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,14 +17,41 @@ import (
 
 	"github.com/kataras/survey"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 func init() {
+	rootCmd.AddCommand(newGetConfigurationContextsCommand())
 	rootCmd.AddCommand(newConfigureCommand())
 	rootCmd.AddCommand(newLoginCommand())
 	rootCmd.AddCommand(newGetUserInfoCommand())
 	// remove `logout` command (at least for the moment) rootCmd.AddCommand(newLogoutCommand())
+}
+
+// Note that configure will never be called if home configuration is already exists, even if `lenses-cli configure`,
+// this is an expected behavior to prevent any actions by mistakes from the user.
+func newGetConfigurationContextsCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:           "contexts",
+		Short:         "Print and validate (through calls to the servers) all the available contexts from the configuration file",
+		Example:       exampleString(`contexts`),
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			for name, v := range configManager.config.Contexts {
+				configManager.setCurrent(name)
+				err := setupClient()
+				validMsg := "valid"
+				if err != nil {
+					validMsg = "invalid"
+				}
+
+				cmd.Printf("%s [%s]\n", name, validMsg)
+				printJSON(cmd, v)
+			}
+			return nil
+		},
+	}
+
+	return cmd
 }
 
 // Note that configure will never be called if home configuration is already exists, even if `lenses-cli configure`,
@@ -41,7 +67,7 @@ func newConfigureCommand() *cobra.Command {
 		Example:       exampleString(`configure`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !config.IsValid() || reset {
+			if !configManager.isValid() || reset {
 				// This is the only command and place the user has direct interaction with the CLI
 				// and it's not used by a third-party tool because of the survey.
 				// So, print our "banner" :)
@@ -54,10 +80,8 @@ func newConfigureCommand() *cobra.Command {
 |       ||   |___ | | |   | _____| ||   |___  _____| |
 |_______||_______||_|  |__||_______||_______||_______|
 `)
-				// flags are missing, so we don't have something to save directly,
-				// ask the user to complete the neseccary (or missing from flags, yes host may given but user no for example)
-				// fields with question-answer (prompt) system.
-				// TODO: prompt.
+				currentConfig := configManager.getCurrent()
+
 				qs := []*survey.Question{
 					{
 						Name: "host",
@@ -94,33 +118,30 @@ func newConfigureCommand() *cobra.Command {
 					},
 				}
 
-				if err := survey.Ask(qs, &currentConfig); err != nil {
+				if err := survey.Ask(qs, currentConfig); err != nil {
 					return err
 				} // else continue by saving the result to the desired system filepath.
 
-				if configFilepath == "" { // if no --config is provided then ask.
+				if configManager.filepath == "" { // if no --config is provided then ask.
 					if err := survey.AskOne(&survey.Input{
 						Message: "Save configuration file to",
 						Default: defaultConfigFilepath,
 						Help:    "This is the system filepath to save the configuration which includes the credentials",
-					}, &configFilepath, nil); err != nil {
+					}, &configManager.filepath, nil); err != nil {
 						return err
 					}
 				}
 
-				if configCurrentContext != "" {
-					config.Contexts[configCurrentContext] = currentConfig
-				} else {
-					config.Configuration = currentConfig
+			} else {
+				nFlags := cmd.Root().Flags().NFlag()
+				if nFlags == 0 || (nFlags == 1 && cmd.Root().Flag("context").Changed) {
+					// flags given like --user and --pass and --host, then we don't want to save anything,
+					// user may need to re-configure, give a note about the --reset flag.
+					return fmt.Errorf("configuration already exists, try 'configure --reset' instead")
 				}
-
-			} else if cmd.Root().Flags().NFlag() == 0 {
-				// flags given like --user and --pass and --host, then we don't want to save anything,
-				// user may need to re-configure, give a note about the --reset flag.
-				return fmt.Errorf("configuration already exists, try 'configure --reset' instead")
 			}
 
-			return saveConfiguration()
+			return configManager.save()
 		},
 	}
 
@@ -212,42 +233,9 @@ func encryptPassword(cfg *lenses.Configuration) error {
 	return nil
 }
 
-func saveConfiguration() error {
-	// we encrypt every password (main and contexts) because
-	// they are decrypted on load, even if user didn't select to update a specific context.
-	for k, v := range config.Contexts {
-		if err := encryptPassword(&v); err != nil {
-			return err
-		}
-		config.Contexts[k] = v
-	}
-
-	if err := encryptPassword(&config.Configuration); err != nil {
-		return err
-	}
-
-	out, err := yaml.Marshal(config)
-	if err != nil { // should never happen.
-		return fmt.Errorf("unable to marshal the configuration, error: %v", err)
-	}
-
-	if configFilepath == "" {
-		configFilepath = defaultConfigFilepath
-	}
-
-	directoryMode := os.FileMode(0750)
-	// create any necessary directories.
-	os.MkdirAll(filepath.Dir(configFilepath), directoryMode)
-
-	currentConfig.Token = "" // remove token
-
-	fileMode := os.FileMode(0600)
-	// if file exists it overrides it.
-	if err = ioutil.WriteFile(configFilepath, out, fileMode); err != nil {
-		return fmt.Errorf("unable to create the configuration file for your system, error: %v", err)
-	}
-
-	return nil
+func decryptPassword(cfg *lenses.Configuration) {
+	p, _ := decryptString(cfg.Password, cfg.Host)
+	cfg.Password = p
 }
 
 func newLoginCommand() *cobra.Command {

@@ -72,6 +72,8 @@ func newLiveLSQLCommand() *cobra.Command {
 				return fmt.Errorf("query should not be empty")
 			}
 
+			currentConfig := configManager.getCurrent()
+
 			conn, err := lenses.OpenLiveConnection(lenses.LiveConfiguration{
 				User:     currentConfig.User,
 				Password: currentConfig.Password,

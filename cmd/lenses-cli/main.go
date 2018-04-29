@@ -25,55 +25,7 @@ var (
 	buildTime = ""
 )
 
-// configuration is the CLI's configuration, the lenses client configuration is embedded here as well.
-// An optional `Contexts` map of string and lenses client configuration values can be filled to map different environments.
-type configuration struct {
-	lenses.Configuration `yaml:",inline"`
-	Contexts             map[string]lenses.Configuration `yaml:"Contexts,omitempty"`
-}
-
-func decodePassword(cfg *lenses.Configuration) {
-	p, _ := decryptString(cfg.Password, cfg.Host)
-	cfg.Password = p
-}
-
-// IsValid overrides and wraps the lenses.Configuration#IsValid.
-func (c *configuration) IsValid() bool {
-	// for a whole configuration to be valid we need to check each contexts' configs as well.
-	for _, cfg := range c.Contexts {
-		if !cfg.IsValid() {
-			return false
-		}
-	}
-
-	return c.Configuration.IsValid()
-}
-
-// Fill overrides and wraps the lenses.Configuration#Fill.
-func (c *configuration) Fill(other configuration) bool {
-	if len(other.Contexts) > 0 {
-		if c.Contexts == nil {
-			c.Contexts = make(map[string]lenses.Configuration, len(other.Contexts))
-		}
-		for k, v := range other.Contexts {
-			decodePassword(&v)
-			c.Contexts[k] = v
-		}
-	}
-
-	decodePassword(&other.Configuration)
-	return c.Configuration.Fill(other.Configuration)
-}
-
 var (
-	configFilepath string
-	config         configuration
-	// the current context selected by the end-user with --context flag,
-	// we could also save it to configuration and start with the last used context.
-	configCurrentContext string
-	// the current configuration based on the `configCurrentContext`, this will be used for client setup and rest.
-	currentConfig lenses.Configuration
-
 	client *lenses.Client
 )
 
@@ -81,39 +33,6 @@ const examplePrefix = `lenses-cli %s`
 
 func exampleString(str string) string {
 	return fmt.Sprintf(examplePrefix, str)
-}
-
-func tryLoadConfigurationFromFile(filename string) error {
-	if filename == "" {
-		return nil
-	}
-	var cfg configuration
-	if err := lenses.TryReadConfigurationFromFile(filename, &cfg); err != nil {
-		// here we could check for flags but we don't, if --config given then read from it,
-		// otherwise fail in order to notify the user about that behavior.
-		return err
-	}
-	config.Fill(cfg)
-	return nil
-}
-
-func tryLoadConfigurationFromCommonDirectories() {
-	var cfg configuration
-
-	var ok bool
-	// search from the current working directory,
-	// if not found then the executable's path
-	// and if not found then try lookup from the home dir.
-	// working directory and executable paths have priority over the home directory,
-	// in order to make folder-based projects work as expected.
-	if ok = lenses.TryReadConfigurationFromCurrentWorkingDir(&cfg); ok {
-	} else if ok = lenses.TryReadConfigurationFromExecutable(&cfg); ok {
-	} else if ok = lenses.TryReadConfigurationFromHome(&cfg); ok {
-	}
-
-	if ok {
-		config.Fill(cfg)
-	}
 }
 
 var rootCmd = &cobra.Command{
@@ -127,42 +46,35 @@ var rootCmd = &cobra.Command{
 	TraverseChildren:           true,
 	SuggestionsMinimumDistance: 1,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
-		if err = tryLoadConfigurationFromFile(configFilepath); err != nil {
-			if cmd.Name() != "configure" {
-				return
-			}
-			err = nil // skip the error if configure command, we need the `--config` to save, not to load then.
-		}
+		// check for old config, if found then convert to its new format before anything else.
+		configManager.applyCompatibility()
 
-		if !config.IsValid() {
-			tryLoadConfigurationFromCommonDirectories()
-		}
-
-		// set the selected configuration.
-		// if from flags, currentConfig is not empty, it may contain just the `--debug`, we want to matter, so we declare an empty cfg variable,
-		// fill it with the current and set the current to it.
-		cfg := config.Configuration
-
-		if configCurrentContext != "" {
-			if config.Contexts == nil {
-				config.Contexts = make(map[string]lenses.Configuration)
-			}
-
-			if c, ok := config.Contexts[configCurrentContext]; ok {
-				cfg = c
-			}
-		}
-
-		cfg.Fill(currentConfig)
-		currentConfig = cfg
-		//
-
+		ok, err := configManager.load()
 		// if command is "configure" and the configuration is invalid at this point, don't give a failure,
 		// let the configure command give a tutorial for user in order to create a configuration file.
 		// Note that if clientConfig is valid and we are inside the configure command
 		// then the configure will normally continue and save the valid configuration (that normally came from flags).
 		if cmd.Name() == "configure" {
 			return nil
+		}
+
+		// it's not nil, if context does not exist then it would throw an error.
+		currentConfig := configManager.getCurrent()
+		for !ok {
+			if err != nil {
+				return err
+			}
+
+			if currentConfig.Debug {
+				fmt.Fprintf(cmd.OutOrStdout(), "%#+v\n", *currentConfig)
+			}
+
+			fmt.Fprintln(cmd.OutOrStderr(), "cannot retrieve credentials, please configure below")
+			if err = newConfigureCommand().Execute(); err != nil {
+				return err
+			}
+
+			ok, err = configManager.load()
 		}
 
 		// if login, remove the token so setupClient will generate a new one and save it to the home dir/lenses-cli.yml.
@@ -184,18 +96,6 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		// --config missing, working dir, exec path and home dir doesn't contain any valid configuration
-		// and not in the "configure" mode then give an error about missing flags:
-		// The host and (token or (user, pass)) are the required flags.
-		// Note that the `lenses.OpenConnection` will give errors if credentials missing
-		// but let's catch them as soon as possible.
-		if !config.IsValid() {
-			if currentConfig.Debug {
-				fmt.Fprintf(cmd.OutOrStdout(), "%#+v\n", config)
-			}
-			return fmt.Errorf("cannot retrieve credentials, please setup using the '%s' command first", "configure")
-		}
-
 		// if config.Debug {
 		// 	cmd.DebugFlags()
 		// }
@@ -210,10 +110,11 @@ var rootCmd = &cobra.Command{
 }
 
 func setupClient() (err error) {
-	client, err = lenses.OpenConnection(currentConfig)
-	if err == nil {
-		currentConfig.Token = client.GetAccessToken()
-	}
+	currentConfig := configManager.getCurrent()
+	client, err = lenses.OpenConnection(*currentConfig)
+	// if err == nil {
+	// 	currentConfig.Token = client.GetAccessToken()
+	// }
 
 	return
 }
@@ -269,18 +170,11 @@ func mapError(err error, messages errorMap) error {
 	return err // otherwise just print the error as it's.
 }
 
+var configManager *configurationManager
+
 func main() {
 	rootCmd.SetVersionTemplate(buildVersionTmpl())
-
-	rootCmd.PersistentFlags().StringVar(&configCurrentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
-	rootCmd.PersistentFlags().StringVar(&currentConfig.Host, "host", "", "--host=https://example.com")
-	rootCmd.PersistentFlags().StringVar(&currentConfig.User, "user", "", "--user=MyUser")
-	rootCmd.PersistentFlags().StringVar(&currentConfig.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
-	rootCmd.PersistentFlags().StringVar(&currentConfig.Password, "pass", "", "--pass=MyPassword")
-	rootCmd.PersistentFlags().StringVar(&currentConfig.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
-	rootCmd.PersistentFlags().BoolVar(&currentConfig.Debug, "debug", false, "print some information that are necessary for debugging")
-
-	rootCmd.PersistentFlags().StringVar(&configFilepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml, toml or json)")
+	configManager = newConfigurationManager(rootCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		// catch any errors that should be described by the command that gave that error.
