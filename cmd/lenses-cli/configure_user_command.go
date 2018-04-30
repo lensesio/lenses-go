@@ -21,6 +21,7 @@ import (
 
 func init() {
 	rootCmd.AddCommand(newGetConfigurationContextsCommand())
+	rootCmd.AddCommand(newConfigurationContextCommand())
 	rootCmd.AddCommand(newConfigureCommand())
 	rootCmd.AddCommand(newLoginCommand())
 	rootCmd.AddCommand(newGetUserInfoCommand())
@@ -36,29 +37,140 @@ func newGetConfigurationContextsCommand() *cobra.Command {
 		Example:       exampleString(`contexts`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var invalidContexts []string // collect the invalid contexts, so user can select to fix those.
 			for name, v := range configManager.config.Contexts {
 				configManager.setCurrent(name)
 				err := setupClient()
 				validMsg := "valid"
 				if err != nil {
 					validMsg = "invalid"
+					invalidContexts = append(invalidContexts, name)
 				}
 
 				cmd.Printf("%s [%s]\n", name, validMsg)
-				printJSON(cmd, v)
+				if err = printJSON(cmd, v); err != nil {
+					return err
+				}
+
+			}
+
+			if !silent {
+				for _, name := range invalidContexts {
+					var action string
+
+					if err := survey.AskOne(&survey.Select{
+						Message: fmt.Sprintf("Would you like to skip, edit or delete the '%s' invalid configuration context?", name),
+						Options: []string{"skip", "edit", "delete"},
+					}, &action, nil); err != nil {
+						return err
+					}
+
+					if action == "skip" {
+						continue
+					}
+
+					if action == "delete" {
+						deleteCmd := newDeleteConfigurationContextCommand()
+						deleteCmd.SetArgs([]string{name})
+						if err := deleteCmd.Execute(); err != nil {
+							return err
+						}
+
+						continue
+					}
+
+					if action == "edit" {
+						editCmd := newUpdateConfigurationContextCommand()
+						editCmd.SetArgs([]string{name})
+						if err := editCmd.Execute(); err != nil {
+							return err
+						}
+					}
+				}
+
 			}
 			return nil
 		},
 	}
 
+	canBeSilent(cmd)
+
 	return cmd
+}
+
+func newConfigurationContextCommand() *cobra.Command {
+	root := &cobra.Command{
+		Use:           "context",
+		Short:         "Modify or delete a configuration context",
+		Example:       exampleString(`context delete context_name`),
+		SilenceErrors: true,
+	}
+
+	root.AddCommand(newUpdateConfigurationContextCommand())
+	root.AddCommand(newDeleteConfigurationContextCommand())
+
+	return root
+}
+
+func newDeleteConfigurationContextCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:           "delete",
+		Short:         "Delete a configuration context",
+		Example:       exampleString(`context delete context_name`),
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("one argument is required for the context name")
+			}
+
+			name := args[0]
+			deleted := configManager.removeContext(name)
+
+			if !deleted {
+				return echo(cmd, "unable to delete '%s'", name)
+			}
+
+			return echo(cmd, "'%s' context deleted", name)
+		},
+	}
+}
+
+func newUpdateConfigurationContextCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:           "update",
+		Aliases:       []string{"edit"},
+		Short:         "Edit a configuration context, similar to 'configure --context=context_name --reset' but without banner and this one saves the configuration to the default location",
+		Example:       exampleString(`context edit context_name`),
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("one argument is required for the context name")
+			}
+
+			name := args[0]
+
+			configureCmd := newConfigureCommand()
+			rootCmd.Flag("context").Value.Set(name)
+			configureCmd.Flag("reset").Value.Set("true")
+			// these wil disable banner and location save, note that if --file is there then it will take that, otherwise the default $HOME/.lenses/lenses-cli.yml.
+			configureCmd.Flag("no-banner").Value.Set("true")
+			configureCmd.Flag("default-location").Value.Set("true")
+			if err := configureCmd.Execute(); err != nil {
+				return err
+			}
+
+			return echo(cmd, "'%s' saved", name)
+		},
+	}
 }
 
 // Note that configure will never be called if home configuration is already exists, even if `lenses-cli configure`,
 // this is an expected behavior to prevent any actions by mistakes from the user.
 func newConfigureCommand() *cobra.Command {
 	var (
-		reset bool
+		reset       bool
+		noBanner    bool // if true doesn't print the banner (useful for running inside other commands).
+		defLocation bool // if true doesn't asks for location to save (useful for running inside other commands).
 	)
 
 	cmd := &cobra.Command{
@@ -71,15 +183,18 @@ func newConfigureCommand() *cobra.Command {
 				// This is the only command and place the user has direct interaction with the CLI
 				// and it's not used by a third-party tool because of the survey.
 				// So, print our "banner" :)
-				cmd.Println(`
- ___      _______  __    _  _______  _______  _______ 
-|   |    |       ||  |  | ||       ||       ||       |
-|   |    |    ___||   |_| ||  _____||    ___||  _____|
-|   |    |   |___ |       || |_____ |   |___ | |_____ 
-|   |___ |    ___||  _    ||_____  ||    ___||_____  |
-|       ||   |___ | | |   | _____| ||   |___  _____| |
-|_______||_______||_|  |__||_______||_______||_______|
-`)
+				if !noBanner {
+					cmd.Println(`
+						___      _______  __    _  _______  _______  _______ 
+					   |   |    |       ||  |  | ||       ||       ||       |
+					   |   |    |    ___||   |_| ||  _____||    ___||  _____|
+					   |   |    |   |___ |       || |_____ |   |___ | |_____ 
+					   |   |___ |    ___||  _    ||_____  ||    ___||_____  |
+					   |       ||   |___ | | |   | _____| ||   |___  _____| |
+					   |_______||_______||_|  |__||_______||_______||_______|
+					   `)
+				}
+
 				currentConfig := configManager.getCurrent()
 
 				qs := []*survey.Question{
@@ -122,7 +237,7 @@ func newConfigureCommand() *cobra.Command {
 					return err
 				} // else continue by saving the result to the desired system filepath.
 
-				if configManager.filepath == "" { // if no --config is provided then ask.
+				if configManager.filepath == "" && !defLocation { // if no --config is provided then ask.
 					if err := survey.AskOne(&survey.Input{
 						Message: "Save configuration file to",
 						Default: defaultConfigFilepath,
@@ -146,6 +261,8 @@ func newConfigureCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&reset, "reset", false, "reset the current configuration")
+	cmd.Flags().BoolVar(&noBanner, "no-banner", false, "disables the banner output")
+	cmd.Flags().BoolVar(&defLocation, "default-location", false, "will not ask for the location to save on, the result will be saved to the $HOME/.lenses/lenses-cli.yml")
 	return cmd
 }
 

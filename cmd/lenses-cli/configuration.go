@@ -12,12 +12,38 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Configuration is the CLI's configuration, the lenses client configuration is embedded here as well.
-// An optional `Contexts` map of string and lenses client configuration values can be filled to map different environments.
+// Configuration is the CLI's configuration.
+// The `Contexts` map of string and lenses client configuration values can be filled to map different environments.
 type Configuration struct {
 	// lenses.Configuration `yaml:",inline"`
 	CurrentContext string                           `yaml:"CurrentContext"`
 	Contexts       map[string]*lenses.Configuration `yaml:"Contexts"`
+}
+
+type configurationManager struct {
+	config   *Configuration
+	flags    lenses.Configuration
+	filepath string
+}
+
+func newConfigurationManager(cmd *cobra.Command) *configurationManager {
+	m := &configurationManager{
+		config: &Configuration{
+			Contexts: make(map[string]*lenses.Configuration),
+		},
+	}
+
+	cmd.PersistentFlags().StringVar(&m.config.CurrentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
+
+	cmd.PersistentFlags().StringVar(&m.flags.Host, "host", "", "--host=https://example.com")
+	cmd.PersistentFlags().StringVar(&m.flags.User, "user", "", "--user=MyUser")
+	cmd.PersistentFlags().StringVar(&m.flags.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
+	cmd.PersistentFlags().StringVar(&m.flags.Password, "pass", "", "--pass=MyPassword")
+	cmd.PersistentFlags().StringVar(&m.flags.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
+	cmd.PersistentFlags().BoolVar(&m.flags.Debug, "debug", false, "print some information that are necessary for debugging")
+
+	cmd.PersistentFlags().StringVar(&m.filepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml, toml or json)")
+	return m
 }
 
 // isValid returns the result of the contexts' lenses.Configuration#IsValid.
@@ -74,30 +100,17 @@ func (m *configurationManager) removeTokens() {
 	}
 }
 
-type configurationManager struct {
-	config   *Configuration
-	flags    lenses.Configuration
-	filepath string
-}
-
-func newConfigurationManager(cmd *cobra.Command) *configurationManager {
-	m := &configurationManager{
-		config: &Configuration{
-			Contexts: make(map[string]*lenses.Configuration),
-		},
+// returns true if found and removed, otherwise false.
+func (m *configurationManager) removeContext(contextName string) bool {
+	if _, ok := m.config.Contexts[contextName]; ok {
+		delete(m.config.Contexts, contextName)
+		if err := m.save(); err != nil {
+			return false
+		}
+		return true
 	}
 
-	cmd.PersistentFlags().StringVar(&m.config.CurrentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
-
-	cmd.PersistentFlags().StringVar(&m.flags.Host, "host", "", "--host=https://example.com")
-	cmd.PersistentFlags().StringVar(&m.flags.User, "user", "", "--user=MyUser")
-	cmd.PersistentFlags().StringVar(&m.flags.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
-	cmd.PersistentFlags().StringVar(&m.flags.Password, "pass", "", "--pass=MyPassword")
-	cmd.PersistentFlags().StringVar(&m.flags.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
-	cmd.PersistentFlags().BoolVar(&m.flags.Debug, "debug", false, "print some information that are necessary for debugging")
-
-	cmd.PersistentFlags().StringVar(&m.filepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml, toml or json)")
-	return m
+	return false
 }
 
 func (m *configurationManager) load() (bool, error) {

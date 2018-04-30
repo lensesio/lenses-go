@@ -29,19 +29,35 @@ The **new** command `lenses-cli contexts` will print the contexts and validate (
 ```sh
 master [valid]
 {
-  "host": "http://master.example.com:9991",
-  "user": "kataras",
-  "password": "kataras999",
+  "host": "http://localhost:9991",
+  "user": "validName",
+  "password": "validPassEncrypted",
   "token": ""
 }
-dev [invalid]
+dev2test [invalid]
 {
-  "host": "http://dev.example.com:9991",
-  "user": "invalid_username",
-  "password": "e\ufffda\ufffd\ufffdY\ufffd\ufffd\u0000F",
+  "host": "http://localhost:9991",
+  "user": "invalidName2",
+  "password": "invalidPassEncrypted",
   "token": ""
 }
+devtest [invalid]
+{
+  "host": "http://localhost:9991",
+  "user": "invalidName",
+  "password": "invalidPassEncrypted",
+  "token": ""
+}
+? Would you like to skip, edit or delete the 'dev2test' invalid configuration context? **skip**
+? Would you like to skip, edit or delete the 'devtest' invalid configuration context? **edit**
+? Host http://localhost:9991
+? User kataras
+? Password [? for help] **********
+? Enable debug mode? No
+'devtest' saved
 ```
+
+> Other new commands except the `contexts` are the: `context delete $context_name` and `context update(or edit) $context_name` which is the same as `configure --context=$context_name --reset --no-banner --default-location`.
 
 ##### Compatibility:
 
