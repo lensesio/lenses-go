@@ -31,22 +31,19 @@ master [valid]
 {
   "host": "http://localhost:9991",
   "user": "validName",
-  "password": "validPassEncrypted",
-  "token": ""
+  "password": "****",
 }
 dev2test [invalid]
 {
   "host": "http://localhost:9991",
   "user": "invalidName2",
-  "password": "invalidPassEncrypted",
-  "token": ""
+  "password": "****",
 }
 devtest [invalid]
 {
   "host": "http://localhost:9991",
   "user": "invalidName",
-  "password": "invalidPassEncrypted",
-  "token": ""
+  "token": "****"
 }
 ? Would you like to skip, edit or delete the 'dev2test' invalid configuration context? **skip**
 ? Would you like to skip, edit or delete the 'devtest' invalid configuration context? **edit**

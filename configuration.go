@@ -28,7 +28,7 @@ type Configuration struct {
 	// User is your "user" field,
 	User string `json:"user" yaml:"User" toml:"User" survey:"user"`
 	// Password is your "password".
-	Password string `json:"password" yaml:"Password" toml:"Password" survey:"password"`
+	Password string `json:"password,omitempty" yaml:"Password" toml:"Password" survey:"-"`
 
 	// Token is the "X-Kafka-Lenses-Token" request header's value.
 	// Overrides the `User` and `Password` settings.
@@ -38,7 +38,7 @@ type Configuration struct {
 	//
 	// For general-purpose usecase the recommendation is to let this field empty and
 	// fill the `User` and `Password` instead.
-	Token string `json:"token" yaml:"Token" toml:"Token" survey:"-"`
+	Token string `json:"token,omitempty" yaml:"Token" toml:"Token" survey:"-"`
 
 	// Timeout specifies the timeout for connection establishment.
 	//

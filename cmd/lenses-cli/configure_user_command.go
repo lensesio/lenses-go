@@ -38,13 +38,21 @@ func newGetConfigurationContextsCommand() *cobra.Command {
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var invalidContexts []string // collect the invalid contexts, so user can select to fix those.
-			for name, v := range configManager.config.Contexts {
+			c := configManager.clone()
+			for name, v := range c.Contexts {
 				configManager.setCurrent(name)
 				err := setupClient()
 				validMsg := "valid"
 				if err != nil {
 					validMsg = "invalid"
 					invalidContexts = append(invalidContexts, name)
+				}
+
+				if v.Password != "" {
+					v.Password = "****"
+				}
+				if v.Token != "" {
+					v.Token = "****"
 				}
 
 				cmd.Printf("%s [%s]\n", name, validMsg)
