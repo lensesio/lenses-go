@@ -304,6 +304,11 @@ func newConfigureCommand() *cobra.Command {
 					return err
 				} // else continue by saving the result to the desired system filepath.
 
+				// if already saved once and want to add more contexts, then don't ask for system path.
+				if configManager.config.CurrentContext != "" && len(configManager.config.Contexts) > 0 {
+					defLocation = true
+				}
+
 				if configManager.filepath == "" && !defLocation { // if no --config is provided then ask.
 					if err := survey.AskOne(&survey.Input{
 						Message: "Save configuration file to",
