@@ -154,7 +154,7 @@ func newConfigurationContextCommand() *cobra.Command {
 }
 
 func newDeleteConfigurationContextCommand() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "delete",
 		Short:         "Delete a configuration context",
 		Example:       exampleString(`context delete context_name`),
@@ -174,10 +174,14 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 			return echo(cmd, "'%s' context deleted", name)
 		},
 	}
+
+	canBeSilent(cmd)
+
+	return cmd
 }
 
 func newUpdateConfigurationContextCommand() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "update",
 		Aliases:       []string{"edit"},
 		Short:         "Edit a configuration context, similar to 'configure --context=context_name --reset' but without banner and this one saves the configuration to the default location",
@@ -200,9 +204,31 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 				return err
 			}
 
-			return echo(cmd, "'%s' saved", name)
+			if isValidConfigurationContext(name) {
+				return echo(cmd, "%s was successfully validated and saved", name)
+			}
+
+			retry := true
+			if err := survey.AskOne(&survey.Confirm{
+				Message: fmt.Sprintf("%s is still invalid, do you mind to retry fixing it?", name),
+				Default: true,
+			}, &retry, nil); err != nil {
+				return err
+			}
+
+			if retry {
+				newCmd := newUpdateConfigurationContextCommand()
+				newCmd.SetArgs(args)
+				return newCmd.Execute()
+			}
+
+			return nil
 		},
 	}
+
+	canBeSilent(cmd)
+
+	return cmd
 }
 
 // Note that configure will never be called if home configuration is already exists, even if `lenses-cli configure`,
