@@ -184,7 +184,7 @@ func TryReadConfigurationFromFile(filename string, outPtr interface{}) (err erro
 		}
 	}
 
-	return fmt.Errorf("configuration file '%s' is not formatted to a compatible document: JSON, YAML, TOML", filename)
+	return fmt.Errorf("configuration file '%s' does not exist or it is not formatted to a compatible document: JSON, YAML, TOML", filename)
 }
 
 var configurationPossibleFilenames = []string{

@@ -252,13 +252,13 @@ func newConfigureCommand() *cobra.Command {
 				// So, print our "banner" :)
 				if !noBanner {
 					cmd.Println(`
-						___      _______  __    _  _______  _______  _______ 
-					   |   |    |       ||  |  | ||       ||       ||       |
-					   |   |    |    ___||   |_| ||  _____||    ___||  _____|
-					   |   |    |   |___ |       || |_____ |   |___ | |_____ 
-					   |   |___ |    ___||  _    ||_____  ||    ___||_____  |
-					   |       ||   |___ | | |   | _____| ||   |___  _____| |
-					   |_______||_______||_|  |__||_______||_______||_______|
+	 ___      _______  __    _  _______  _______  _______ 
+	|   |    |       ||  |  | ||       ||       ||       |
+	|   |    |    ___||   |_| ||  _____||    ___||  _____|
+	|   |    |   |___ |       || |_____ |   |___ | |_____ 
+	|   |___ |    ___||  _    ||_____  ||    ___||_____  |
+	|       ||   |___ | | |   | _____| ||   |___  _____| |
+	|_______||_______||_|  |__||_______||_______||_______|
 					   `)
 				}
 
@@ -321,7 +321,7 @@ func newConfigureCommand() *cobra.Command {
 
 			} else {
 				nFlags := cmd.Root().Flags().NFlag()
-				if nFlags == 0 || (nFlags == 1 && cmd.Root().Flag("context").Changed) {
+				if nFlags == 0 || (nFlags == 1 && cmd.Root().Flag("context").Changed) || (nFlags <= 2 && cmd.Root().Flag("config").Changed) {
 					// flags given like --user and --pass and --host, then we don't want to save anything,
 					// user may need to re-configure, give a note about the --reset flag.
 					return fmt.Errorf("configuration already exists, try 'configure --reset' instead")

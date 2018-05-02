@@ -47,7 +47,9 @@ var rootCmd = &cobra.Command{
 	SuggestionsMinimumDistance: 1,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check for old config, if found then convert to its new format before anything else.
-		configManager.applyCompatibility()
+		if err := configManager.applyCompatibility(); err != nil {
+			return err
+		}
 
 		ok, err := configManager.load()
 		// if command is "configure" and the configuration is invalid at this point, don't give a failure,

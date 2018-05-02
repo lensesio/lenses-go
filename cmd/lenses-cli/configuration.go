@@ -24,6 +24,7 @@ type configurationManager struct {
 	config   *Configuration
 	flags    lenses.Configuration
 	filepath string
+	fromFile bool // if the configuration was SUCCESSFULLY loaded from --config flag.
 }
 
 func newConfigurationManager(cmd *cobra.Command) *configurationManager {
@@ -118,8 +119,13 @@ func (m *configurationManager) load() (bool, error) {
 	var found bool
 
 	contextFlag := c.CurrentContext
-
-	if found = m.filepath != "" && (lenses.TryReadConfigurationFromFile(m.filepath, c) == nil); found {
+	if m.filepath != "" {
+		// must read from file, otherwise fail.
+		if err := lenses.TryReadConfigurationFromFile(m.filepath, c); err != nil {
+			return false, err
+		}
+		found = true
+		m.fromFile = true
 	} else if found = lenses.TryReadConfigurationFromCurrentWorkingDir(c); found {
 	} else if found = lenses.TryReadConfigurationFromExecutable(c); found {
 	} else if found = lenses.TryReadConfigurationFromHome(c); found {
@@ -197,24 +203,28 @@ func (m *configurationManager) save() error {
 	return nil
 }
 
-func (m *configurationManager) applyCompatibility() {
+func (m *configurationManager) applyCompatibility() error {
 	var (
 		found     bool
 		oldFormat lenses.Configuration // <>
 	)
 
+	// here we just fetch whatever is valid.
 	if found = m.filepath != "" && (lenses.TryReadConfigurationFromFile(m.filepath, &oldFormat) == nil); found {
+		m.fromFile = true
 	} else if found = lenses.TryReadConfigurationFromCurrentWorkingDir(&oldFormat); found {
 	} else if found = lenses.TryReadConfigurationFromExecutable(&oldFormat); found {
 	} else if found = lenses.TryReadConfigurationFromHome(&oldFormat); found {
 	}
 
 	if !found {
-		return
+		return nil
 	}
 
 	decryptPassword(&oldFormat) // decrypt before save.
 	if m.getCurrent().Fill(oldFormat) {
-		m.save()
+		return m.save()
 	}
+
+	return nil
 }
