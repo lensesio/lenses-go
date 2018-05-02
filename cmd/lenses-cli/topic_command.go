@@ -46,7 +46,7 @@ func newTopicsCommand() *cobra.Command {
 			}
 
 			sort.Slice(topics, func(i, j int) bool {
-				return topics[i].TopicName > topics[j].TopicName
+				return topics[i].TopicName < topics[j].TopicName
 			})
 
 			return printJSON(cmd, topics)
