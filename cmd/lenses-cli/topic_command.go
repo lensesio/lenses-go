@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/landoop/lenses-go"
 
@@ -29,6 +30,7 @@ func newTopicsCommand() *cobra.Command {
 				}
 
 				if noJSON {
+					sort.Strings(topicNames)
 					for _, name := range topicNames {
 						fmt.Fprintln(cmd.OutOrStdout(), name)
 					}
@@ -42,6 +44,10 @@ func newTopicsCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			sort.Slice(topics, func(i, j int) bool {
+				return topics[i].TopicName > topics[j].TopicName
+			})
 
 			return printJSON(cmd, topics)
 		},

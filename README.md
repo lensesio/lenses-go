@@ -6,7 +6,7 @@ The [Landoop's](http://www.landoop.com) Lenses [REST API](https://lenses.stream/
 
 ## Installation
 
-The only requirement is the [Go Programming Language](https://golang.org/dl) version **1.10+** and a [Lenses Box](http://www.landoop.com/kafka-lenses/) of version **2.0 at least** .
+The only requirement is the [Go Programming Language](https://golang.org/dl) version **1.10+** and a [Lenses Box](http://www.landoop.com/kafka-lenses/) of version **2.0 at least**.
 
 ```sh
 $ go get -u github.com/landoop/lenses-go/cmd/lenses-cli
