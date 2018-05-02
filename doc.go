@@ -192,7 +192,7 @@ Source code and other details for the project are available at GitHub:
 
 Current Version
 
-2.0
+2.1.0
 
 Installation
 
