@@ -37,6 +37,7 @@ func isValidConfigurationContext(name string) bool {
 }
 
 func printConfigurationContext(cmd *cobra.Command, name string) bool {
+	currentContextName := configManager.config.CurrentContext
 	c, ok := configManager.config.Contexts[name]
 	if !ok {
 		return false // this should never happen.
@@ -45,9 +46,9 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 
 	isValid := isValidConfigurationContext(name)
 
-	validMsg := "valid"
+	info := "valid"
 	if !isValid {
-		validMsg = "invalid"
+		info = "invalid"
 	}
 
 	if cfg.Password != "" {
@@ -57,7 +58,11 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 		cfg.Token = "****"
 	}
 
-	cmd.Printf("%s [%s]\n", name, validMsg)
+	if name == currentContextName {
+		info += ", current"
+	}
+
+	cmd.Printf("%s [%s]\n", name, info)
 	printJSON(cmd, cfg)
 
 	return isValid

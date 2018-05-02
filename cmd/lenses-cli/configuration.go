@@ -5,9 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -114,6 +116,8 @@ func (m *configurationManager) removeContext(contextName string) bool {
 	return false
 }
 
+const currentContextEnvKey = "LENSES_CLI_CONTEXT"
+
 func (m *configurationManager) load() (bool, error) {
 	c := m.config
 	var found bool
@@ -144,6 +148,16 @@ func (m *configurationManager) load() (bool, error) {
 		} else {
 			for _, v := range c.Contexts {
 				decryptPassword(v)
+			}
+
+			// try to set the current context from *.env file or from system's env variables,
+			// if not empty, the env value has a priority over the configurated `CurrentContext`
+			// but --context flag has a priority over all (look above).
+			//
+			// Note that the env variable will NOT change the `CurrentContext` field from the configuration file, by purpose.
+			godotenv.Load()
+			if envContext := strings.TrimSpace(os.Getenv(currentContextEnvKey)); envContext != "" {
+				c.CurrentContext = envContext
 			}
 		}
 
