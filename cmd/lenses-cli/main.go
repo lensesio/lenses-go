@@ -54,7 +54,7 @@ var rootCmd = &cobra.Command{
 		// let the configure command give a tutorial for user in order to create a configuration file.
 		// Note that if clientConfig is valid and we are inside the configure command
 		// then the configure will normally continue and save the valid configuration (that normally came from flags).
-		if cmd.Name() == "configure" {
+		if name := cmd.Name(); name == "configure" || name == "context" {
 			return nil
 		}
 

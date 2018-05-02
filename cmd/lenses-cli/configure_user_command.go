@@ -28,6 +28,76 @@ func init() {
 	// remove `logout` command (at least for the moment) rootCmd.AddCommand(newLogoutCommand())
 }
 
+func isValidConfigurationContext(name string) bool {
+	currentContext := configManager.config.CurrentContext
+	configManager.setCurrent(name)
+	isValid := setupClient() == nil
+	configManager.setCurrent(currentContext)
+	return isValid
+}
+
+func printConfigurationContext(cmd *cobra.Command, name string) bool {
+	c, ok := configManager.config.Contexts[name]
+	if !ok {
+		return false // this should never happen.
+	}
+	cfg := *c
+
+	isValid := isValidConfigurationContext(name)
+
+	validMsg := "valid"
+	if !isValid {
+		validMsg = "invalid"
+	}
+
+	if cfg.Password != "" {
+		cfg.Password = "****"
+	}
+	if cfg.Token != "" {
+		cfg.Token = "****"
+	}
+
+	cmd.Printf("%s [%s]\n", name, validMsg)
+	printJSON(cmd, cfg)
+
+	return isValid
+}
+
+func showOptionsForConfigurationContext(cmd *cobra.Command, name string) error {
+	var action string
+
+	if err := survey.AskOne(&survey.Select{
+		Message: fmt.Sprintf("Would you like to skip, edit or delete the '%s' invalid configuration context?", name),
+		Options: []string{"skip", "edit", "delete"},
+	}, &action, nil); err != nil {
+		return err
+	}
+
+	if action == "skip" {
+		return nil
+	}
+
+	if action == "delete" {
+		deleteCmd := newDeleteConfigurationContextCommand()
+		deleteCmd.SetArgs([]string{name})
+		if err := deleteCmd.Execute(); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if action == "edit" {
+		editCmd := newUpdateConfigurationContextCommand()
+		editCmd.SetArgs([]string{name})
+		if err := editCmd.Execute(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Note that configure will never be called if home configuration is already exists, even if `lenses-cli configure`,
 // this is an expected behavior to prevent any actions by mistakes from the user.
 func newGetConfigurationContextsCommand() *cobra.Command {
@@ -37,65 +107,12 @@ func newGetConfigurationContextsCommand() *cobra.Command {
 		Example:       exampleString(`contexts`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var invalidContexts []string // collect the invalid contexts, so user can select to fix those.
-			c := configManager.clone()
-			for name, v := range c.Contexts {
-				configManager.setCurrent(name)
-				err := setupClient()
-				validMsg := "valid"
-				if err != nil {
-					validMsg = "invalid"
-					invalidContexts = append(invalidContexts, name)
-				}
-
-				if v.Password != "" {
-					v.Password = "****"
-				}
-				if v.Token != "" {
-					v.Token = "****"
-				}
-
-				cmd.Printf("%s [%s]\n", name, validMsg)
-				if err = printJSON(cmd, v); err != nil {
-					return err
-				}
-
-			}
-
-			if !silent {
-				for _, name := range invalidContexts {
-					var action string
-
-					if err := survey.AskOne(&survey.Select{
-						Message: fmt.Sprintf("Would you like to skip, edit or delete the '%s' invalid configuration context?", name),
-						Options: []string{"skip", "edit", "delete"},
-					}, &action, nil); err != nil {
-						return err
-					}
-
-					if action == "skip" {
-						continue
-					}
-
-					if action == "delete" {
-						deleteCmd := newDeleteConfigurationContextCommand()
-						deleteCmd.SetArgs([]string{name})
-						if err := deleteCmd.Execute(); err != nil {
-							return err
-						}
-
-						continue
-					}
-
-					if action == "edit" {
-						editCmd := newUpdateConfigurationContextCommand()
-						editCmd.SetArgs([]string{name})
-						if err := editCmd.Execute(); err != nil {
-							return err
-						}
+			for name := range configManager.config.Contexts {
+				if !printConfigurationContext(cmd, name) {
+					if !silent {
+						showOptionsForConfigurationContext(cmd, name)
 					}
 				}
-
 			}
 			return nil
 		},
@@ -109,10 +126,26 @@ func newGetConfigurationContextsCommand() *cobra.Command {
 func newConfigurationContextCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "context",
-		Short:         "Modify or delete a configuration context",
-		Example:       exampleString(`context delete context_name`),
+		Short:         "Print the current context or modify or delete a configuration context using the update and delete subcommands",
+		Example:       exampleString(`context`),
 		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// normally the cli would throw "client: credentials missing or invalid" if the current context's configuration
+			// are invalid, but in the case of "context" command, we skip that setup on the root command.
+			if !configManager.currentContextExists() {
+				return fmt.Errorf("current context does not exist, please use the `configure` command first")
+			}
+			name := configManager.config.CurrentContext
+			if !printConfigurationContext(cmd, name) {
+				if !silent {
+					showOptionsForConfigurationContext(cmd, name)
+				}
+			}
+			return nil
+		},
 	}
+
+	canBeSilent(root)
 
 	root.AddCommand(newUpdateConfigurationContextCommand())
 	root.AddCommand(newDeleteConfigurationContextCommand())
