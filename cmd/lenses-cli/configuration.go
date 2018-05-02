@@ -217,7 +217,7 @@ func (m *configurationManager) applyCompatibility() error {
 	} else if found = lenses.TryReadConfigurationFromHome(&oldFormat); found {
 	}
 
-	if !found {
+	if !found || !oldFormat.IsValid() { // do not proceed if it's not valid because it will fill the current context even if new config exists.
 		return nil
 	}
 
