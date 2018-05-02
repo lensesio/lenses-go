@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/landoop/lenses-go"
@@ -33,6 +34,10 @@ func newGetProcessorsCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			sort.Slice(result.Streams, func(i, j int) bool {
+				return result.Streams[i].Name < result.Streams[j].Name
+			})
 
 			for _, processor := range result.Streams {
 				if mode == lenses.ExecutionModeConnect || mode == lenses.ExecutionModeKubernetes {
