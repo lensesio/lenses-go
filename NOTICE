@@ -9,3 +9,4 @@ golog            : BSD-3               - https://github.com/kataras/golog
 cobra            : Apache 2.0          - https://github.com/spf13/cobra
 yaml             : Apache 2.0          - https://github.com/go-yaml/yaml
 go-jmespath      : Apache 2.0          - https://github.com/jmespath/go-jmespath
+godotenv         : MIT                 - https://github.com/joho/godotenv
