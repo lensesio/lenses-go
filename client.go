@@ -920,9 +920,13 @@ type ConsumersGroup struct {
 	ID          string              `json:"id"`
 	Coordinator ConsumerCoordinator `json:"coordinator"`
 	// On consumers not active/committing offsets - we don't get any of the following info
-	Active    bool               `json:"active"`
-	State     ConsumerGroupState `json:"state"`
-	Consumers []Consumer         `json:"consumers"`
+	Active               bool               `json:"active"`
+	State                ConsumerGroupState `json:"state"`
+	Consumers            []string           `json:"consumers"`
+	ConsumersCount       int                `json:"consumersCount"`
+	TopicPartitionsCount int                `json:"topicPartitionsCount"`
+	MinLag               int64              `json:"minLag,omitempty"`
+	MaxLag               int64              `json:"maxLag,omitempty"`
 }
 
 // ConsumerGroupState describes the valid values of a `ConsumerGroupState`:
