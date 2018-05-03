@@ -106,11 +106,30 @@ func (m *configurationManager) removeTokens() {
 // returns true if found and removed, otherwise false.
 func (m *configurationManager) removeContext(contextName string) bool {
 	if _, ok := m.config.Contexts[contextName]; ok {
-		delete(m.config.Contexts, contextName)
-		if err := m.save(); err != nil {
-			return false
+
+		canBeRemoved := false
+		// we are going to remove the current context, let's check if we can change the current context to a valid one.
+		if m.config.CurrentContext == contextName {
+			for name, c := range m.config.Contexts {
+				if name == contextName {
+					continue // skip the context we want to delete of course.
+				}
+				if c.IsValid() { // set the current to the first valid one.
+					canBeRemoved = true
+					m.setCurrent(name)
+					break
+				}
+			}
 		}
-		return true
+
+		if canBeRemoved {
+			delete(m.config.Contexts, contextName)
+			if err := m.save(); err != nil {
+				return false
+			}
+		}
+
+		return canBeRemoved
 	}
 
 	return false
