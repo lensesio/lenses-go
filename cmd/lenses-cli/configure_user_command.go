@@ -42,6 +42,7 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 	if !ok {
 		return false // this should never happen.
 	}
+	c.FormatHost()
 	cfg := *c
 
 	isValid := isValidConfigurationContext(name)

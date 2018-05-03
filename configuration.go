@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v2"
@@ -73,16 +74,56 @@ we can load them via files, i.e in `OpenConnection`, we pass out options that ar
 functions, they can't load via files.
 */
 
-// IsValid returns true if the configuration contains the necessary fields, otherwise false.
-func (c *Configuration) IsValid() bool {
+// FormatHost will try to make sure that the schema:host:port pattern is followed on the `Host` field.
+func (c *Configuration) FormatHost() {
 	if len(c.Host) == 0 {
-		return false
+		return
 	}
 
 	// remove last slash, so the API can append the path with ease.
 	if c.Host[len(c.Host)-1] == '/' {
 		c.Host = c.Host[0 : len(c.Host)-1]
 	}
+
+	portIdx := strings.LastIndexByte(c.Host, ':')
+
+	schemaIdx := strings.Index(c.Host, "://")
+	hasSchema := schemaIdx >= 0
+	hasPort := portIdx > schemaIdx+1
+
+	var port = "80"
+	if hasPort {
+		port = c.Host[portIdx+1:]
+	}
+
+	// find the schema based on the port.
+	if !hasSchema {
+		if port == "443" {
+			c.Host = "https://" + c.Host
+		} else {
+			c.Host = "http://" + c.Host
+		}
+	} else if !hasPort {
+		// has schema but not port.
+		if strings.HasPrefix(c.Host, "https://") {
+			port = "443"
+		}
+	}
+
+	// finally, append the port part if it wasn't there.
+	if !hasPort {
+		c.Host += ":" + port
+	}
+}
+
+// IsValid returns true if the configuration contains the necessary fields, otherwise false.
+func (c *Configuration) IsValid() bool {
+	if len(c.Host) == 0 {
+		return false
+	}
+
+	c.FormatHost()
+
 	return c.Host != "" && (c.Token != "" || (c.User != "" && c.Password != ""))
 }
 

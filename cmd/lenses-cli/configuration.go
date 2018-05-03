@@ -86,6 +86,7 @@ func (m *configurationManager) setCurrent(currentContext string) {
 
 func (m *configurationManager) getCurrent() *lenses.Configuration {
 	if c, has := m.config.Contexts[m.config.CurrentContext]; has {
+		// c.FormatHost()
 		return c
 	}
 
@@ -208,6 +209,7 @@ func (m *configurationManager) save() error {
 	// we encrypt every password (main and contexts) because
 	// they are decrypted on load, even if user didn't select to update a specific context.
 	for _, v := range c.Contexts {
+		v.FormatHost()
 		if err := encryptPassword(v); err != nil {
 			return err
 		}
