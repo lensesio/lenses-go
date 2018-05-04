@@ -5,9 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -61,7 +63,6 @@ func (m *configurationManager) isValid() bool {
 
 func (m *configurationManager) fillCurrent(cfg lenses.Configuration) {
 	c := m.config
-
 	context := c.CurrentContext
 
 	if _, ok := c.Contexts[context]; !ok {
@@ -84,6 +85,7 @@ func (m *configurationManager) setCurrent(currentContext string) {
 
 func (m *configurationManager) getCurrent() *lenses.Configuration {
 	if c, has := m.config.Contexts[m.config.CurrentContext]; has {
+		// c.FormatHost()
 		return c
 	}
 
@@ -104,15 +106,36 @@ func (m *configurationManager) removeTokens() {
 // returns true if found and removed, otherwise false.
 func (m *configurationManager) removeContext(contextName string) bool {
 	if _, ok := m.config.Contexts[contextName]; ok {
-		delete(m.config.Contexts, contextName)
-		if err := m.save(); err != nil {
-			return false
+
+		canBeRemoved := false
+		// we are going to remove the current context, let's check if we can change the current context to a valid one.
+		if m.config.CurrentContext == contextName {
+			for name, c := range m.config.Contexts {
+				if name == contextName {
+					continue // skip the context we want to delete of course.
+				}
+				if c.IsValid() { // set the current to the first valid one.
+					canBeRemoved = true
+					m.setCurrent(name)
+					break
+				}
+			}
 		}
-		return true
+
+		if canBeRemoved {
+			delete(m.config.Contexts, contextName)
+			if err := m.save(); err != nil {
+				return false
+			}
+		}
+
+		return canBeRemoved
 	}
 
 	return false
 }
+
+const currentContextEnvKey = "LENSES_CLI_CONTEXT"
 
 func (m *configurationManager) load() (bool, error) {
 	c := m.config
@@ -145,8 +168,17 @@ func (m *configurationManager) load() (bool, error) {
 			for _, v := range c.Contexts {
 				decryptPassword(v)
 			}
-		}
 
+			// try to set the current context from *.env file or from system's env variables,
+			// if not empty, the env value has a priority over the configurated `CurrentContext`
+			// but --context flag has a priority over all (look above).
+			//
+			// Note that the env variable will NOT change the `CurrentContext` field from the configuration file, by purpose.
+			godotenv.Load()
+			if envContext := strings.TrimSpace(os.Getenv(currentContextEnvKey)); envContext != "" {
+				c.CurrentContext = envContext
+			}
+		}
 	}
 
 	m.fillCurrent(m.flags)
@@ -175,6 +207,7 @@ func (m *configurationManager) save() error {
 	// we encrypt every password (main and contexts) because
 	// they are decrypted on load, even if user didn't select to update a specific context.
 	for _, v := range c.Contexts {
+		v.FormatHost()
 		if err := encryptPassword(v); err != nil {
 			return err
 		}
@@ -217,7 +250,7 @@ func (m *configurationManager) applyCompatibility() error {
 	} else if found = lenses.TryReadConfigurationFromHome(&oldFormat); found {
 	}
 
-	if !found || !oldFormat.IsValid() { // do not proceed if it's not valid because it will fill the current context even if new config exists.
+	if !found || !oldFormat.IsValid() {
 		return nil
 	}
 

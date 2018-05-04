@@ -56,7 +56,7 @@ var rootCmd = &cobra.Command{
 		// let the configure command give a tutorial for user in order to create a configuration file.
 		// Note that if clientConfig is valid and we are inside the configure command
 		// then the configure will normally continue and save the valid configuration (that normally came from flags).
-		if name := cmd.Name(); name == "configure" || name == "context" {
+		if name := cmd.Name(); name == "configure" || name == "context" || name == "contexts" {
 			return nil
 		}
 
@@ -113,6 +113,7 @@ var rootCmd = &cobra.Command{
 
 func setupClient() (err error) {
 	currentConfig := configManager.getCurrent()
+	currentConfig.FormatHost()
 	client, err = lenses.OpenConnection(*currentConfig)
 	// if err == nil {
 	// 	currentConfig.Token = client.GetAccessToken()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/landoop/lenses-go"
@@ -19,6 +20,7 @@ func newConnectorsCommand() *cobra.Command {
 		clusterName string
 
 		namesOnly bool // if true then print only the connector names and not the details as json.
+		noJSON    bool // if true nad namesOnly is true then print just the connectors names as a list of strings.
 	)
 
 	root := &cobra.Command{
@@ -61,6 +63,15 @@ func newConnectorsCommand() *cobra.Command {
 					names = append(names, cNames...)
 				}
 
+				sort.Strings(names)
+
+				if noJSON {
+					for _, name := range names {
+						fmt.Fprintln(cmd.OutOrStdout(), name)
+					}
+					return nil
+				}
+
 				return printJSON(cmd, outlineStringResults("name", names))
 			}
 
@@ -83,8 +94,9 @@ func newConnectorsCommand() *cobra.Command {
 		},
 	}
 
-	root.Flags().BoolVar(&namesOnly, "names", false, `--names`)
 	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
+	root.Flags().BoolVar(&namesOnly, "names", false, `--names`)
+	root.Flags().BoolVar(&noJSON, "no-json", false, "--no-json")
 
 	canPrintJSON(root)
 
@@ -163,6 +175,10 @@ func newGetConnectorsClustersCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			sort.Slice(clusters, func(i, j int) bool {
+				return clusters[i].Name < clusters[j].Name
+			})
 
 			if namesOnly {
 				var b strings.Builder

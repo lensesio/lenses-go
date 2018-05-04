@@ -37,17 +37,19 @@ func isValidConfigurationContext(name string) bool {
 }
 
 func printConfigurationContext(cmd *cobra.Command, name string) bool {
+	currentContextName := configManager.config.CurrentContext
 	c, ok := configManager.config.Contexts[name]
 	if !ok {
 		return false // this should never happen.
 	}
+	c.FormatHost()
 	cfg := *c
 
 	isValid := isValidConfigurationContext(name)
 
-	validMsg := "valid"
+	info := "valid"
 	if !isValid {
-		validMsg = "invalid"
+		info = "invalid"
 	}
 
 	if cfg.Password != "" {
@@ -57,7 +59,11 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 		cfg.Token = "****"
 	}
 
-	cmd.Printf("%s [%s]\n", name, validMsg)
+	if name == currentContextName {
+		info += ", current"
+	}
+
+	cmd.Printf("%s [%s]\n", name, info)
 	printJSON(cmd, cfg)
 
 	return isValid
@@ -165,13 +171,23 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 			}
 
 			name := args[0]
+			removeContextWillChangeContext := configManager.config.CurrentContext == name
 			deleted := configManager.removeContext(name)
 
 			if !deleted {
-				return echo(cmd, "unable to delete '%s'", name)
+				// failed when no found this context or if we can't upgrade to another one.
+				return echo(cmd, "unable to delete context '%s', at least one more valid context should be present", name)
 			}
 
-			return echo(cmd, "'%s' context deleted", name)
+			succMsg := fmt.Sprintf("'%s' context deleted", name)
+
+			if removeContextWillChangeContext {
+				newCurrentContext := configManager.config.CurrentContext
+				succMsg = fmt.Sprintf("%s, current context set to '%s'", succMsg, newCurrentContext)
+			}
+
+			return echo(cmd, succMsg)
+
 		},
 	}
 
@@ -182,9 +198,9 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 
 func newUpdateConfigurationContextCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:           "update",
-		Aliases:       []string{"edit"},
-		Short:         "Edit a configuration context, similar to 'configure --context=context_name --reset' but without banner and this one saves the configuration to the default location",
+		Use:           "set",
+		Aliases:       []string{"edit", "update", "create", "add"},
+		Short:         "Edit an existing or add a configuration context, similar to 'configure --context=context_name --reset' but without banner and this one saves the configuration to the default location",
 		Example:       exampleString(`context edit context_name`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -205,7 +221,7 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 			}
 
 			if isValidConfigurationContext(name) {
-				return echo(cmd, "%s was successfully validated and saved", name)
+				return echo(cmd, "%s was successfully validated and saved, it is the current context now", name)
 			}
 
 			retry := true

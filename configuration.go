@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v2"
@@ -73,50 +74,90 @@ we can load them via files, i.e in `OpenConnection`, we pass out options that ar
 functions, they can't load via files.
 */
 
-// IsValid returns true if the configuration contains the necessary fields, otherwise false.
-func (c *Configuration) IsValid() bool {
+// FormatHost will try to make sure that the schema:host:port pattern is followed on the `Host` field.
+func (c *Configuration) FormatHost() {
 	if len(c.Host) == 0 {
-		return false
+		return
 	}
 
 	// remove last slash, so the API can append the path with ease.
 	if c.Host[len(c.Host)-1] == '/' {
 		c.Host = c.Host[0 : len(c.Host)-1]
 	}
+
+	portIdx := strings.LastIndexByte(c.Host, ':')
+
+	schemaIdx := strings.Index(c.Host, "://")
+	hasSchema := schemaIdx >= 0
+	hasPort := portIdx > schemaIdx+1
+
+	var port = "80"
+	if hasPort {
+		port = c.Host[portIdx+1:]
+	}
+
+	// find the schema based on the port.
+	if !hasSchema {
+		if port == "443" {
+			c.Host = "https://" + c.Host
+		} else {
+			c.Host = "http://" + c.Host
+		}
+	} else if !hasPort {
+		// has schema but not port.
+		if strings.HasPrefix(c.Host, "https://") {
+			port = "443"
+		}
+	}
+
+	// finally, append the port part if it wasn't there.
+	if !hasPort {
+		c.Host += ":" + port
+	}
+}
+
+// IsValid returns true if the configuration contains the necessary fields, otherwise false.
+func (c *Configuration) IsValid() bool {
+	if len(c.Host) == 0 {
+		return false
+	}
+
+	c.FormatHost()
+
 	return c.Host != "" && (c.Token != "" || (c.User != "" && c.Password != ""))
 }
 
-// Fill iterates over the current "c" Configuration's fields
-// it checks if a field is empty or false,
-// if it's then fill from the "other".
+// Fill iterates over the "other" Configuration's fields
+// it checks if a field is not empty,
+// if it's then it sets the value to the "c" Configuration's particular field.
 //
 // It returns true if the final configuration is valid by calling the `IsValid`.
 //
 // Example of usage:
 // Load configuration from flags directly, on the command run
-// the flags are filled, if any, then try to load from files but give prioriy to flags(the current "c").
+// the file was loaded, if any, then try to check if flags given but give prioriy to flags(the "other").
 func (c *Configuration) Fill(other Configuration) bool {
-	if c.Host == "" {
-		c.Host = other.Host
+	if v := other.Host; v != "" && v != c.Host {
+		c.Host = v
 	}
 
-	if c.Token == "" {
-		c.Token = other.Token
+	if v := other.Token; v != "" && v != c.Token {
+		c.Token = v
 	}
 
-	if c.User == "" {
-		c.User = other.User
+	if v := other.User; v != "" && v != c.User {
+		c.User = v
 	}
 
-	if c.Password == "" {
-		c.Password = other.Password
+	if v := other.Password; v != "" && v != c.Password {
+		c.Password = v
 	}
 
-	if c.Timeout == "" {
-		c.Timeout = other.Timeout
+	if v := other.Timeout; v != "" && v != c.Timeout {
+		c.Timeout = v
 	}
 
-	if !c.Debug {
+	if c.Debug != other.Debug {
 		c.Debug = other.Debug
 	}
 
