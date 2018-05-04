@@ -127,37 +127,37 @@ func (c *Configuration) IsValid() bool {
 	return c.Host != "" && (c.Token != "" || (c.User != "" && c.Password != ""))
 }
 
-// Fill iterates over the current "c" Configuration's fields
-// it checks if a field is empty or false,
-// if it's then fill from the "other".
+// Fill iterates over the "other" Configuration's fields
+// it checks if a field is not empty,
+// if it's then it sets the value to the "c" Configuration's particular field.
 //
 // It returns true if the final configuration is valid by calling the `IsValid`.
 //
 // Example of usage:
 // Load configuration from flags directly, on the command run
-// the flags are filled, if any, then try to load from files but give prioriy to flags(the current "c").
+// the file was loaded, if any, then try to check if flags given but give prioriy to flags(the "other").
 func (c *Configuration) Fill(other Configuration) bool {
-	if c.Host == "" {
-		c.Host = other.Host
+	if v := other.Host; v != "" && v != c.Host {
+		c.Host = v
 	}
 
-	if c.Token == "" {
-		c.Token = other.Token
+	if v := other.Token; v != "" && v != c.Token {
+		c.Token = v
 	}
 
-	if c.User == "" {
-		c.User = other.User
+	if v := other.User; v != "" && v != c.User {
+		c.User = v
 	}
 
-	if c.Password == "" {
-		c.Password = other.Password
+	if v := other.Password; v != "" && v != c.Password {
+		c.Password = v
 	}
 
-	if c.Timeout == "" {
-		c.Timeout = other.Timeout
+	if v := other.Timeout; v != "" && v != c.Timeout {
+		c.Timeout = v
 	}
 
-	if !c.Debug {
+	if c.Debug != other.Debug {
 		c.Debug = other.Debug
 	}
 

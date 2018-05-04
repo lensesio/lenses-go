@@ -63,7 +63,6 @@ func (m *configurationManager) isValid() bool {
 
 func (m *configurationManager) fillCurrent(cfg lenses.Configuration) {
 	c := m.config
-
 	context := c.CurrentContext
 
 	if _, ok := c.Contexts[context]; !ok {
@@ -180,7 +179,6 @@ func (m *configurationManager) load() (bool, error) {
 				c.CurrentContext = envContext
 			}
 		}
-
 	}
 
 	m.fillCurrent(m.flags)
