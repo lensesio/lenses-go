@@ -2605,3 +2605,54 @@ func (c *Client) DeleteQuotaForClient(clientID string) error {
 
 	return resp.Body.Close()
 }
+
+// Alert API
+
+// AlertSetting describes the type of list entry of the `GetAlertSettings`.
+type AlertSetting struct {
+	ID                int               `json:"id"`
+	Description       string            `json:"description"`
+	Category          string            `json:"category"`
+	Enabled           bool              `json:"enabled"`
+	Docs              string            `json:"docs,omitempty"`
+	ConditionTemplate string            `json:"conditionTemplate,omitempty"`
+	ConditionRegex    string            `json:"conditionRegex,omitempty"`
+	Conditions        map[string]string `json:"conditions,omitempty"`
+	IsAvailable       bool              `json:"isAvailable"`
+}
+
+const (
+	alertSettingsPath = "/api/alerts/settings"
+	alertSettingPath  = alertSettingsPath + "/%d"
+)
+
+// GetAlertSettings returns all the configured alert settings.
+// Alerts are divided into two categories:
+//
+// * Infrastructure - These are out of the box alerts that be toggled on and offset.
+// * Consumer group - These are user-defined alerts on consumer groups.
+//
+// Alert notifications are the result of an `AlertSetting` Condition being met on an `AlertSetting`.
+func (c *Client) GetAlertSettings() ([]AlertSetting, error) {
+	resp, err := c.do(http.MethodGet, alertSettingsPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var settings []AlertSetting
+	err = c.readJSON(resp, &settings)
+	return settings, err
+}
+
+// GetAlertSetting returns a specific alert setting based on its "id".
+func (c *Client) GetAlertSetting(id int) (setting AlertSetting, err error) {
+	path := fmt.Sprintf(alertSettingPath, id)
+	resp, respErr := c.do(http.MethodGet, path, "", nil)
+	if respErr != nil {
+		err = respErr
+		return
+	}
+
+	err = c.readJSON(resp, &setting)
+	return
+}
