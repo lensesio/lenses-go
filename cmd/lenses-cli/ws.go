@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strconv"
@@ -59,11 +60,31 @@ func newLiveLSQLCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var queryArgs []string
 			if len(args) <= 1 {
-				return fmt.Errorf(`sql query is missing, the correct form is: live sql "query here"`)
+				//Detect if there are data coming from stdin:
+				stats, _ := os.Stdin.Stat()
+				if (stats.Mode() & os.ModeCharDevice) != os.ModeCharDevice {
+					stdin, err := ioutil.ReadAll(os.Stdin)
+					if err != nil {
+						return fmt.Errorf(`failed to read from stdin and sql query is missing`)
+					} else {
+						rawArgs := strings.Split(string(stdin), ";")
+						for _, v := range rawArgs {
+							if len(strings.TrimSpace(v)) != 0 {
+								queryArgs = append(queryArgs, v)
+							}
+						}
+					}
+				} else {
+					return fmt.Errorf(`sql query is missing, the correct form is: live sql "query here"`)
+				}
 			}
 
-			queries, err := readAndQuoteQueries(args[1:]) // -> omit the "sql" because it parsed as argument.
+			if len(queryArgs) == 0 {
+				queryArgs = args[1:] // -> omit the "sql" because it parsed as argument.
+			}
+			queries, err := readAndQuoteQueries(queryArgs)
 			if err != nil {
 				return err
 			}
