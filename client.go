@@ -920,16 +920,13 @@ type ConsumersGroup struct {
 	ID          string              `json:"id"`
 	Coordinator ConsumerCoordinator `json:"coordinator"`
 	// On consumers not active/committing offsets - we don't get any of the following info
-	Active bool               `json:"active"`
-	State  ConsumerGroupState `json:"state"`
-	// TODO: for the next lenses version
-	// It's not ready yet, it was "reverted" for now:
-	// Consumers         []string   `json:"consumers"`
-	Consumers            []Consumer `json:"consumers"`
-	ConsumersCount       int        `json:"consumersCount,omitempty"`
-	TopicPartitionsCount int        `json:"topicPartitionsCount,omitempty"`
-	MinLag               int64      `json:"minLag,omitempty"`
-	MaxLag               int64      `json:"maxLag,omitempty"`
+	Active               bool               `json:"active"`
+	State                ConsumerGroupState `json:"state"`
+	Consumers            []string           `json:"consumers"`
+	ConsumersCount       int                `json:"consumersCount,omitempty"`
+	TopicPartitionsCount int                `json:"topicPartitionsCount,omitempty"`
+	MinLag               int64              `json:"minLag,omitempty"`
+	MaxLag               int64              `json:"maxLag,omitempty"`
 }
 
 // ConsumerGroupState describes the valid values of a `ConsumerGroupState`:

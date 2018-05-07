@@ -51,6 +51,7 @@ func newConnectorsCommand() *cobra.Command {
 			} else {
 				names, err := client.GetConnectors(clusterName)
 				if err != nil {
+					errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve connectors, cluster with name '%s' does not exist", clusterName)
 					return err
 				}
 
