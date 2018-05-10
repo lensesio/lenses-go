@@ -51,7 +51,8 @@ func isOK(resp *http.Response) bool {
 		resp.StatusCode == http.StatusAccepted || /* see PauseConnector for the `StatusAccepted` */
 		(resp.Request.Method == http.MethodDelete && resp.StatusCode == http.StatusNoContent) || /* see RemoveConnector for the `StatusNoContnet` */
 		(resp.Request.Method == http.MethodPost && resp.StatusCode == http.StatusNoContent) || /* see Restart tasks for the `StatusNoContnet` */
-		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */
+		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) || /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */
+		(resp.Request.Method == http.MethodDelete && (resp.StatusCode == http.StatusForbidden) || (resp.StatusCode == http.StatusBadRequest)) /* for things like deletion if not proper user access or invalid value of something passed */
 }
 
 const (
@@ -76,9 +77,25 @@ var schemaAPIOption = func(r *http.Request) {
 	r.Header.Add(acceptHeaderKey, contentTypeSchemaJSON)
 }
 
-// ErrResourceNotFound is being fired from all API calls when a 404 not found error code is received.
-// It's a static error message of just `404`, therefore it can be used to add additional info messages based on the caller's action.
-var ErrResourceNotFound = fmt.Errorf("%d", http.StatusNotFound)
+var (
+	// ErrResourceNotFound is being fired from all API calls when a 404 not found error code is received.
+	// It's a static error message of just `404`, therefore it can be used to add additional info messages based on the caller's action.
+	//
+	// Example of usage: on topic deletion, if topic does not exist.
+	ErrResourceNotFound = fmt.Errorf("%d", http.StatusNotFound)
+
+	// ErrResourceNotAccessible is being fired from all API calls when 403 forbidden code is received.
+	// It's static error message, same usage as `ErrResourceNotFound`.
+	//
+	// Example of usage: on topic's records deletion with offset, if user has no admin access.
+	ErrResourceNotAccessible = fmt.Errorf("%d", http.StatusForbidden)
+
+	// ErrResourceNotGood is being fired from all API calls when 400 bad request code is received.
+	// It's static error message, same usage as `ErrResourceNotFound`.
+	//
+	// Example of usage: on topic's records deletion with offset, if offset is negative value.
+	ErrResourceNotGood = fmt.Errorf("%d", http.StatusBadRequest)
+)
 
 func (c *Client) do(method, path, contentType string, send []byte, options ...requestOption) (*http.Response, error) {
 	if path[0] == '/' { // remove beginning slash, if any.
@@ -144,10 +161,19 @@ func (c *Client) do(method, path, contentType string, send []byte, options ...re
 			defer resp.Body.Close()
 		}
 
-		if !c.config.Debug && resp.StatusCode == http.StatusNotFound {
-			// if status code is 404, then we set a static error instead of a full message, so front-ends can check.
-			return nil, ErrResourceNotFound
+		// if not on debug, then throw static errors, otherwise debug error with the full information, including
+		// method, url, status code and the errored body.
+		if !c.config.Debug {
+			if resp.StatusCode == http.StatusNotFound {
+				// if status code is 404, then we set a static error instead of a full message, so front-ends can check and so on.
+				return nil, ErrResourceNotFound
+			} else if resp.StatusCode == http.StatusForbidden {
+				return nil, ErrResourceNotAccessible
+			} else if resp.StatusCode == http.StatusBadRequest {
+				return nil, ErrResourceNotGood
+			}
 		}
+
 		return nil, fmt.Errorf("client: (%s: %s) failed with status code %d%s",
 			method, unescapedURI, resp.StatusCode, errBody)
 	}
@@ -759,7 +785,7 @@ func (c *Client) CancelQuery(id int64) (bool, error) {
 
 // Topics API
 //
-// Follow the instructions on http://lenses.stream/developers-guide/rest-api/index.html and read
+// Follow the instructions on http://lenses.stream/dev/lenses-apis/rest-api/index.html#topic-api and read
 // the call comments for a deeper understanding.
 
 // KV is just a keyvalue map, a form of map[string]interface{}.
@@ -816,7 +842,7 @@ type CreateTopicPayload struct {
 // partitions, int.
 // configs, topic key - value.
 //
-// Read more at: http://lenses.stream/developers-guide/rest-api/index.html#create-topic
+// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#create-topic
 func (c *Client) CreateTopic(topicName string, replication, partitions int, configs KV) error {
 	if topicName == "" {
 		return errRequired("topicName")
@@ -842,18 +868,44 @@ func (c *Client) CreateTopic(topicName string, replication, partitions int, conf
 	return resp.Body.Close()
 }
 
-const topicPath = topicsPath + "/%s"
+const (
+	topicPath        = topicsPath + "/%s"
+	topicRecordsPath = topicPath + "/%d/%d"
+)
 
 // DeleteTopic deletes a topic.
 // It accepts the topicName, a required, not empty string.
 //
-// Read more at: http://lenses.stream/developers-guide/rest-api/index.html#delete-topic
+// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#delete-topic
 func (c *Client) DeleteTopic(topicName string) error {
 	if topicName == "" {
 		return errRequired("topicName")
 	}
 
 	path := fmt.Sprintf(topicPath, topicName)
+	resp, err := c.do(http.MethodDelete, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteTopicRecords deletes a topic's records from partition to an offset.
+// If user has no rights for that action it returns `ErrResourceNotAccessible`,
+// if negative value of "toOffset" then it returns `ErrResourceNotGood`.
+//
+// All input arguments are required.
+func (c *Client) DeleteTopicRecords(topicName string, fromPartition int, toOffset int64) error {
+	if topicName == "" {
+		return errRequired("topicName")
+	}
+
+	if toOffset < 0 || fromPartition < 0 {
+		return ErrResourceNotGood
+	}
+
+	path := fmt.Sprintf(topicRecordsPath, topicName, fromPartition, toOffset)
 	resp, err := c.do(http.MethodDelete, path, "", nil)
 	if err != nil {
 		return err
@@ -874,7 +926,7 @@ type UpdateTopicPayload struct {
 // topicName, string.
 // configsSlice, array of topic config key-values.
 //
-// Read more at: http://lenses.stream/developers-guide/rest-api/index.html#update-topic-configuration
+// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#update-topic-configuration
 func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	if topicName == "" {
 		return errRequired("topicName")
@@ -981,7 +1033,7 @@ type PartitionMessage struct {
 
 // GetTopic returns a topic's information, a `lenses.Topic` value.
 //
-// Read more at: http://lenses.stream/developers-guide/rest-api/index.html#get-topic-information
+// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#get-topic-information
 func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 	if topicName == "" {
 		err = errRequired("topicName")
@@ -1250,7 +1302,7 @@ func (c *Client) DeleteProcessor(processorNameOrID string) error {
 //
 // https://docs.confluent.io/current/connect/devguide.html
 // https://docs.confluent.io/current/connect/restapi.html
-// http://lenses.stream/developers-guide/rest-api/index.html#connector-api
+// http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
 
 // ConnectorConfig the configuration parameters
 // for the connector.
@@ -1289,7 +1341,7 @@ const connectorsPath = "/api/proxy-connect/%s/connectors"
 
 // GetConnectors returns a list of active connectors names as list of strings.
 //
-// Visit http://lenses.stream/developers-guide/rest-api/index.html#connector-api
+// Visit http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
 // and https://docs.confluent.io/current/connect/restapi.html for a deeper understanding.
 func (c *Client) GetConnectors(clusterName string) (names []string, err error) {
 	if clusterName == "" {

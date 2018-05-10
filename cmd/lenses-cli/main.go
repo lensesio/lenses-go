@@ -155,8 +155,9 @@ func buildVersionTmpl() string {
 }
 
 var (
-	errResourceNotFoundMessage string
-	// more may come.
+	errResourceNotFoundMessage      string
+	errResourceNotAccessibleMessage string
+	errResourceNotGoodMessage       string
 )
 
 type errorMap map[error]string
@@ -184,7 +185,9 @@ func main() {
 		// each errResourceXXXMessage should be declared inside the command,
 		// they are global variables and that's because we don't want to get dirdy on each resource command, don't change it unless discussion.
 		err = mapError(err, errorMap{
-			lenses.ErrResourceNotFound: errResourceNotFoundMessage,
+			lenses.ErrResourceNotFound:      errResourceNotFoundMessage,
+			lenses.ErrResourceNotAccessible: errResourceNotAccessibleMessage,
+			lenses.ErrResourceNotGood:       errResourceNotGoodMessage,
 		})
 
 		// always new line because of the unix terminal.

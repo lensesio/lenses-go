@@ -138,17 +138,34 @@ func newTopicCreateCommand() *cobra.Command {
 }
 
 func newTopicDeleteCommand() *cobra.Command {
-	var topicName string
+	var (
+		topicName string
+		// and for records with offset.
+		fromPartition int
+		toOffset      int64
+	)
 
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Deletes a topic",
-		Example:          exampleString(`topic delete --name="topic1"`),
+		Example:          exampleString(`topic delete --name="topic1" [--partition=0 --offset=1260]`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := checkRequiredFlags(cmd, flags{"name": topicName}); err != nil {
 				return err
+			}
+
+			if fromPartition >= 0 && toOffset >= 0 {
+				// delete records.
+				if err := client.DeleteTopicRecords(topicName, fromPartition, toOffset); err != nil {
+					errResourceNotFoundMessage = fmt.Sprintf("unable to delete records, topic '%s' does not exist", topicName)
+					errResourceNotAccessibleMessage = fmt.Sprintf("unable to delete records from topic '%s', not proper access", topicName)
+					errResourceNotGoodMessage = fmt.Sprintf("unable to delete records from topic '%s', invalid offset '%d' or partition '%d' passed", topicName, toOffset, fromPartition)
+					return err
+				}
+
+				return echo(cmd, "Records from topic '%s' and partition '%d' up to offset '%d', are marked for deletion. This may take a few moments to have effect", topicName, fromPartition, toOffset)
 			}
 
 			if err := client.DeleteTopic(topicName); err != nil {
@@ -161,6 +178,11 @@ func newTopicDeleteCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&topicName, "name", "", "--name=topic1")
+
+	// negative default values because 0 is valid value.
+	cmd.Flags().IntVar(&fromPartition, "partition", -1, "--partition=0 Deletes records from a specific partition (offset must set)")
+	cmd.Flags().Int64Var(&toOffset, "offset", -1, "--offset=1260 Deletes records from a specific offset (partition must set)")
+
 	canBeSilent(cmd)
 
 	return cmd
