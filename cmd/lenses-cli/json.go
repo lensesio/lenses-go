@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -60,6 +61,12 @@ func printJSON(cmd *cobra.Command, v interface{}) error {
 	if err != nil {
 		return err
 	}
+
+	// don't escape html.
+	rawJSON = bytes.Replace(rawJSON, []byte("\\u003c"), []byte("<"), -1)
+	rawJSON = bytes.Replace(rawJSON, []byte("\\u003e"), []byte(">"), -1)
+	rawJSON = bytes.Replace(rawJSON, []byte("\\u0026"), []byte("&"), -1)
+
 	_, err = fmt.Fprintln(cmd.OutOrStdout(), string(rawJSON))
 	return err
 }

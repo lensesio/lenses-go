@@ -2609,3 +2609,245 @@ func (c *Client) DeleteQuotaForClient(clientID string) error {
 
 	return resp.Body.Close()
 }
+
+// Alert API
+
+type (
+	// AlertSetting describes the type of list entry of the `GetAlertSetting` and `CreateOrUpdateAlertSettingCondition`.
+	AlertSetting struct {
+		ID                int               `json:"id"`
+		Description       string            `json:"description"`
+		Category          string            `json:"category"`
+		Enabled           bool              `json:"enabled"`
+		Docs              string            `json:"docs,omitempty"`
+		ConditionTemplate string            `json:"conditionTemplate,omitempty"`
+		ConditionRegex    string            `json:"conditionRegex,omitempty"`
+		Conditions        map[string]string `json:"conditions,omitempty"`
+		IsAvailable       bool              `json:"isAvailable"`
+	}
+
+	// AlertSettings describes the type of list entry of the `GetAlertSettings`.
+	AlertSettings struct {
+		Categories AlertSettingsCategoryMap `json:"categories"`
+	}
+
+	AlertSettingsCategoryMap struct {
+		Infrastructure []AlertSetting `json:"Infrastructure"`
+		Consumers      []AlertSetting `json:"Consumers"`
+	}
+)
+
+const (
+	alertsPath                 = "/api/alerts"
+	alertSettingsPath          = alertsPath + "/settings"
+	alertSettingPath           = alertSettingsPath + "/%d"
+	alertSettingConditionsPath = alertSettingPath + "/condition"
+	alertSettingConditionPath  = alertSettingConditionsPath + "/%s" // UUID for condition.
+)
+
+// GetAlertSettings returns all the configured alert settings.
+// Alerts are divided into two categories:
+//
+// * Infrastructure - These are out of the box alerts that be toggled on and offset.
+// * Consumer group - These are user-defined alerts on consumer groups.
+//
+// Alert notifications are the result of an `AlertSetting` Condition being met on an `AlertSetting`.
+func (c *Client) GetAlertSettings() (AlertSettings, error) {
+	resp, err := c.do(http.MethodGet, alertSettingsPath, "", nil)
+	if err != nil {
+		return AlertSettings{}, err
+	}
+
+	var settings AlertSettings
+	err = c.readJSON(resp, &settings)
+	return settings, err
+}
+
+// GetAlertSetting returns a specific alert setting based on its "id".
+func (c *Client) GetAlertSetting(id int) (setting AlertSetting, err error) {
+	path := fmt.Sprintf(alertSettingPath, id)
+	resp, respErr := c.do(http.MethodGet, path, "", nil)
+	if respErr != nil {
+		err = respErr
+		return
+	}
+
+	err = c.readJSON(resp, &setting)
+	return
+}
+
+// EnableAlertSetting enables a specific alert setting based on its "id".
+func (c *Client) EnableAlertSetting(id int) error {
+	path := fmt.Sprintf(alertSettingPath, id)
+	resp, err := c.do(http.MethodPut, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// AlertSettingConditions map with UUID as key and the condition as value, used on `GetAlertSettingConditions`.
+type AlertSettingConditions map[string]string
+
+// GetAlertSettingConditions returns alert setting's conditions as a map of strings.
+func (c *Client) GetAlertSettingConditions(id int) (AlertSettingConditions, error) {
+	path := fmt.Sprintf(alertSettingConditionsPath, id)
+	resp, err := c.do(http.MethodGet, path, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var conds AlertSettingConditions
+	if err = c.readJSON(resp, &conds); err != nil {
+		return nil, err
+	}
+	return conds, nil
+}
+
+type (
+	// Alert is the request payload that is used to register an Alert via `RegisterAlert` and the response that client retrieves from the `GetAlerts`.
+	Alert struct {
+		// AlertID  is a unique identifier for the setting corresponding to this alert. See the available ids via `GetAlertSettings`.
+		AlertID int `json:"alertId" yaml:"AlertID"`
+		// EndsAt is the time as string the alert ended at.
+		EndsAt string `json:"endsAt" yaml:"EndsAt"`
+		// StartsAt is the time as string, in ISO format, for when the alert starts
+		StartsAt string `json:"startsAt" yaml:"StartsAt"`
+		// Labels field is a list of key-value pairs. It must contain a non empty `Severity` value.
+		Labels AlertLabels `json:"labels" yaml:"Labels"`
+		// Annotations is a list of key-value pairs. It contains the summary, source, and docs fields.
+		Annotations AlertAnnotations `json:"annotations" yaml:"Annotations"`
+		// GeneratorURL is a unique URL identifying the creator of this alert.
+		// It matches AlertManager requirements for providing this field.
+		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL"`
+	}
+
+	// AlertLabels labels for the `Alert`, at least Severity should be filled.
+	AlertLabels struct {
+		Category string `json:"category,omitempty" yaml:"Category,omitempty"`
+		Severity string `json:"severity" yaml:"Severity,omitempty"`
+		Instance string `json:"instance,omitempty" yaml:"Instance,omitempty"`
+	}
+
+	// AlertAnnotations annotations for the `Alert`, at least Summary should be filled.
+	AlertAnnotations struct {
+		Summary string `json:"summary" yaml:"Summary"`
+		Source  string `json:"source,omitempty" yaml:"Source,omitempty"`
+		Docs    string `json:"docs,omitempty" yaml:"Docs,omitempty"`
+	}
+)
+
+// RegisterAlert registers an Alert, returns an error on failure.
+func (c *Client) RegisterAlert(alert Alert) error {
+	if alert.Labels.Severity == "" {
+		return errRequired("Labels.Severity")
+	}
+
+	alert.Labels.Severity = strings.ToUpper(alert.Labels.Severity)
+
+	send, err := json.Marshal(alert)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.do(http.MethodPost, alertsPath, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// GetAlerts returns the registered alerts.
+func (c *Client) GetAlerts() (alerts []Alert, err error) {
+	resp, respErr := c.do(http.MethodGet, alertsPath, "", nil)
+	if respErr != nil {
+		err = respErr
+		return
+	}
+
+	err = c.readJSON(resp, &alerts)
+	return
+}
+
+// CreateOrUpdateAlertSettingCondition sets a condition(expression text) for a specific alert setting.
+func (c *Client) CreateOrUpdateAlertSettingCondition(alertSettingID int, condition string) error {
+	path := fmt.Sprintf(alertSettingConditionsPath, alertSettingID)
+	resp, err := c.do(http.MethodPost, path, "text/plain", []byte(condition))
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteAlertSettingCondition deletes a condition from an alert setting.
+func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID string) error {
+	path := fmt.Sprintf(alertSettingConditionPath, alertSettingID, conditionUUID)
+	resp, err := c.do(http.MethodDelete, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+const (
+	alertsPathSSE       = "/api/sse/alerts"
+	alertsSSEDataPrefix = "data:"
+)
+
+// AlertHandler is the type of func that can be registered to receive alerts via the `GetAlertsLive`.
+type AlertHandler func(Alert) error
+
+// GetAlertsLive receives alert notifications in real-time from the server via a Send Server Event endpoint.
+func (c *Client) GetAlertsLive(handler AlertHandler) error {
+	resp, err := c.do(http.MethodGet, alertsPathSSE, contentTypeJSON, nil, func(r *http.Request) {
+		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+	}, schemaAPIOption)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	reader, err := c.acquireResponseBodyStream(resp)
+	if err != nil {
+		return err
+	}
+
+	streamReader := bufio.NewReader(reader)
+
+	for {
+		line, err := streamReader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil // we read until the the end, exit with no error here.
+			}
+			return err // exit on first failure.
+		}
+
+		// ignore all except data: ..., heartbeats.
+		if len(line) < len(alertsSSEDataPrefix)+1 {
+			continue
+		}
+
+		message := line[len(alertsSSEDataPrefix):] // we need everything after the 'data:'.
+
+		// it can return data:[empty here] when it stops, let's stop it
+		if len(message) < 2 {
+			return nil // stop here for now.
+		}
+
+		alert := Alert{}
+
+		if err = json.Unmarshal(message, &alert); err != nil {
+			// exit on first error here as well.
+			return err
+		}
+
+		if err = handler(alert); err != nil {
+			return err // stop on first error by the caller.
+		}
+	}
+}

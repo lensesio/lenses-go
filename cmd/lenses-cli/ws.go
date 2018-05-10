@@ -62,7 +62,7 @@ func newLiveLSQLCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var queryArgs []string
 			if len(args) <= 1 {
-				//Detect if there are data coming from stdin:
+				// Detect if there are data coming from stdin:
 				stats, _ := os.Stdin.Stat()
 				if (stats.Mode() & os.ModeCharDevice) != os.ModeCharDevice {
 					stdin, err := ioutil.ReadAll(os.Stdin)
