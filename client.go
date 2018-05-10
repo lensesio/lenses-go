@@ -759,7 +759,7 @@ func (c *Client) CancelQuery(id int64) (bool, error) {
 
 // Topics API
 //
-// Follow the instructions on http://lenses.stream/developers-guide/rest-api/index.html and read
+// Follow the instructions on http://lenses.stream/dev/lenses-apis/rest-api/index.html#topic-api and read
 // the call comments for a deeper understanding.
 
 // KV is just a keyvalue map, a form of map[string]interface{}.
@@ -816,7 +816,7 @@ type CreateTopicPayload struct {
 // partitions, int.
 // configs, topic key - value.
 //
-// Read more at: http://lenses.stream/developers-guide/rest-api/index.html#create-topic
+// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#create-topic
 func (c *Client) CreateTopic(topicName string, replication, partitions int, configs KV) error {
 	if topicName == "" {
 		return errRequired("topicName")
@@ -847,7 +847,7 @@ const topicPath = topicsPath + "/%s"
 // DeleteTopic deletes a topic.
 // It accepts the topicName, a required, not empty string.
 //
-// Read more at: http://lenses.stream/developers-guide/rest-api/index.html#delete-topic
+// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#delete-topic
 func (c *Client) DeleteTopic(topicName string) error {
 	if topicName == "" {
 		return errRequired("topicName")
@@ -874,7 +874,7 @@ type UpdateTopicPayload struct {
 // topicName, string.
 // configsSlice, array of topic config key-values.
 //
-// Read more at: http://lenses.stream/developers-guide/rest-api/index.html#update-topic-configuration
+// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#update-topic-configuration
 func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	if topicName == "" {
 		return errRequired("topicName")
@@ -981,7 +981,7 @@ type PartitionMessage struct {
 
 // GetTopic returns a topic's information, a `lenses.Topic` value.
 //
-// Read more at: http://lenses.stream/developers-guide/rest-api/index.html#get-topic-information
+// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#get-topic-information
 func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 	if topicName == "" {
 		err = errRequired("topicName")
@@ -1250,7 +1250,7 @@ func (c *Client) DeleteProcessor(processorNameOrID string) error {
 //
 // https://docs.confluent.io/current/connect/devguide.html
 // https://docs.confluent.io/current/connect/restapi.html
-// http://lenses.stream/developers-guide/rest-api/index.html#connector-api
+// http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
 
 // ConnectorConfig the configuration parameters
 // for the connector.
@@ -1289,7 +1289,7 @@ const connectorsPath = "/api/proxy-connect/%s/connectors"
 
 // GetConnectors returns a list of active connectors names as list of strings.
 //
-// Visit http://lenses.stream/developers-guide/rest-api/index.html#connector-api
+// Visit http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
 // and https://docs.confluent.io/current/connect/restapi.html for a deeper understanding.
 func (c *Client) GetConnectors(clusterName string) (names []string, err error) {
 	if clusterName == "" {
