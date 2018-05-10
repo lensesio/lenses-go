@@ -78,6 +78,8 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				return err
 			}
 
+			errResourceNotAccessibleMessage = "unable to access quota, user has no rights for this action"
+
 			if quota.User != "" {
 				if clientID := quota.ClientID; clientID != "" {
 					if clientID == "all" || clientID == "*" {
@@ -126,6 +128,8 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			errResourceNotAccessibleMessage = "unable to delete quota, user has no rights for this action"
+
 			var user, clientID = quota.User, quota.ClientID
 
 			if user != "" {
@@ -196,6 +200,8 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 				return err
 			}
 
+			errResourceNotAccessibleMessage = "unable to access quota, user has no rights for this action"
+
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.CreateOrUpdateQuotaForClient(quota.ClientID, quota.Config); err != nil {
 					return err
@@ -229,6 +235,8 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 			if err := checkRequiredFlags(cmd, flags{"quota-client": quota.ClientID}); err != nil {
 				return err
 			}
+
+			errResourceNotAccessibleMessage = "unable to delete quota, user has no rights for this action"
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.DeleteQuotaForClient(id); err != nil {

@@ -2444,16 +2444,18 @@ type (
 		// EntityType can be either `QuotaEntityClient`, `QuotaEntityClients`,
 		// `QuotaEntityClientsDefault`, `QuotaEntityUser`, `QuotaEntityUsers`, `QuotaEntityUserClient`
 		// or `QuotaEntityUsersDefault`.
-		EnityType QuotaEntityType `json:"entityType"`
+		EnityType QuotaEntityType `json:"entityType" yaml:"EntityType"`
 		// Entityname is the Kafka client id for "CLIENT"
 		// and "CLIENTS" and user name for "USER", "USER" and "USERCLIENT", the `QuotaEntityXXX`.
-		EntityName string `json:"entityName"`
+		EntityName string `json:"entityName" yaml:"EntityName"`
 		// Child is optional and only present for entityType `QuotaEntityUserClient` and is the client id.
-		Child string `json:"child,omitempty"`
+		Child string `json:"child,omitempty" yaml:"Child"`
 		// Properties  is a map of the quota constraints, the `QuotaConfig`.
-		Properties QuotaConfig `json:"properties"`
+		Properties QuotaConfig `json:"properties" yaml:"Properties"`
 		// URL is the url from this quota in Lenses.
-		URL string `json:"url"`
+		URL string `json:"url" yaml:"URL"`
+
+		IsAuthorized bool `json:"isAuthorized" yaml:"IsAuthorized"`
 	}
 
 	// QuotaConfig is a typed struct which defines the
