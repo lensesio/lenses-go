@@ -15,6 +15,8 @@ func init() {
 }
 
 func newGetAlertsCommand() *cobra.Command {
+	var sse bool
+
 	cmd := &cobra.Command{
 		Use:              "alerts",
 		Short:            "Print the registered alerts",
@@ -22,6 +24,14 @@ func newGetAlertsCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if sse {
+				handler := func(alert lenses.Alert) error {
+					return printJSON(cmd, alert)
+				}
+
+				return client.GetAlertsLive(handler)
+			}
+
 			alerts, err := client.GetAlerts()
 			if err != nil {
 				return err
@@ -30,6 +40,8 @@ func newGetAlertsCommand() *cobra.Command {
 			return printJSON(cmd, alerts)
 		},
 	}
+
+	cmd.Flags().BoolVar(&sse, "live", false, "--live Enables real-time push alert notifications")
 
 	canPrintJSON(cmd)
 

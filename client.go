@@ -2792,3 +2792,62 @@ func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID s
 
 	return resp.Body.Close()
 }
+
+const (
+	alertsPathSSE       = "/api/sse/alerts"
+	alertsSSEDataPrefix = "data:"
+)
+
+// AlertHandler is the type of func that can be registered to receive alerts via the `GetAlertsLive`.
+type AlertHandler func(Alert) error
+
+// GetAlertsLive receives alert notifications in real-time from the server via a Send Server Event endpoint.
+func (c *Client) GetAlertsLive(handler AlertHandler) error {
+	resp, err := c.do(http.MethodGet, alertsPathSSE, contentTypeJSON, nil, func(r *http.Request) {
+		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+	}, schemaAPIOption)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	reader, err := c.acquireResponseBodyStream(resp)
+	if err != nil {
+		return err
+	}
+
+	streamReader := bufio.NewReader(reader)
+
+	for {
+		line, err := streamReader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil // we read until the the end, exit with no error here.
+			}
+			return err // exit on first failure.
+		}
+
+		// ignore all except data: ..., heartbeats.
+		if len(line) < len(alertsSSEDataPrefix)+1 {
+			continue
+		}
+
+		message := line[len(alertsSSEDataPrefix):] // we need everything after the 'data:'.
+
+		// it can return data:[empty here] when it stops, let's stop it
+		if len(message) < 2 {
+			return nil // stop here for now.
+		}
+
+		alert := Alert{}
+
+		if err = json.Unmarshal(message, &alert); err != nil {
+			// exit on first error here as well.
+			return err
+		}
+
+		if err = handler(alert); err != nil {
+			return err // stop on first error by the caller.
+		}
+	}
+}
