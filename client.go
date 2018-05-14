@@ -928,7 +928,7 @@ type (
 )
 
 const (
-	topicsMetadataPath = "/api/system/topics/metadata"
+	topicsMetadataPath = "/api/metadata/topics"
 	topicMetadataPath  = topicsMetadataPath + "/%s"
 )
 
@@ -968,12 +968,27 @@ func (c *Client) CreateOrUpdateTopicMetadata(metadata TopicMetadata) error {
 		return errRequired("metadata.TopicName")
 	}
 
-	send, err := json.Marshal(metadata)
-	if err != nil {
-		return err
+	path := fmt.Sprintf(topicMetadataPath, metadata.TopicName)
+	path += fmt.Sprintf("?topicName=%s&keyType=%s&valueType=%s", metadata.TopicName, metadata.KeyType, metadata.ValueType) // required.
+
+	// optional.
+	if len(metadata.KeySchema.Fields) > 0 {
+		b, err := json.Marshal(metadata.KeySchema)
+		if err != nil {
+			return err
+		}
+		path += "&keySchema=" + string(b)
 	}
 
-	resp, err := c.do(http.MethodPost, topicsMetadataPath, contentTypeJSON, send)
+	if len(metadata.ValueSchema.Fields) > 0 {
+		b, err := json.Marshal(metadata.ValueSchema)
+		if err != nil {
+			return err
+		}
+		path += "&valueSchema" + string(b)
+	}
+
+	resp, err := c.do(http.MethodPost, path, "", nil)
 	if err != nil {
 		return err
 	}

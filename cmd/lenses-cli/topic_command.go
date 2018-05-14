@@ -156,6 +156,10 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&meta.TopicName, "name", "", "--name=topicName")
+	cmd.Flags().StringVar(&meta.KeyType, "key-type", "", "--key-type=keyType")
+	cmd.Flags().StringVar(&meta.ValueType, "value-type", "", "--value-type=valueType")
+
 	canBeSilent(cmd)
 
 	shouldTryLoadFile(cmd, &meta)
