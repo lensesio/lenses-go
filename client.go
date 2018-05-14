@@ -262,6 +262,61 @@ func (c *Client) Logout() error {
 	return resp.Body.Close()
 }
 
+// LicenseInfo describes the data received from the `GetLicenseInfo`.
+type LicenseInfo struct {
+	ClientID    string `json:"clientId"`
+	IsRespected bool   `json:"isRespected"`
+	MaxBrokers  int    `json:"maxBrokers"`
+	MaxMessages int    `json:"maxMessages,omitempty"`
+	Expiry      int64  `json:"expiry"`
+
+	// no-payload data.
+
+	// ExpiresAt is the time.Time expiration datetime (unix).
+	ExpiresAt time.Time `json:"-"`
+
+	// ExpiresDur is the duration that expires from now.
+	ExpiresDur time.Duration `json:"-"`
+
+	// YearsToExpire is the length of years that expires from now.
+	YearsToExpire int `json:"yearsToExpire,omitempty"`
+	// MonthsToExpire is the length of months that expires from now.
+	MonthsToExpire int `json:"monthsToExpire,omitempty"`
+	// DaysToExpire is the length of days that expires from now.
+	DaysToExpire int `json:"daysToExpire,omitempty"`
+}
+
+const licensePath = "/api/license"
+
+// GetLicenseInfo returns the license information for the connected lenses box.
+func (c *Client) GetLicenseInfo() (LicenseInfo, error) {
+	var lc LicenseInfo
+
+	resp, err := c.do(http.MethodGet, licensePath, "", nil)
+	if err != nil {
+		return lc, err
+	}
+
+	if err = c.readJSON(resp, &lc); err != nil {
+		return lc, err
+	}
+
+	lc.ExpiresAt = time.Unix(lc.Expiry/1000, 0)
+	lc.ExpiresDur = lc.ExpiresAt.Sub(time.Now())
+	lc.DaysToExpire = int(lc.ExpiresDur.Hours() / 24)
+	lc.MonthsToExpire = int(lc.DaysToExpire / 30)
+	lc.YearsToExpire = int(lc.MonthsToExpire / 12)
+
+	if lc.YearsToExpire > 0 {
+		lc.DaysToExpire = 0
+		lc.MonthsToExpire = 0
+	} else if lc.MonthsToExpire > 0 {
+		lc.DaysToExpire = 0
+	}
+
+	return lc, nil
+}
+
 // ExecutionMode is the type for the config's execution modes,
 // valid values are: IN_PROC/CONNECT/KUBERNETES.
 type ExecutionMode string
