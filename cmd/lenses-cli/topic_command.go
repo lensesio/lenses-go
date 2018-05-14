@@ -137,10 +137,10 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 	var meta lenses.TopicMetadata
 
 	cmd := &cobra.Command{
-		Use:              "create",
-		Aliases:          []string{"add"},
-		Short:            "Create a new topic metadata",
-		Example:          exampleString(`topics metadata create ./topic_metadata.yml`),
+		Use:              "set",
+		Aliases:          []string{"create", "update"},
+		Short:            "Create or update an existing topic metadata",
+		Example:          exampleString(`topics metadata set ./topic_metadata.yml`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -148,7 +148,7 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 				return err
 			}
 
-			if err := client.CreateTopicMetadata(meta); err != nil {
+			if err := client.CreateOrUpdateTopicMetadata(meta); err != nil {
 				return err
 			}
 

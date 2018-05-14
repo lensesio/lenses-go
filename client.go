@@ -962,8 +962,8 @@ func (c *Client) GetTopicMetadata(topicName string) (TopicMetadata, error) {
 	return meta, err
 }
 
-// CreateTopicMetadata adds a topic metadata.
-func (c *Client) CreateTopicMetadata(metadata TopicMetadata) error {
+// CreateOrUpdateTopicMetadata adds or updates an existing topic metadata.
+func (c *Client) CreateOrUpdateTopicMetadata(metadata TopicMetadata) error {
 	if metadata.TopicName == "" {
 		return errRequired("metadata.TopicName")
 	}
