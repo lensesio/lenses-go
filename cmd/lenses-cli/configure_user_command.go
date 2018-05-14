@@ -26,6 +26,7 @@ func init() {
 	rootCmd.AddCommand(newLoginCommand())
 	rootCmd.AddCommand(newGetUserInfoCommand())
 	// remove `logout` command (at least for the moment) rootCmd.AddCommand(newLogoutCommand())
+	rootCmd.AddCommand(newGetLicenseInfoCommand())
 }
 
 func isValidConfigurationContext(name string) bool {
@@ -571,7 +572,8 @@ func newGetUserInfoCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&jmespathQuery, "query", "q", "", "jmespath query to further filter results")
+	canPrintJSON(cmd)
+
 	return cmd
 }
 
@@ -596,3 +598,24 @@ const logoutCmdName = "logout"
 
 // 	return cmd
 // }
+
+func newGetLicenseInfoCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:              "license",
+		Short:            "Print the license information for the connected lenses box",
+		Example:          exampleString("license"),
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			lc, err := client.GetLicenseInfo()
+			if err != nil {
+				return err
+			}
+
+			return printJSON(cmd, lc)
+		},
+	}
+
+	canPrintJSON(cmd)
+
+	return cmd
+}
