@@ -890,6 +890,112 @@ func (c *Client) GetTopicsNames() ([]string, error) {
 	return topicNames, nil
 }
 
+type (
+	// TopicMetadata describes the data received from the `GetTopicsMetadata`
+	// and the payload to send on the `CreateTopicMetadata`.
+	TopicMetadata struct {
+		KeyType     string                   `json:"keyType" yaml:"KeyType"`
+		ValueType   string                   `json:"valueType" yaml:"ValueType"`
+		TopicName   string                   `json:"topicName" yaml:"TopicName"`
+		ValueSchema TopicMetadataValueSchema `json:"valueSchema" yaml:"ValueSchema"`
+		KeySchema   TopicMetadataKeySchema   `json:"keySchema" yaml:"KeySchema"`
+	}
+
+	// TopicMetadataValueSchema describes the "ValueSchema" field of the `TopicMetadata` structure.
+	TopicMetadataValueSchema struct {
+		Type      string               `json:"type" yaml:"Type"`
+		Name      string               `json:"name" yaml:"Name"`
+		Namespace string               `json:"namespace" yaml:"Namespace"`
+		Doc       string               `json:"doc" yaml:"Doc"`
+		Fields    []TopicMetadataField `json:"fields" yaml:"Fields"`
+	}
+
+	// TopicMetadataField contains the "Name" and the "Type" of a topic metadata field.
+	//
+	// See `TopicMetadataValueSchema` and `TopicMetadataKeySchema` for more.
+	TopicMetadataField struct {
+		Name string `json:"name" yaml:"Name"`
+		Type string `json:"type" yaml:"Type"`
+	}
+
+	// TopicMetadataKeySchema describes the "KeySchema" field of the `TopicMetadata` structure.
+	TopicMetadataKeySchema struct {
+		Type      string               `json:"type" yaml:"Type"`
+		Name      string               `json:"name" yaml:"Name"`
+		Namespace string               `json:"namespace" yaml:"Namespace"`
+		Fields    []TopicMetadataField `json:"fields" yaml:"Fields"`
+	}
+)
+
+const (
+	topicsMetadataPath = "/api/system/topics/metadata"
+	topicMetadataPath  = topicsMetadataPath + "/%s"
+)
+
+// GetTopicsMetadata retrieves and returns all the topics' available metadata.
+func (c *Client) GetTopicsMetadata() ([]TopicMetadata, error) {
+	resp, err := c.do(http.MethodGet, topicsMetadataPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var meta []TopicMetadata
+
+	err = c.readJSON(resp, &meta)
+	return meta, err
+}
+
+func (c *Client) GetTopicMetadata(topicName string) (TopicMetadata, error) {
+	var meta TopicMetadata
+
+	if topicName == "" {
+		return meta, errRequired("topicName")
+	}
+
+	path := fmt.Sprintf(topicMetadataPath, topicName)
+	resp, err := c.do(http.MethodGet, path, "", nil)
+	if err != nil {
+		return meta, err
+	}
+
+	err = c.readJSON(resp, &meta)
+	return meta, err
+}
+
+// CreateTopicMetadata adds a topic metadata.
+func (c *Client) CreateTopicMetadata(metadata TopicMetadata) error {
+	if metadata.TopicName == "" {
+		return errRequired("metadata.TopicName")
+	}
+
+	send, err := json.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.do(http.MethodPost, topicsMetadataPath, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteTopicMetadata removes an existing topic metadata.
+func (c *Client) DeleteTopicMetadata(topicName string) error {
+	if topicName == "" {
+		return errRequired("topicName")
+	}
+
+	path := fmt.Sprintf(topicMetadataPath, topicName)
+	resp, err := c.do(http.MethodDelete, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
 // CreateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
 type CreateTopicPayload struct {
 	TopicName   string `json:"topicName" yaml:"Name"`

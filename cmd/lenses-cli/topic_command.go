@@ -10,16 +10,16 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(newTopicsCommand())
+	rootCmd.AddCommand(newTopicsGroupCommand())
 	rootCmd.AddCommand(newTopicGroupCommand())
 }
 
-func newTopicsCommand() *cobra.Command {
+func newTopicsGroupCommand() *cobra.Command {
 	var namesOnly, noJSON bool
 
-	cmd := &cobra.Command{
+	root := &cobra.Command{
 		Use:           "topics",
-		Short:         "List all available topic names",
+		Short:         "List all available topics",
 		Example:       exampleString("topics"),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -53,9 +53,112 @@ func newTopicsCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&namesOnly, "names", false, "--names")
-	cmd.Flags().BoolVar(&noJSON, "no-json", false, "--no-json")
-	canPrintJSON(cmd)
+	root.Flags().BoolVar(&namesOnly, "names", false, "--names")
+	root.Flags().BoolVar(&noJSON, "no-json", false, "--no-json")
+
+	canPrintJSON(root)
+
+	root.AddCommand(newTopicsMetadataSubgroupCommand())
+
+	return root
+}
+
+func newTopicsMetadataSubgroupCommand() *cobra.Command {
+	var topicName string
+
+	rootSub := &cobra.Command{
+		Use:           "metadata",
+		Short:         "List all available topics metadata",
+		Example:       exampleString("topics metadata"),
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if topicName != "" {
+				// view single.
+				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve topic's metadata for '%s', it does not exist", topicName)
+				meta, err := client.GetTopicMetadata(topicName)
+				if err != nil {
+					return err
+				}
+
+				return printJSON(cmd, meta)
+			}
+
+			meta, err := client.GetTopicsMetadata()
+			if err != nil {
+				return err
+			}
+
+			return printJSON(cmd, meta)
+		},
+	}
+
+	rootSub.Flags().StringVar(&topicName, "name", "", "--name=topicName if filled then it returns a single topic metadata for that specific topic")
+
+	canBeSilent(rootSub)
+	canPrintJSON(rootSub)
+
+	rootSub.AddCommand(newTopicMetadataDeleteCommand())
+	rootSub.AddCommand(newTopicMetadataCreateCommand())
+
+	return rootSub
+}
+
+func newTopicMetadataDeleteCommand() *cobra.Command {
+	var topicName string
+
+	cmd := &cobra.Command{
+		Use:              "delete",
+		Short:            "Delete a topic's metadata",
+		Example:          exampleString(`topics metadata delete --name="topicName"`),
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkRequiredFlags(cmd, flags{"name": topicName}); err != nil {
+				return err
+			}
+
+			if err := client.DeleteTopicMetadata(topicName); err != nil {
+				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, metadata for topic '%s' does not exist", topicName)
+				return err
+			}
+
+			return echo(cmd, "Metadata for topic '%s' deleted", topicName)
+		},
+	}
+
+	cmd.Flags().StringVar(&topicName, "name", "", "--name=topicName")
+
+	canBeSilent(cmd)
+
+	return cmd
+}
+
+func newTopicMetadataCreateCommand() *cobra.Command {
+	var meta lenses.TopicMetadata
+
+	cmd := &cobra.Command{
+		Use:              "create",
+		Aliases:          []string{"add"},
+		Short:            "Create a new topic metadata",
+		Example:          exampleString(`topics metadata create ./topic_metadata.yml`),
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkRequiredFlags(cmd, flags{"name": meta.TopicName}); err != nil {
+				return err
+			}
+
+			if err := client.CreateTopicMetadata(meta); err != nil {
+				return err
+			}
+
+			return echo(cmd, "Metadata for topic '%s' created", meta.TopicName)
+		},
+	}
+
+	canBeSilent(cmd)
+
+	shouldTryLoadFile(cmd, &meta)
 
 	return cmd
 }
@@ -108,7 +211,7 @@ func newTopicCreateCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "create",
-		Short:            "Creates a new topic",
+		Short:            "Create a new topic",
 		Example:          exampleString(`topic create --name="topic1" --replication=1 --partitions=1 --configs="{\"max.message.bytes\": \"1000010\"}"`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -147,7 +250,7 @@ func newTopicDeleteCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "delete",
-		Short:            "Deletes a topic",
+		Short:            "Delete a topic",
 		Example:          exampleString(`topic delete --name="topic1" [--partition=0 --offset=1260]`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -198,7 +301,7 @@ func newTopicUpdateCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "update",
-		Short:            "Updates a topic's configs (as an array of config key-value map)",
+		Short:            "Update a topic's configs (as an array of config key-value map)",
 		Example:          exampleString(`topic update --name="topic1" --configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]" or topic update ./topic.yml`),
 		SilenceErrors:    true,
 		TraverseChildren: true,
