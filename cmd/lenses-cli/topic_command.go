@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -63,6 +64,45 @@ func newTopicsGroupCommand() *cobra.Command {
 	return root
 }
 
+type topicMetadataView struct {
+	lenses.TopicMetadata `yaml:",inline"`
+	ValueSchema          json.RawMessage `json:"valueSchema" yaml:"-"` // for view-only.
+	KeySchema            json.RawMessage `json:"keySchema" yaml:"-"`   // for view-only.
+}
+
+func newtopicMetadataView(m lenses.TopicMetadata) (topicMetadataView, error) {
+	viewM := topicMetadataView{m, nil, nil}
+
+	if len(m.ValueSchemaRaw) > 0 {
+		rawJSON, err := lenses.JSONAvroSchema(m.ValueSchemaRaw)
+		if err != nil {
+			return viewM, err
+		}
+
+		if err = json.Unmarshal(rawJSON, &viewM.ValueSchema); err != nil {
+			return viewM, err
+		}
+
+		// clear raw (avro) values and keep only the jsoned(ValueSchema, KeySchema).
+		viewM.ValueSchemaRaw = ""
+	}
+
+	if len(m.KeySchemaRaw) > 0 {
+		rawJSON, err := lenses.JSONAvroSchema(m.KeySchemaRaw)
+		if err != nil {
+			return viewM, err
+		}
+
+		if err = json.Unmarshal(rawJSON, &viewM.KeySchema); err != nil {
+			return viewM, err
+		}
+
+		viewM.KeySchemaRaw = ""
+	}
+
+	return viewM, nil
+}
+
 func newTopicsMetadataSubgroupCommand() *cobra.Command {
 	var topicName string
 
@@ -74,13 +114,19 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if topicName != "" {
 				// view single.
+
 				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve topic's metadata for '%s', it does not exist", topicName)
 				meta, err := client.GetTopicMetadata(topicName)
 				if err != nil {
 					return err
 				}
 
-				return printJSON(cmd, meta)
+				viewMeta, err := newtopicMetadataView(meta)
+				if err != nil {
+					return err
+				}
+
+				return printJSON(cmd, viewMeta)
 			}
 
 			meta, err := client.GetTopicsMetadata()
@@ -88,7 +134,16 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, meta)
+			viewMeta := make([]topicMetadataView, len(meta), len(meta))
+
+			for i, m := range meta {
+				viewMeta[i], err = newtopicMetadataView(m)
+				if err != nil {
+					return err
+				}
+			}
+
+			return printJSON(cmd, viewMeta)
 		},
 	}
 

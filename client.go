@@ -894,37 +894,40 @@ type (
 	// TopicMetadata describes the data received from the `GetTopicsMetadata`
 	// and the payload to send on the `CreateTopicMetadata`.
 	TopicMetadata struct {
-		KeyType     string                   `json:"keyType" yaml:"KeyType"`
-		ValueType   string                   `json:"valueType" yaml:"ValueType"`
-		TopicName   string                   `json:"topicName" yaml:"TopicName"`
-		ValueSchema TopicMetadataValueSchema `json:"valueSchema" yaml:"ValueSchema"`
-		KeySchema   TopicMetadataKeySchema   `json:"keySchema" yaml:"KeySchema"`
+		KeyType   string `json:"keyType,omitempty" yaml:"KeyType"`
+		ValueType string `json:"valueType,omitempty" yaml:"ValueType"`
+		TopicName string `json:"topicName" yaml:"TopicName"`
+
+		ValueSchemaRaw string `json:"valueSchema,omitempty" yaml:"ValueSchema,omitempty"` // for response read.
+		KeySchemaRaw   string `json:"keySchema,omitempty" yaml:"KeySchema,omitempty"`     // for response read.
 	}
 
-	// TopicMetadataValueSchema describes the "ValueSchema" field of the `TopicMetadata` structure.
-	TopicMetadataValueSchema struct {
-		Type      string               `json:"type" yaml:"Type"`
-		Name      string               `json:"name" yaml:"Name"`
-		Namespace string               `json:"namespace" yaml:"Namespace"`
-		Doc       string               `json:"doc" yaml:"Doc"`
-		Fields    []TopicMetadataField `json:"fields" yaml:"Fields"`
-	}
+	/*
+		// TopicMetadataValueSchema describes the "ValueSchema" field of the `TopicMetadata` structure.
+		TopicMetadataValueSchema struct {
+			Type      string               `json:"type" yaml:"Type"`
+			Name      string               `json:"name" yaml:"Name"`
+			Namespace string               `json:"namespace" yaml:"Namespace"`
+			Doc       string               `json:"doc" yaml:"Doc"`
+			Fields    []TopicMetadataField `json:"fields" yaml:"Fields"`
+		}
 
-	// TopicMetadataField contains the "Name" and the "Type" of a topic metadata field.
-	//
-	// See `TopicMetadataValueSchema` and `TopicMetadataKeySchema` for more.
-	TopicMetadataField struct {
-		Name string `json:"name" yaml:"Name"`
-		Type string `json:"type" yaml:"Type"`
-	}
+		// TopicMetadataField contains the "Name" and the "Type" of a topic metadata field.
+		//
+		// See `TopicMetadataValueSchema` and `TopicMetadataKeySchema` for more.
+		TopicMetadataField struct {
+			Name string `json:"name" yaml:"Name"`
+			Type string `json:"type" yaml:"Type"`
+		}
 
-	// TopicMetadataKeySchema describes the "KeySchema" field of the `TopicMetadata` structure.
-	TopicMetadataKeySchema struct {
-		Type      string               `json:"type" yaml:"Type"`
-		Name      string               `json:"name" yaml:"Name"`
-		Namespace string               `json:"namespace" yaml:"Namespace"`
-		Fields    []TopicMetadataField `json:"fields" yaml:"Fields"`
-	}
+		// TopicMetadataKeySchema describes the "KeySchema" field of the `TopicMetadata` structure.
+		TopicMetadataKeySchema struct {
+			Type      string               `json:"type" yaml:"Type"`
+			Name      string               `json:"name" yaml:"Name"`
+			Namespace string               `json:"namespace" yaml:"Namespace"`
+			Fields    []TopicMetadataField `json:"fields" yaml:"Fields"`
+		}
+	*/
 )
 
 const (
@@ -945,6 +948,7 @@ func (c *Client) GetTopicsMetadata() ([]TopicMetadata, error) {
 	return meta, err
 }
 
+// GetTopicMetadata retrieves and returns a topic's metadata.
 func (c *Client) GetTopicMetadata(topicName string) (TopicMetadata, error) {
 	var meta TopicMetadata
 
@@ -969,23 +973,15 @@ func (c *Client) CreateOrUpdateTopicMetadata(metadata TopicMetadata) error {
 	}
 
 	path := fmt.Sprintf(topicMetadataPath, metadata.TopicName)
-	path += fmt.Sprintf("?topicName=%s&keyType=%s&valueType=%s", metadata.TopicName, metadata.KeyType, metadata.ValueType) // required.
+	path += fmt.Sprintf("?keyType=%s&valueType=%s", metadata.KeyType, metadata.ValueType) // required.
 
 	// optional.
-	if len(metadata.KeySchema.Fields) > 0 {
-		b, err := json.Marshal(metadata.KeySchema)
-		if err != nil {
-			return err
-		}
-		path += "&keySchema=" + string(b)
+	if len(metadata.KeySchemaRaw) > 0 {
+		path += "&keySchema=" + string(metadata.KeySchemaRaw)
 	}
 
-	if len(metadata.ValueSchema.Fields) > 0 {
-		b, err := json.Marshal(metadata.ValueSchema)
-		if err != nil {
-			return err
-		}
-		path += "&valueSchema" + string(b)
+	if len(metadata.ValueSchemaRaw) > 0 {
+		path += "&valueSchema" + string(metadata.ValueSchemaRaw)
 	}
 
 	resp, err := c.do(http.MethodPost, path, "", nil)
