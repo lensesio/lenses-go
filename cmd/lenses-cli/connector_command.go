@@ -33,7 +33,7 @@ func newConnectorsCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			connectorNames := make(map[string][]string) // clusterName:[] connectors names.
 
-			if clusterName == "*" {
+			if clusterName == "*" || clusterName == "" {
 				// if * then no clusterName given,
 				// fetch the connectors from all known clusters and print them.
 				clusters, err := client.GetConnectClusters()
@@ -275,11 +275,10 @@ func newConnectorCreateCommand() *cobra.Command {
 
 			_, err := client.CreateConnector(connector.ClusterName, connector.Name, connector.Config)
 			if err != nil {
+				// give the exactly "low-level" message here, because we can't know if it's from the configuration
+				// or if cluster does not exist here (<- *).
+				errResourceNotFoundMessage = err.Error()
 				return err
-			}
-
-			if silent {
-				return nil
 			}
 
 			return echo(cmd, "Connector %s created", connector.Name)
