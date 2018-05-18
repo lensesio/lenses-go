@@ -188,7 +188,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
 		Short:            "Create or update quota for all clients or for a specific one",
-		Example:          exampleString(`lenses-cli quota users set --user="user" --quota-config="{\"producer_byte_rate\": \"100000\"},\"consumer_byte_rate\": \"200000\"},\"request_percentage\": \"75\"}"`),
+		Example:          exampleString(`lenses-cli quota users set --quota-user="user" --quota-config="{\"producer_byte_rate\": \"100000\"},\"consumer_byte_rate\": \"200000\"},\"request_percentage\": \"75\"}"`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
