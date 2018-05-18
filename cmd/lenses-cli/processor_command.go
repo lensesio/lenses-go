@@ -276,10 +276,10 @@ func newProcessorDeleteCommand() *cobra.Command {
 	// On CONNECT and IN_PROC and KUBERNETES modes can accept name or id (parent command flags).
 	// On KUBERNETES mode clusterName and namespace should be passed (parent command flags) .
 
-	cmd.Flags().String("id", "", "--id=processor_1")
-	cmd.Flags().String("name", "", "--name=processorName")
-	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
-	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
+	cmd.Flags().StringVar(&processorID, "id", "", "--id=processor_1")
+	cmd.Flags().StringVar(&processorName, "name", "", "--name=processorName")
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="clusterName"`)
+	cmd.Flags().StringVar(&namespace, "namespace", "", `--namespace="namespace"`)
 	canBeSilent(cmd)
 
 	return cmd
