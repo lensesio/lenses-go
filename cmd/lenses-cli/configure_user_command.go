@@ -64,7 +64,7 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 		info += ", current"
 	}
 
-	cmd.Printf("%s [%s]\n", name, info)
+	fmt.Fprintf(cmd.OutOrStdout(), "%s [%s]\n", name, info)
 	printJSON(cmd, cfg)
 
 	return isValid
@@ -268,7 +268,7 @@ func newConfigureCommand() *cobra.Command {
 				// and it's not used by a third-party tool because of the survey.
 				// So, print our "banner" :)
 				if !noBanner {
-					cmd.Println(`
+					fmt.Fprintln(cmd.OutOrStdout(), `
 	 ___      _______  __    _  _______  _______  _______ 
 	|   |    |       ||  |  | ||       ||       ||       |
 	|   |    |    ___||   |_| ||  _____||    ___||  _____|
