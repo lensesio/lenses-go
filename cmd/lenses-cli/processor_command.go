@@ -269,6 +269,11 @@ func newProcessorDeleteCommand() *cobra.Command {
 				return err
 			}
 
+			// change the printed value to the processor name if available.
+			if processorName != "" {
+				identifier = processorName
+			}
+
 			return echo(cmd, "Processor %s deleted", identifier)
 		},
 	}
