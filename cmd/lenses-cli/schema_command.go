@@ -32,7 +32,7 @@ func newSchemasGroupCommand() *cobra.Command {
 
 			if noJSON {
 				for _, name := range subjects {
-					cmd.Println(name)
+					fmt.Fprintln(cmd.OutOrStdout(), name)
 				}
 				return nil
 			}

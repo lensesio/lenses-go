@@ -80,7 +80,7 @@ func newLSQLCommand() *cobra.Command {
 				}
 
 				if !validation.IsValid {
-					// cmd.Println(validation.Message)
+					// fmt.Fprintln(cmd.OutOrStdout(), validation.Message)
 					// return it as error so Exit(1).
 					return fmt.Errorf(validation.Message)
 				}
@@ -133,13 +133,13 @@ func newLSQLCommand() *cobra.Command {
 				}
 				*/
 				// here we stop but it's not an error, so we can't return a non-nil error.
-				cmd.Println("Stop")
+				fmt.Fprintln(cmd.OutOrStdout(), "Stop")
 				printJSON(cmd, stopRecord)
 				return nil
 			}
 
 			stopErrHandler := func(errRecord lenses.LSQLError) error {
-				cmd.Println("Stop:Error")
+				fmt.Fprintln(cmd.OutOrStdout(), "Stop:Error")
 				// this error will be catched by the err = client.LSQL(...) below, same with the rest of the handlers.
 				return fmt.Errorf(errRecord.Message)
 			}
@@ -156,7 +156,7 @@ func newLSQLCommand() *cobra.Command {
 				  "currentSize": 144875
 				}
 				*/
-				cmd.Println("Stats")
+				fmt.Fprintln(cmd.OutOrStdout(), "Stats")
 				return printJSON(cmd, stats)
 			}
 
@@ -226,7 +226,7 @@ func newCancelQueryCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			cmd.Println(deleted)
+			fmt.Fprintln(cmd.OutOrStdout(), deleted)
 			return nil
 		},
 	}
