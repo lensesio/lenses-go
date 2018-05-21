@@ -232,10 +232,6 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"quota-client": quota.ClientID}); err != nil {
-				return err
-			}
-
 			errResourceNotAccessibleMessage = "unable to delete quota, user has no rights for this action"
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
