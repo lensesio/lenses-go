@@ -226,10 +226,6 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"quota-client": quota.ClientID}); err != nil {
-				return err
-			}
-
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.DeleteQuotaForClient(id); err != nil {
 					errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for client: '%s' does not exist", id)
