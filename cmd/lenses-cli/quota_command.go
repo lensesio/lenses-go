@@ -32,7 +32,7 @@ func newQuotaGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "quota",
 		Short:            "Work with particular a quota, create a new quota or update and delete an existing one",
-		Example:          exampleString(`quota users set [--quota-user=""] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\"},\"consumer_byte_rate\": \"200000\"},\"request_percentage\": \"75\"}"`),
+		Example:          exampleString(`quota users set [--quota-user=""] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 	}
@@ -69,8 +69,8 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 	setCommand := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
-		Short:            "Create or update quota for all users or for a specific user (and client)",
-		Example:          exampleString(`quota users set [--quota-user="user"] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\"},\"consumer_byte_rate\": \"200000\"},\"request_percentage\": \"75\"}"`),
+		Short:            "Create or update the default user quota or a specific user quota (and/or client(s))",
+		Example:          exampleString(`quota users set [--quota-user="user"] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -102,14 +102,14 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 					return err
 				}
 
-				return echo(cmd, "Quota for user %s created", quota.User)
+				return echo(cmd, "Quota for user %s created/updated", quota.User)
 			}
 
 			if err := client.CreateOrUpdateQuotaForAllUsers(quota.Config); err != nil {
 				return err
 			}
 
-			return echo(cmd, "Quota for all users created")
+			return echo(cmd, "Default user quota created/updated")
 		},
 	}
 
@@ -123,52 +123,60 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 
 	deleteCommand := &cobra.Command{
 		Use:              "delete",
-		Short:            "Delete default quota for all users or for a specific user (and client)",
-		Example:          exampleString(`quota users delete [to delete for all users] or --quota-client=* [for all clients or to a specific one] or --quota-user="user"`),
+		Short:            "Delete the default user quota or a specific quota for a user (and client)",
+		Example:          exampleString(`quota users delete [to delete for all users] or --quota-client=* [for all clients or to a specific one] or --quota-user="user" producer_byte_rate or/and consumer_byte_rate or/and request_percentage to remove quota's config properties, if arguments empty then all keys will be passed on`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			errResourceNotAccessibleMessage = "unable to delete quota, user has no rights for this action"
+			actionMsg := "delete" // +d in the echo message.
+			if len(args) > 0 {
+				// if arguments are not empty then it should show "update(d)",
+				// otherwise it's a deletion because it deletes the whole default user quota.
+				actionMsg = "update"
+			}
+
+			errResourceNotAccessibleMessage = "unable to " + actionMsg + " quota, user has no rights for this action"
 
 			var user, clientID = quota.User, quota.ClientID
 
 			if user != "" {
 				if clientID != "" {
 					if clientID == "all" || clientID == "*" {
-						if err := client.DeleteQuotaForUserAllClients(user); err != nil {
-							errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for user: '%s' does not exist", user)
+						if err := client.DeleteQuotaForUserAllClients(user, args...); err != nil {
+							errResourceNotFoundMessage = fmt.Sprintf("unable to %s, quota for user: '%s' does not exist", actionMsg, user)
 							return err
 						}
 
 						return echo(cmd, "Quota for user %s deleted for all clients", user)
 					}
 
-					if err := client.DeleteQuotaForUserClient(user, clientID); err != nil {
-						errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for user: '%s' and client: '%s' does not exist", user, clientID)
+					if err := client.DeleteQuotaForUserClient(user, clientID, args...); err != nil {
+						errResourceNotFoundMessage = fmt.Sprintf("unable to %s, quota for user: '%s' and client: '%s' does not exist", actionMsg, user, clientID)
 						return err
 					}
 
 					return echo(cmd, "Quota for user %s deleted for client %s", user, clientID)
 				}
 
-				if err := client.DeleteQuotaForUser(user); err != nil {
-					errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for user: '%s' does not exist", user)
+				if err := client.DeleteQuotaForUser(user, args...); err != nil {
+					errResourceNotFoundMessage = fmt.Sprintf("unable to %s, quota for user: '%s' does not exist", actionMsg, user)
 					return err
 				}
 
-				return echo(cmd, "Quota for user %s deleted", user)
+				return echo(cmd, "Quota for user %s %sd", user, actionMsg)
 			}
 
-			if err := client.DeleteQuotaForAllUsers(); err != nil {
+			if err := client.DeleteQuotaForAllUsers(args...); err != nil {
 				return err
 			}
 
-			return echo(cmd, "Quota for all users deleted")
+			return echo(cmd, "Default user quota %sd", actionMsg)
 		},
 	}
 
 	deleteCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
 	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+
 	rootSub.AddCommand(deleteCommand)
 
 	return rootSub
@@ -191,8 +199,8 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 	setCommand := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
-		Short:            "Create or update quota for all clients or for a specific one",
-		Example:          exampleString(`quota clients set [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\"},\"consumer_byte_rate\": \"200000\"},\"request_percentage\": \"75\"}"`),
+		Short:            "Create or update the default client quota or for a specific client",
+		Example:          exampleString(`quota clients set [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -207,14 +215,14 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 					return err
 				}
 
-				return echo(cmd, "Quota for client %s created", quota.ClientID)
+				return echo(cmd, "Quota for client %s created/updated", quota.ClientID)
 			}
 
 			if err := client.CreateOrUpdateQuotaForAllClients(quota.Config); err != nil {
 				return err
 			}
 
-			return echo(cmd, "Quota for all clients created")
+			return echo(cmd, "Default client quota created/updated")
 		},
 	}
 
@@ -227,27 +235,34 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 
 	deleteCommand := &cobra.Command{
 		Use:              "delete",
-		Short:            "Delete default quota for all clients or for a specific one",
-		Example:          exampleString(`quota clients delete [--quota-client=""]`),
+		Short:            "Delete the default client quota or a specific one",
+		Example:          exampleString(`quota clients delete [--quota-client=""] producer_byte_rate or/and consumer_byte_rate or/and request_percentage to remove quota's config properties, if arguments empty then all keys will be passed on`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			errResourceNotAccessibleMessage = "unable to delete quota, user has no rights for this action"
+			actionMsg := "delete" // +d in the echo message.
+			if len(args) > 0 {
+				// if arguments are not empty then it should show "update(d)",
+				// otherwise it's a deletion because it deletes the whole default user quota.
+				actionMsg = "update"
+			}
+
+			errResourceNotAccessibleMessage = "unable to " + actionMsg + " quota, user has no rights for this action"
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
-				if err := client.DeleteQuotaForClient(id); err != nil {
-					errResourceNotFoundMessage = fmt.Sprintf("unable to delete, quota for client: '%s' does not exist", id)
+				if err := client.DeleteQuotaForClient(id, args...); err != nil {
+					errResourceNotFoundMessage = fmt.Sprintf("unable to %s, quota for client: '%s' does not exist", actionMsg, id)
 					return err
 				}
 
-				return echo(cmd, "Quota for client %s deleted", id)
+				return echo(cmd, "Quota for client %s %sd", id, actionMsg)
 			}
 
-			if err := client.DeleteQuotaForAllClients(); err != nil {
+			if err := client.DeleteQuotaForAllClients(args...); err != nil {
 				return err
 			}
 
-			return echo(cmd, "Quota for all clients deleted")
+			return echo(cmd, "Default client quota %sd", actionMsg)
 		},
 	}
 

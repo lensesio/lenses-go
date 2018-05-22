@@ -2680,10 +2680,41 @@ func (c *Client) CreateOrUpdateQuotaForAllUsers(config QuotaConfig) error {
 	return resp.Body.Close()
 }
 
+// DefaultQuotaConfigPropertiesToRemove is a set of hard-coded strings that the client will send on `DeleteQuotaXXX` functions.
+// It contains the "producer_byte_rate", "consumer_byte_rate" and "request_percentage" as they're described at the `QuotaConfig` structure.
+var DefaultQuotaConfigPropertiesToRemove = []string{"producer_byte_rate", "consumer_byte_rate", "request_percentage"}
+
+func marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove []string) ([]byte, error) {
+	for i, s := range propertiesToRemove {
+		// if it's not empty but it contains an empty item, delete it.
+		if s == "" {
+			if len(propertiesToRemove) > i+1 {
+				propertiesToRemove = append(propertiesToRemove[:i], propertiesToRemove[i+1:]...)
+			} else {
+				propertiesToRemove = []string{}
+			}
+		}
+	}
+
+	// it's empty, add its own.
+	if len(propertiesToRemove) == 0 {
+		propertiesToRemove = DefaultQuotaConfigPropertiesToRemove
+	}
+
+	return json.Marshal(propertiesToRemove)
+}
+
 // DeleteQuotaForAllUsers deletes the default for all users.
 // Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
-func (c *Client) DeleteQuotaForAllUsers() error {
-	resp, err := c.do(http.MethodDelete, quotasPathAllUsers, "", nil)
+//
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForAllUsers(propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.do(http.MethodDelete, quotasPathAllUsers, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2712,9 +2743,15 @@ func (c *Client) CreateOrUpdateQuotaForUser(user string, config QuotaConfig) err
 }
 
 // DeleteQuotaForUser deletes a quota for a user.
-func (c *Client) DeleteQuotaForUser(user string) error {
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForUser(user string, propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
 	path := fmt.Sprintf(quotasPathUser, user)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.do(http.MethodDelete, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2743,9 +2780,16 @@ func (c *Client) CreateOrUpdateQuotaForUserAllClients(user string, config QuotaC
 }
 
 // DeleteQuotaForUserAllClients deletes for all client ids for a user.
-func (c *Client) DeleteQuotaForUserAllClients(user string) error {
+//
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForUserAllClients(user string, propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
 	path := fmt.Sprintf(quotasPathUserAllClients, user)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.do(http.MethodDelete, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2774,9 +2818,16 @@ func (c *Client) CreateOrUpdateQuotaForUserClient(user, clientID string, config 
 }
 
 // DeleteQuotaForUserClient deletes the quota for a user/client pair.
-func (c *Client) DeleteQuotaForUserClient(user, clientID string) error {
+//
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForUserClient(user, clientID string, propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
 	path := fmt.Sprintf(quotasPathUserClient, user, clientID)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.do(http.MethodDelete, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2804,8 +2855,15 @@ func (c *Client) CreateOrUpdateQuotaForAllClients(config QuotaConfig) error {
 }
 
 // DeleteQuotaForAllClients deletes the default quota for all clients.
-func (c *Client) DeleteQuotaForAllClients() error {
-	resp, err := c.do(http.MethodDelete, quotasPathAllClients, "", nil)
+//
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForAllClients(propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.do(http.MethodDelete, quotasPathAllClients, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2834,9 +2892,16 @@ func (c *Client) CreateOrUpdateQuotaForClient(clientID string, config QuotaConfi
 }
 
 // DeleteQuotaForClient deletes quotas for a client id.
-func (c *Client) DeleteQuotaForClient(clientID string) error {
+//
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForClient(clientID string, propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
 	path := fmt.Sprintf(quotasPathClient, clientID)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.do(http.MethodDelete, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2865,6 +2930,7 @@ type (
 		Categories AlertSettingsCategoryMap `json:"categories"`
 	}
 
+	// AlertSettingsCategoryMap describes the type of `AlertSetting`'s Categories.
 	AlertSettingsCategoryMap struct {
 		Infrastructure []AlertSetting `json:"Infrastructure"`
 		Consumers      []AlertSetting `json:"Consumers"`
