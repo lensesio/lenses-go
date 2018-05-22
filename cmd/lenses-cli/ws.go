@@ -68,14 +68,15 @@ func newLiveLSQLCommand() *cobra.Command {
 					stdin, err := ioutil.ReadAll(os.Stdin)
 					if err != nil {
 						return fmt.Errorf(`failed to read from stdin and sql query is missing`)
-					} else {
-						rawArgs := strings.Split(string(stdin), ";")
-						for _, v := range rawArgs {
-							if len(strings.TrimSpace(v)) != 0 {
-								queryArgs = append(queryArgs, v)
-							}
+					}
+
+					rawArgs := strings.Split(string(stdin), ";")
+					for _, v := range rawArgs {
+						if len(strings.TrimSpace(v)) != 0 {
+							queryArgs = append(queryArgs, v)
 						}
 					}
+
 				} else {
 					return fmt.Errorf(`sql query is missing, the correct form is: live sql "query here"`)
 				}
