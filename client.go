@@ -951,13 +951,13 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	return resp.Body.Close()
 }
 
-// Topic describes the data that the `CreateTopic` returns.
+// Topic describes the data that the `GetTopic` returns.
 type Topic struct {
 	TopicName            string             `json:"topicName"`
 	KeyType              string             `json:"keyType"`   // maybe string-based enum?
 	ValueType            string             `json:"valueType"` // maybe string-based enum?
 	Partitions           int                `json:"partitions"`
-	Replications         int                `json:"replications"`
+	Replication          int                `json:"replication"`
 	IsControlTopic       bool               `json:"isControlTopic"`
 	KeySchema            string             `json:"keySchema,omitempty"`
 	ValueSchema          string             `json:"valueSchema,omitempty"`
