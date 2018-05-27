@@ -1128,20 +1128,20 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	return resp.Body.Close()
 }
 
-// Topic describes the data that the `CreateTopic` returns.
+// Topic describes the data that the `GetTopic` returns.
 type Topic struct {
-	TopicName            string             `json:"topicName"`
-	KeyType              string             `json:"keyType"`   // maybe string-based enum?
-	ValueType            string             `json:"valueType"` // maybe string-based enum?
-	Partitions           int                `json:"partitions"`
-	Replications         int                `json:"replications"`
+	TopicName            string             `json:"topicName" header:"Name"`
+	KeyType              string             `json:"keyType" header:"Key Type"`     // maybe string-based enum?
+	ValueType            string             `json:"valueType" header:"Value Type"` // maybe string-based enum?
+	Partitions           int                `json:"partitions" header:"Part"`
+	Replication          int                `json:"replication" header:"Repl"`
 	IsControlTopic       bool               `json:"isControlTopic"`
 	KeySchema            string             `json:"keySchema,omitempty"`
 	ValueSchema          string             `json:"valueSchema,omitempty"`
-	MessagesPerSecond    int64              `json:"messagesPerSecond"`
-	TotalMessages        int64              `json:"totalMessages"`
+	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
+	TotalMessages        int64              `json:"totalMessages" header:"Total Messages"`
 	Timestamp            int64              `json:"timestamp"`
-	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion"`
+	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
 	Config               []KV               `json:"config"`
 	ConsumersGroup       []ConsumersGroup   `json:"consumers"`
 	MessagesPerPartition []PartitionMessage `json:"messagesPerPartition"`
