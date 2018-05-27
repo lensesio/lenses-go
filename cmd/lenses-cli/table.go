@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -14,7 +15,8 @@ func getHeaders(typ reflect.Type) (headers []string) {
 	for i, n := 0, typ.NumField(); i < n; i++ {
 		f := typ.Field(i)
 		if header := f.Tag.Get(headerTag); header != "" {
-			headers = append(headers, header)
+			// header is the first part.
+			headers = append(headers, strings.Split(header, ",")[0])
 		}
 	}
 
@@ -29,9 +31,11 @@ func getRow(val reflect.Value) (row []string) {
 		f := typ.Field(i)
 		if header := f.Tag.Get(headerTag); header != "" {
 			fieldValue := reflect.Indirect(v.Field(i))
+
 			if fieldValue.CanInterface() {
 				s := ""
 				vi := fieldValue.Interface()
+
 				switch fieldValue.Kind() {
 				case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
 					s = fmt.Sprintf("%d", vi)
@@ -47,6 +51,13 @@ func getRow(val reflect.Value) (row []string) {
 					}
 				default:
 					s = fmt.Sprintf("%v", vi)
+				}
+
+				if s == "" {
+					// the second part is used as an alternative printable string value if empty or nil.
+					if h := strings.Split(header, ","); len(h) > 1 {
+						s = strings.ToUpper(h[1])
+					}
 				}
 
 				row = append(row, s)

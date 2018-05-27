@@ -1131,15 +1131,15 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 // Topic describes the data that the `GetTopic` returns.
 type Topic struct {
 	TopicName            string             `json:"topicName" header:"Name"`
-	KeyType              string             `json:"keyType" header:"Key Type"`     // maybe string-based enum?
-	ValueType            string             `json:"valueType" header:"Value Type"` // maybe string-based enum?
+	KeyType              string             `json:"keyType" header:"Key /,NULL"`        // maybe string-based enum?
+	ValueType            string             `json:"valueType" header:"Value Type,NULL"` // maybe string-based enum?
 	Partitions           int                `json:"partitions" header:"Part"`
 	Replication          int                `json:"replication" header:"Repl"`
 	IsControlTopic       bool               `json:"isControlTopic"`
 	KeySchema            string             `json:"keySchema,omitempty"`
 	ValueSchema          string             `json:"valueSchema,omitempty"`
-	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
-	TotalMessages        int64              `json:"totalMessages" header:"Total Messages"`
+	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msgs/sec"`
+	TotalMessages        int64              `json:"totalMessages" header:"Total Msgs"`
 	Timestamp            int64              `json:"timestamp"`
 	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
 	Config               []KV               `json:"config"`
