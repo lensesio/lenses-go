@@ -245,6 +245,7 @@ func newTopicGroupCommand() *cobra.Command {
 			}
 
 			return printJSON(cmd, topic)
+			// TODO: return printTable(cmd, topic)
 		},
 	}
 

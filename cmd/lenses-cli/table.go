@@ -147,7 +147,11 @@ func printTable(cmd *cobra.Command, v interface{}) error {
 		return nil
 	}
 
-	headers[0] = fmt.Sprintf("%s (%d) ", headers[0], len(rows))
+	// if more than 3 then show the length of results.
+	if n := len(rows); n > 3 {
+		headers[0] = fmt.Sprintf("%s (%d) ", headers[0], len(rows))
+	}
+
 	table.SetHeader(headers)
 	table.AppendBulk(rows)
 
