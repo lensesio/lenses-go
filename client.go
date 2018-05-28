@@ -1138,8 +1138,8 @@ type Topic struct {
 	IsControlTopic       bool               `json:"isControlTopic"`
 	KeySchema            string             `json:"keySchema,omitempty"`
 	ValueSchema          string             `json:"valueSchema,omitempty"`
-	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msgs/sec"`
-	TotalMessages        int64              `json:"totalMessages" header:"Total Msgs"`
+	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
+	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
 	Timestamp            int64              `json:"timestamp"`
 	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
 	Config               []KV               `json:"config"`

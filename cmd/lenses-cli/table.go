@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
@@ -38,7 +39,13 @@ func getRow(val reflect.Value) (row []string) {
 
 				switch fieldValue.Kind() {
 				case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
-					s = fmt.Sprintf("%d", vi)
+					sInt64, err := strconv.ParseInt(fmt.Sprintf("%d", vi), 10, 64)
+					if err != nil || sInt64 == 0 {
+						s = "0"
+						break
+					}
+
+					s = nearestThousandFormat(float64(sInt64))
 					break
 				case reflect.Float32, reflect.Float64:
 					s = fmt.Sprintf("%.2f", vi)
@@ -56,7 +63,7 @@ func getRow(val reflect.Value) (row []string) {
 				if s == "" {
 					// the second part is used as an alternative printable string value if empty or nil.
 					if h := strings.Split(header, ","); len(h) > 1 {
-						s = strings.ToUpper(h[1])
+						s = h[1]
 					}
 				}
 
