@@ -80,7 +80,7 @@ func getRow(val reflect.Value) (rightCells []int, row []string) {
 						vf := fieldValue.Index(fieldSliceIdx)
 						if vf.CanInterface() {
 							s += fmt.Sprintf("%v", vf.Interface())
-							if hasMore := fieldSliceIdx+2 == fieldSliceLen; hasMore {
+							if hasMore := fieldSliceIdx+1 > fieldSliceLen; hasMore {
 								s += ", "
 							}
 						}
