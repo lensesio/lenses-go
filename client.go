@@ -1142,7 +1142,7 @@ type Topic struct {
 	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
 	Timestamp            int64              `json:"timestamp"`
 	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
-	Config               []KV               `json:"config"`
+	Config               []KV               `json:"config" header:"Configs,len"`
 	ConsumersGroup       []ConsumersGroup   `json:"consumers"`
 	MessagesPerPartition []PartitionMessage `json:"messagesPerPartition"`
 }
