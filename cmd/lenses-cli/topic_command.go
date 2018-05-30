@@ -51,7 +51,10 @@ func newTopicsGroupCommand() *cobra.Command {
 			})
 
 			return printJSON(cmd, topics)
-			// TODO: return printTable(cmd, topics)
+			// TODO:
+			// return printTable(cmd, topics, func(t lenses.Topic) bool {
+			// 	return !t.IsControlTopic
+			// })
 		},
 	}
 

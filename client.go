@@ -1141,10 +1141,10 @@ type Topic struct {
 	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
 	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
 	Timestamp            int64              `json:"timestamp"`
-	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
 	Config               []KV               `json:"config" header:"Configs,len"`
 	ConsumersGroup       []ConsumersGroup   `json:"consumers"`
 	MessagesPerPartition []PartitionMessage `json:"messagesPerPartition"`
+	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
 }
 
 // ConsumersGroup describes the data that the `Topic`'s  `ConsumersGroup` field contains.
@@ -3147,6 +3147,56 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 		}
 
 		if err = handler(alert); err != nil {
+			return err // stop on first error by the caller.
+		}
+	}
+}
+
+const processorsLogsPathSSE = "/api/k8/logs/sse/%s/%s/%s"
+
+// GetProcessorsLogs retrieves the LSQL processor logs if in kubernetes mode.
+func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool, handler func(string) error) error {
+	if mode, _ := c.GetExecutionMode(); mode != ExecutionModeKubernetes {
+		return fmt.Errorf("unable to retrieve logs, execution mode is not KUBERNETES")
+	}
+
+	path := fmt.Sprintf(processorsLogsPathSSE, clusterName, ns, podName)
+
+	// TODO: need more details.
+	// if follow {
+	// 	path+="?follow=true&lines="
+	// }
+
+	resp, err := c.do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) {
+		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+	}, schemaAPIOption)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	reader, err := c.acquireResponseBodyStream(resp)
+	if err != nil {
+		return err
+	}
+
+	streamReader := bufio.NewReader(reader)
+
+	for {
+		line, err := streamReader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil // we read until the the end, exit with no error here.
+			}
+			return err // exit on first failure.
+		}
+
+		// ignore all except data: ..., heartbeats.
+		if len(line) < 2 {
+			continue
+		}
+
+		if err = handler(line); err != nil {
 			return err // stop on first error by the caller.
 		}
 	}

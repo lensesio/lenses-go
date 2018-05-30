@@ -107,7 +107,51 @@ func getRow(val reflect.Value) (rightCells []int, row []string) {
 	return
 }
 
-func printTable(cmd *cobra.Command, v interface{}) error {
+type rowFilter func(reflect.Value) bool
+
+func canAcceptRow(in reflect.Value, filters []rowFilter) bool {
+	acceptRow := true
+	for _, filter := range filters {
+		if !filter(in) {
+			acceptRow = false
+			break
+		}
+	}
+
+	return acceptRow
+}
+
+func makeFilters(in reflect.Value, filters []interface{}) (f []rowFilter) {
+	for _, filter := range filters {
+		filterTyp := reflect.TypeOf(filter)
+		// must be a function that accepts one input argument which is the same of the "v".
+		if filterTyp.Kind() != reflect.Func || filterTyp.NumIn() != 1 /* not receiver */ || filterTyp.In(0) != in.Type() {
+			continue
+		}
+
+		// must be a function that returns a single boolean value.
+		if filterTyp.NumOut() != 1 || filterTyp.Out(0).Kind() != reflect.Bool {
+			continue
+		}
+
+		filterValue := reflect.ValueOf(filter)
+		func(filterValue reflect.Value) {
+			f = append(f, func(in reflect.Value) bool {
+				out := filterValue.Call([]reflect.Value{in})
+				return out[0].Interface().(bool)
+			})
+		}(filterValue)
+	}
+
+	return
+
+}
+
+// Usage with filters:
+// printTable(cmd, topics, func(t lenses.Topic) bool { /* or any type */
+// 	return t.TopicName == "test" || t.TopicName == "moving_ships"
+// })
+func printTable(cmd *cobra.Command, v interface{}, filters ...interface{}) error {
 	table := tablewriter.NewWriter(cmd.OutOrStdout())
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 
@@ -118,9 +162,13 @@ func printTable(cmd *cobra.Command, v interface{}) error {
 	)
 
 	if val := reflect.Indirect(reflect.ValueOf(v)); val.Kind() == reflect.Slice {
+		var f []rowFilter
 		for i, n := 0, val.Len(); i < n; i++ {
 			v := val.Index(i)
+
 			if i == 0 {
+				// make filters once instead of each time for each entry, they all have the same v type.
+				f = makeFilters(v, filters)
 				headers = getHeaders(v.Type())
 			}
 
@@ -133,14 +181,19 @@ func printTable(cmd *cobra.Command, v interface{}) error {
 				rightAligmentCols = right
 			}
 
-			rows = append(rows, row)
+			if canAcceptRow(v, f) {
+				rows = append(rows, row)
+			}
 		}
 	} else {
 		// single.
 		headers = getHeaders(val.Type())
 		right, row := getRow(val)
 		rightAligmentCols = right
-		rows = append(rows, row)
+		if canAcceptRow(val, makeFilters(val, filters)) {
+			rows = append(rows, row)
+		}
+
 	}
 
 	if len(headers) == 0 {

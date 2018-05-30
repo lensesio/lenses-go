@@ -79,6 +79,42 @@ func newGetProcessorsCommand() *cobra.Command {
 	// example: lenses-cli processors --query="[?ClusterName == 'IN_PROC'].Name | sort(@) | {Processor_Names_IN_PROC: join(', ', @)}"
 	canPrintJSON(cmd)
 
+	cmd.AddCommand(newProcessorsLogsCommand())
+
+	return cmd
+}
+
+func newProcessorsLogsCommand() *cobra.Command {
+	var (
+		clusterName, podName, namespace string
+		follow                          bool
+	)
+
+	cmd := &cobra.Command{
+		Use:              "logs",
+		Short:            "Retrieve LSQL Processor logs. Available only in KUBERNETES execution mode",
+		Example:          exampleString(`processors logs --clusterName="clusterName" --namespace="ns" --podName="podName"`),
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkRequiredFlags(cmd, flags{"clusterName": clusterName, "namespace": namespace, "podName": podName}); err != nil {
+				return err
+			}
+
+			handler := func(log string) error {
+				fmt.Fprintln(cmd.OutOrStdout(), log)
+				return nil
+			}
+
+			return client.GetProcessorsLogs(clusterName, namespace, podName, follow, handler)
+		},
+	}
+
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", "--clusterName=clusterName")
+	cmd.Flags().StringVar(&namespace, "namespace", "", "--namespace=namespace")
+	cmd.Flags().StringVar(&podName, "podName", "", "--podName=podName")
+	cmd.Flags().BoolVar(&follow, "follow", false, "--follow")
+
 	return cmd
 }
 
@@ -214,6 +250,7 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "update",
+		Aliases:          []string{"scale"},
 		Short:            "Update processor runners",
 		Example:          exampleString(`processor update --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
 		SilenceErrors:    true,
