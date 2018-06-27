@@ -16,12 +16,12 @@ import (
 	"github.com/kataras/golog"
 )
 
-// User represents the logged user, it contains the name, e-mail and the given roles.
+// User represents the user of the client.
 type User struct {
-	ID    string   `json:"id"`
-	Name  string   `json:"name"`
-	Email string   `json:"email"`
-	Roles []string `json:"roles"`
+	Token                string   `json:"token"`
+	User                 string   `json:"user"`
+	SchemaRegistryDelete bool     `json:"schemaRegistryDelete"`
+	Roles                []string `json:"roles"`
 }
 
 // Client is the lenses http client.

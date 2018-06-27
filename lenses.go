@@ -122,26 +122,30 @@ func OpenConnection(config Configuration, options ...ConnectionOption) (*Client,
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return nil, fmt.Errorf("http: StatusUnauthorized 401")
 	}
 
-	// set the token we received.
-	var loginData = struct {
-		Success              bool   `json:"success"`
-		Token                string `json:"token"`
-		User                 User   `json:"user"`
-		SchemaRegistryDelete bool   `json:"schemaRegistryDelete"`
-	}{}
+	tokenBytes, err := c.readResponseBody(resp)
+	resp.Body.Close()
 
-	if err := c.readJSON(resp, &loginData); err != nil {
+	if err != nil {
 		return nil, err
 	}
 
-	if !loginData.Success {
-		return nil, fmt.Errorf("http: login failed")
+	if len(tokenBytes) == 0 {
+		return nil, fmt.Errorf("http: retrieved an empty token, please report it as bug")
+	}
+
+	resp, err = c.do(http.MethodGet, "/api/auth", "", nil, func(req *http.Request) {
+		req.Header.Set(xKafkaLensesTokenHeaderKey, string(tokenBytes))
+	})
+
+	// set the token we received.
+	var loginData User
+	if err := c.readJSON(resp, &loginData); err != nil {
+		return nil, err
 	}
 
 	if loginData.Token == "" { // this should never happen.
@@ -156,7 +160,7 @@ func OpenConnection(config Configuration, options ...ConnectionOption) (*Client,
 
 	// set the generated token and the user model retrieved from server.
 	c.config.Token = loginData.Token
-	c.user = loginData.User
+	c.user = loginData
 
 	return c, nil
 }

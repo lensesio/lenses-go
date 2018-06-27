@@ -460,7 +460,7 @@ func newLoginCommand() *cobra.Command {
 			out := cmd.OutOrStdout()
 			signedUser := client.User()
 			fmt.Fprintf(out, "Welcome %s[%s],\ntype 'help' to learn more about the available commands or 'exit' to terminate.\n",
-				signedUser.Name, strings.Join(signedUser.Roles, ", "))
+				signedUser.User, strings.Join(signedUser.Roles, ", "))
 			// read the input pipe, on each read its buffer consumed, so loop 'forever' here.
 			streamReader := bufio.NewReader(os.Stdin)
 			for {
@@ -563,7 +563,7 @@ func newGetUserInfoCommand() *cobra.Command {
 		Example:          exampleString("user"),
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if user := client.User(); user.ID != "" {
+			if user := client.User(); user.User != "" {
 				// if logged in using the user password, then we have those info,
 				// let's print it as well.
 				return printJSON(cmd, user)
