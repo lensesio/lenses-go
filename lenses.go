@@ -5,9 +5,15 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/kataras/golog"
+	"gopkg.in/jcmturner/gokrb5.v5/client"
+	kerberosconfig "gopkg.in/jcmturner/gokrb5.v5/config"
+	"gopkg.in/jcmturner/gokrb5.v5/credentials"
+	"gopkg.in/jcmturner/gokrb5.v5/keytab"
 )
 
 // Version is the current semantic version of the lenses client and cli.
@@ -92,7 +98,7 @@ func UsingToken(tok string) ConnectionOption {
 //
 // Read more by navigating to the `Client` type documentation.
 func OpenConnection(config Configuration, options ...ConnectionOption) (*Client, error) {
-	c := &Client{config: config} // we need the timeout.
+	c := &Client{config: config}
 	for _, opt := range options {
 		opt(c)
 	}
@@ -115,32 +121,103 @@ func OpenConnection(config Configuration, options ...ConnectionOption) (*Client,
 		return c, nil
 	}
 
-	// retrieve token.
-	userAuthJSON := fmt.Sprintf(`{"user":"%s", "password": "%s"}`, c.config.User, c.config.Password)
+	var (
+		resp *http.Response
+		err  error
+	)
 
-	resp, err := c.do(http.MethodPost, "api/login", contentTypeJSON, []byte(userAuthJSON))
+	if c.config.User != "" && c.config.Password != "" && c.config.Kerberos.ConfFile == "" {
+		// auth by raw username/password.
+		// retrieve token.
+		userAuthJSON := fmt.Sprintf(`{"user":"%s", "password": "%s"}`, c.config.User, c.config.Password)
+
+		resp, err = c.do(http.MethodPost, "api/login", contentTypeJSON, []byte(userAuthJSON))
+		if err != nil {
+			return nil, fmt.Errorf("%s or kerberos authentication is required", err.Error())
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, fmt.Errorf("client: auth failure: basic: StatusUnauthorized 401")
+		}
+
+		tokenBytes, err := c.readResponseBody(resp)
+		resp.Body.Close()
+
+		if err != nil {
+			return nil, err
+		}
+
+		if len(tokenBytes) == 0 {
+			return nil, fmt.Errorf("client: auth failure: retrieved an empty token, please report it as bug")
+		}
+
+		resp, err = c.do(http.MethodGet, "/api/auth", "", nil, func(req *http.Request) error {
+			req.Header.Set(xKafkaLensesTokenHeaderKey, string(tokenBytes))
+			return nil
+		})
+	} else if krb5 := c.config.Kerberos; krb5.IsValid() {
+		absPath, err := filepath.Abs(krb5.ConfFile)
+		if err != nil {
+			return nil, fmt.Errorf("client: auth failure: kerberos failure: unable to retrieve absolute file location for '%s': %v", krb5.ConfFile, err)
+		}
+		f, err := os.Open(absPath)
+		f.Close()
+		if err != nil {
+			return nil, fmt.Errorf("client: auth failure: kerberos failure: unable to find conf file '%s': %v", absPath, err)
+		}
+
+		var kerberosClient client.Client
+		if krb5.KeyTabFile == "" && krb5.CCacheFile == "" {
+			// load via parent `User` and `Password` and its `Realm` (if it was empty, then the underline library will use the default one).
+			if c.config.User == "" && c.config.Password == "" {
+				return nil, fmt.Errorf("client: auth failure: kerberos failure: with password: 'Configuration#User' and 'Configuration#Password' are both required")
+			}
+
+			kerberosClient = client.NewClientWithPassword(c.config.User, krb5.Realm, c.config.Password)
+		} else if krb5.KeyTabFile != "" {
+			// load via keytab.
+			if c.config.User == "" {
+				return nil, fmt.Errorf("client: auth failure: kerberos failure: with keytab: 'Configuration#User' is required")
+			}
+			kt, err := keytab.Load(krb5.KeyTabFile)
+			if err != nil {
+				return nil, fmt.Errorf("client: auth failure: kerberos failure: with keytab: unable to load keytab file '%s': %v", krb5.KeyTabFile, err)
+			}
+			kerberosClient = client.NewClientWithKeytab(c.config.User, krb5.Realm, kt)
+		} else {
+			// load via ccache, one of these cases should be executed.
+			cc, err := credentials.LoadCCache(krb5.CCacheFile)
+			if err != nil {
+				return nil, fmt.Errorf("client: auth failure: kerberos failure: with ccache: unable to load ccache file '%s': %v", krb5.CCacheFile, err)
+			}
+
+			kerberosClient, err = client.NewClientFromCCache(cc)
+			if err != nil { // stop as soon as possible.
+				return nil, fmt.Errorf("client: auth failure: kerberos failure: with ccache: %v", err)
+			}
+		}
+
+		kerberosConfig, err := kerberosconfig.Load(krb5.ConfFile)
+		if err != nil {
+			return nil, fmt.Errorf("client: auth failure: kerberos invalid configuration: %v", err)
+		}
+
+		if err = kerberosClient.WithConfig(kerberosConfig).Login(); err != nil {
+			return nil, fmt.Errorf("client: auth failure: kerberos login: %v", err)
+		}
+
+		c.persistentRequestOption = func(r *http.Request) error {
+			return kerberosClient.SetSPNEGOHeader(r, fmt.Sprintf("%s/%s", "HTTP", r.URL.Host))
+		}
+
+		resp, err = c.do(http.MethodGet, "/api/auth", contentTypeJSON, nil)
+	} else { // no, don't do it automatically, user should know if <- isKerberosConfReal("/etc/krb5.conf") {
+		return nil, fmt.Errorf("client: auth failure: 'User' and 'Password' or 'Kerberos' missing from the Configuration")
+	}
+
 	if err != nil {
 		return nil, err
 	}
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("http: StatusUnauthorized 401")
-	}
-
-	tokenBytes, err := c.readResponseBody(resp)
-	resp.Body.Close()
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(tokenBytes) == 0 {
-		return nil, fmt.Errorf("http: retrieved an empty token, please report it as bug")
-	}
-
-	resp, err = c.do(http.MethodGet, "/api/auth", "", nil, func(req *http.Request) {
-		req.Header.Set(xKafkaLensesTokenHeaderKey, string(tokenBytes))
-	})
 
 	// set the token we received.
 	var loginData User
@@ -149,13 +226,13 @@ func OpenConnection(config Configuration, options ...ConnectionOption) (*Client,
 	}
 
 	if loginData.Token == "" { // this should never happen.
-		return nil, fmt.Errorf("http: token is undefinied")
+		return nil, fmt.Errorf("client: login failure: token is undefinied")
 	}
 
 	if config.Debug {
 		golog.SetLevel("debug")
 		golog.Debugf("Connected on %s with token: %s.\nUser details: %#+v",
-			c.config.Host, loginData.Token, loginData.User)
+			c.config.Host, loginData.Token, loginData.Name)
 	}
 
 	// set the generated token and the user model retrieved from server.

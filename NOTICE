@@ -11,3 +11,4 @@ yaml             : Apache 2.0          - https://github.com/go-yaml/yaml
 go-jmespath      : Apache 2.0          - https://github.com/jmespath/go-jmespath
 godotenv         : MIT                 - https://github.com/joho/godotenv
 tablewriter      : MIT                 - https://github.com/olekukonko/tablewriter
+gokrb5           : Apache 2.0          - https://github.com/jcmturner/gokrb5

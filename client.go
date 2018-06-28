@@ -19,7 +19,7 @@ import (
 // User represents the user of the client.
 type User struct {
 	Token                string   `json:"token"`
-	User                 string   `json:"user"`
+	Name                 string   `json:"user"`
 	SchemaRegistryDelete bool     `json:"schemaRegistryDelete"`
 	Roles                []string `json:"roles"`
 }
@@ -27,7 +27,8 @@ type User struct {
 // Client is the lenses http client.
 // It contains the necessary API calls to communicate and develop via lenses.
 type Client struct {
-	config Configuration
+	config                  Configuration
+	persistentRequestOption requestOption
 
 	// user is generated on `lenses#OpenConnection` when configuration's token is missing,
 	// in the same api point that token is generated.
@@ -79,10 +80,11 @@ const (
 // are invalid or the specific user has no access to a specific action.
 var ErrCredentialsMissing = fmt.Errorf("client: credentials missing or invalid")
 
-type requestOption func(r *http.Request)
+type requestOption func(r *http.Request) error
 
-var schemaAPIOption = func(r *http.Request) {
+var schemaAPIOption = func(r *http.Request) error {
 	r.Header.Add(acceptHeaderKey, contentTypeSchemaJSON)
+	return nil
 }
 
 var (
@@ -133,8 +135,16 @@ func (c *Client) do(method, path, contentType string, send []byte, options ...re
 	// response accept gziped content.
 	req.Header.Add(acceptEncodingHeaderKey, gzipEncodingHeaderValue)
 
+	if c.persistentRequestOption != nil {
+		if err := c.persistentRequestOption(req); err != nil {
+			return nil, err
+		}
+	}
+
 	for _, opt := range options {
-		opt(req)
+		if err = opt(req); err != nil {
+			return nil, err
+		}
 	}
 
 	// here will print all the headers, including the token (because it may be useful for debugging)
@@ -399,8 +409,9 @@ const (
 // To retrieve the execution mode of the box with safety,
 // see the `Client#GetExecutionMode` instead.
 func (c *Client) GetConfig() (map[string]interface{}, error) {
-	resp, err := c.do(http.MethodGet, configPath, "", nil, func(r *http.Request) {
+	resp, err := c.do(http.MethodGet, configPath, "", nil, func(r *http.Request) error {
 		r.Header.Set("Accept", "application/json, text/plain")
+		return nil
 	})
 
 	if err != nil {
@@ -687,8 +698,9 @@ func (c *Client) LSQL(
 
 	// it's sse, so accept text/event-stream and stream reading the response body, no
 	// external libraries needed, it is fairly simple.
-	resp, err := c.do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) {
+	resp, err := c.do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) error {
 		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+		return nil
 	}, schemaAPIOption)
 	if err != nil {
 		return err
@@ -3103,8 +3115,9 @@ type AlertHandler func(Alert) error
 
 // GetAlertsLive receives alert notifications in real-time from the server via a Send Server Event endpoint.
 func (c *Client) GetAlertsLive(handler AlertHandler) error {
-	resp, err := c.do(http.MethodGet, alertsPathSSE, contentTypeJSON, nil, func(r *http.Request) {
+	resp, err := c.do(http.MethodGet, alertsPathSSE, contentTypeJSON, nil, func(r *http.Request) error {
 		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+		return nil
 	}, schemaAPIOption)
 	if err != nil {
 		return err
@@ -3167,8 +3180,9 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 	// 	path+="?follow=true&lines="
 	// }
 
-	resp, err := c.do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) {
+	resp, err := c.do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) error {
 		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+		return nil
 	}, schemaAPIOption)
 	if err != nil {
 		return err

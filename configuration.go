@@ -15,64 +15,105 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Configuration contains the necessary information
-// that client needs to connect and talk to the lenses backend server.
-//
-// Configuration can be loaded via JSON or YAML.
-type Configuration struct {
-	// Host is the network address that your lenses backend is listening for incoming requests.
-	Host string `json:"host" yaml:"Host" toml:"Host" survey:"host"`
+type (
+	// KerberosAuthentication is a configuration struct which contains
+	KerberosAuthentication struct {
+		// required.
+		ConfFile string `json:"confFile" yaml:"ConfFile" toml:"ConfFile" survey:"conf"`
+		// optional, if empty then default is used, `User` and `Password` are required here.
+		Realm string `json:"realm" yaml:"Realm" toml:"Realm" survey:"realm"`
+		// optional, if not empty then load kerberos client with keytab file, `User` is required, `Realm` can be used as well here.
+		KeyTabFile string `json:"keyTabFile" yaml:"KeyTabFile" toml:"KeyTabFile" survey:"keytab"`
+		// optional, if not empty then load kerberos client from cache file, `User` is required here.
+		CCacheFile string `json:"ccacheFile" yaml:"CCacheFile" toml:"CCacheFile" survey:"ccache"`
+	}
 
-	// Auth fields
-	// we need those in order to generate the access token.
+	// Configuration contains the necessary information
+	// that client needs to connect and talk to the lenses backend server.
+	//
+	// Configuration can be loaded via JSON or YAML.
+	Configuration struct {
+		// Host is the network address that your lenses backend is listening for incoming requests.
+		Host string `json:"host" yaml:"Host" toml:"Host" survey:"host"`
 
-	// User is your "user" field,
-	User string `json:"user" yaml:"User" toml:"User" survey:"user"`
-	// Password is your "password".
-	Password string `json:"password,omitempty" yaml:"Password" toml:"Password" survey:"-"`
+		// Auth fields
+		// we need those in order to generate the access token.
 
-	// Token is the "X-Kafka-Lenses-Token" request header's value.
-	// Overrides the `User` and `Password` settings.
-	//
-	// If `Token` is expired then all the calls will result on 403 forbidden error HTTP code
-	// and a manual renewal will be demanded.
-	//
-	// For general-purpose usecase the recommendation is to let this field empty and
-	// fill the `User` and `Password` instead.
-	Token string `json:"token,omitempty" yaml:"Token" toml:"Token" survey:"-"`
+		// User is your "user" field,
+		User string `json:"user" yaml:"User" toml:"User" survey:"user"`
+		// Password is your "password".
+		Password string `json:"password,omitempty" yaml:"Password" toml:"Password" survey:"-"`
 
-	// Timeout specifies the timeout for connection establishment.
-	//
-	// Empty timeout value means no timeout.
-	//
-	// Such as "300ms", "-1.5h" or "2h45m".
-	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-	// Example: "5s" for 5 seconds, "5m" for 5 minutes and so on.
-	Timeout string `json:"timeout,omitempty" yaml:"Timeout" toml:"Timeout" survey:"timeout"`
-	// Debug activates the debug mode, it logs every request, the configuration (except the `Password`)
-	// and its raw response before decoded but after gzip reading.
-	//
-	// If this is enabled then printer's contents are not predicted to the end-user.
-	// The output source is always the `os.Stdout` which 99.9% of the times means the terminal,
-	// so use it only for debugging.
-	//
-	//
-	// Defaults to false.
-	Debug bool `json:"debug,omitempty" yaml:"Debug" toml:"Debug" survey:"debug"` /*
-	 Logging is hapenning trhough the `github.com/kataras/golog` and `pio` package,
-	 which performs x3 times faster than the alternatives.
-	 Zero performance cost if a logger is not responsible to actually print/write the message,
-	 on `Debugf` not even the `fmt.Spritnf` is called in that case.
-	 The user of the lenses client can change its output source(s) and even inject the log messaging
-	 by using the `golog.Default` instance.
+		// Kerberos should be filled if kerberos-based authentication needed.
+		// Note that `User` and `Password` fields are still necessary if Kerberos' `File` and/or its `Realm` values are not empty.
+		//
+		// Look `lenses#KerberosAuthentication` too.
+		Kerberos KerberosAuthentication `json:"-" yaml:"Kerberos" toml:"Kerberos" survey:"kerberos"`
+
+		// Token is the "X-Kafka-Lenses-Token" request header's value.
+		// Overrides the `User` and `Password` settings.
+		//
+		// If `Token` is expired then all the calls will result on 403 forbidden error HTTP code
+		// and a manual renewal will be demanded.
+		//
+		// For general-purpose usecase the recommendation is to let this field empty and
+		// fill the `User` and `Password` instead.
+		Token string `json:"token,omitempty" yaml:"Token" toml:"Token" survey:"-"`
+
+		// Timeout specifies the timeout for connection establishment.
+		//
+		// Empty timeout value means no timeout.
+		//
+		// Such as "300ms", "-1.5h" or "2h45m".
+		// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+		// Example: "5s" for 5 seconds, "5m" for 5 minutes and so on.
+		Timeout string `json:"timeout,omitempty" yaml:"Timeout" toml:"Timeout" survey:"timeout"`
+		// Debug activates the debug mode, it logs every request, the configuration (except the `Password`)
+		// and its raw response before decoded but after gzip reading.
+		//
+		// If this is enabled then printer's contents are not predicted to the end-user.
+		// The output source is always the `os.Stdout` which 99.9% of the times means the terminal,
+		// so use it only for debugging.
+		//
+		//
+		// Defaults to false.
+		Debug bool `json:"debug,omitempty" yaml:"Debug" toml:"Debug" survey:"debug"`
+	} /* Why a whole Configuration struct while we could just pass those 3 params?
+	Because we may need more fields in the future,
+	and it's always a good practise to start like this on those type of packages.
+	Another reason to not move those fields inside the Client itself is because
+	we can load them via files, i.e in `OpenConnection`, we pass out options that are only runtime
+	functions, they can't load via files.
 	*/
-} /* Why a whole Configuration struct while we could just pass those 3 params?
-Because we may need more fields in the future,
-and it's always a good practise to start like this on those type of packages.
-Another reason to not move those fields inside the Client itself is because
-we can load them via files, i.e in `OpenConnection`, we pass out options that are only runtime
-functions, they can't load via files.
-*/
+
+)
+
+// IsValid for use.
+func (c *KerberosAuthentication) IsValid() bool {
+	if c.ConfFile == "" {
+		return false
+	}
+
+	if c.Realm != "" {
+		if c.CCacheFile != "" {
+			return false
+		}
+	}
+
+	if c.KeyTabFile != "" {
+		if c.Realm == "" || c.CCacheFile != "" {
+			return false
+		}
+	}
+
+	if c.CCacheFile != "" {
+		if c.Realm != "" || c.KeyTabFile != "" {
+			return false
+		}
+	}
+
+	return true
+}
 
 // FormatHost will try to make sure that the schema:host:port pattern is followed on the `Host` field.
 func (c *Configuration) FormatHost() {
@@ -124,7 +165,28 @@ func (c *Configuration) IsValid() bool {
 
 	c.FormatHost()
 
-	return c.Host != "" && (c.Token != "" || (c.User != "" && c.Password != ""))
+	return c.Host != "" && (c.Token != "" || (c.User != "" && c.Password != "") || c.Kerberos.IsValid())
+}
+
+// Fill iterates over the "other" KerberosAuthentication's fields
+// it checks if a field is not empty,
+// if it's then it sets the value to the "c" KerberosAuthentication's particular field.
+func (c *KerberosAuthentication) Fill(other KerberosAuthentication) {
+	if v := other.ConfFile; v != "" && v != c.ConfFile {
+		c.ConfFile = v
+	}
+
+	if v := other.Realm; v != "" && v != c.Realm {
+		c.Realm = v
+	}
+
+	if v := other.KeyTabFile; v != "" && v != c.KeyTabFile {
+		c.KeyTabFile = v
+	}
+
+	if v := other.CCacheFile; v != "" && v != c.CCacheFile {
+		c.CCacheFile = v
+	}
 }
 
 // Fill iterates over the "other" Configuration's fields
@@ -152,6 +214,8 @@ func (c *Configuration) Fill(other Configuration) bool {
 	if v := other.Password; v != "" && v != c.Password {
 		c.Password = v
 	}
+
+	c.Kerberos.Fill(other.Kerberos)
 
 	if v := other.Timeout; v != "" && v != c.Timeout {
 		c.Timeout = v
