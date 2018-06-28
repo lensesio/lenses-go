@@ -11,14 +11,15 @@ import (
 	"github.com/landoop/lenses-go"
 )
 
+// TODO: will fail atm, will be fixed when CLI adapts the latest client's API changes.
+
 const testDebug = false
 
 var expectedConfiguration = lenses.Configuration{
-	Host:     "https://landoop.com",
-	User:     "testuser",
-	Password: "testpassword",
-	Timeout:  "11s",
-	Debug:    true,
+	Host:           "https://landoop.com",
+	Authentication: lenses.BasicAuthentication{Username: "testuser", Password: "testpassword"},
+	Timeout:        "11s",
+	Debug:          true,
 }
 
 func makeTestFile(t *testing.T, filename string) (*os.File, func()) {
