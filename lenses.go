@@ -207,10 +207,13 @@ func OpenConnection(config Configuration, options ...ConnectionOption) (*Client,
 		}
 
 		c.persistentRequestOption = func(r *http.Request) error {
-			return kerberosClient.SetSPNEGOHeader(r, fmt.Sprintf("%s/%s", "HTTP", r.URL.Host))
+			return kerberosClient.SetSPNEGOHeader(r, fmt.Sprintf("%s/%s", "HTTP", r.URL.Hostname()))
 		}
 
 		resp, err = c.do(http.MethodGet, "/api/auth", contentTypeJSON, nil)
+		if err != nil {
+			return nil, fmt.Errorf("client: auth failure: kerberos failed to sent SPNEGO header: %v", err)
+		}
 	} else { // no, don't do it automatically, user should know if <- isKerberosConfReal("/etc/krb5.conf") {
 		return nil, fmt.Errorf("client: auth failure: 'User' and 'Password' or 'Kerberos' missing from the Configuration")
 	}
