@@ -72,6 +72,23 @@ func TestReadConfigurationFromJSON(t *testing.T) {
 	testConfigurationFile(t, "configuration.json", contents, lenses.ReadConfigurationFromJSON)
 }
 
+func TestReadConfigurationFromJSONBackwardsCompatibility(t *testing.T) {
+	contents := fmt.Sprintf(`
+        {
+            "host": "%s",
+			"user": "%s",
+            "password": "%s",
+            "timeout": "%s",
+            "debug": %v
+        }`,
+		expectedConfiguration.Host,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Username,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Password,
+		expectedConfiguration.Timeout,
+		expectedConfiguration.Debug)
+	testConfigurationFile(t, "configuration.json", contents, lenses.ReadConfigurationFromJSON)
+}
+
 func TestWriteConfigurationToJSON(t *testing.T) {
 	expectedContents := fmt.Sprintf(`{"host":"%s","basic_authentication":{"username":"%s","password":"%s"},"timeout":"%s","debug":%v}`,
 		expectedConfiguration.Host,

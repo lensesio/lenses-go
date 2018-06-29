@@ -134,6 +134,22 @@ func jsonUnmarshalConfiguration(b []byte, c *Configuration) error {
 		}
 	}
 
+	// no new format found, let's do a backwards compatibility for "user" and "password" fields -> BasicAuthentication.
+	if usernameJSON, passwordJSON := raw["user"], raw["password"]; len(usernameJSON) > 0 && len(passwordJSON) > 0 {
+		// need to escape those "\"...\"".
+		var auth BasicAuthentication
+		if err := json.Unmarshal(usernameJSON, &auth.Username); err != nil {
+			return err
+		}
+
+		if err := json.Unmarshal(passwordJSON, &auth.Password); err != nil {
+			return err
+		}
+
+		c.Authentication = auth
+		return nil
+	}
+
 	return fmt.Errorf("json: unknown or missing authentication key")
 }
 
