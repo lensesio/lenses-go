@@ -1,7 +1,6 @@
 Third Party libraries and components
 ------------------------------------
 
-toml             : MIT                 - https://github.com/BurntSushi/toml
 uuid             : MIT                 - https://github.com/satori/go.uuid
 survey           : MIT                 - https://github.com/kataras/survey
 websocket        : BSD-2               - https://github.com/gorilla/websocket

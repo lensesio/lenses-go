@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v2"
 )
 
@@ -22,12 +21,12 @@ type (
 	// Configuration can be loaded via JSON or YAML.
 	Configuration struct {
 		// Host is the network address that your lenses backend is listening for incoming requests.
-		Host string `json:"host" yaml:"Host" toml:"Host" survey:"host"`
+		Host string `json:"host" yaml:"Host" survey:"host"`
 
 		// Authentication, in order to gain access using different kind of options.
 		//
 		// See `BasicAuthentication` and `KerberosAuthentication` or the example for more.
-		Authentication Authentication `json:"authentication" yaml:"Authentication" toml:"Authentication" survey:"-"`
+		Authentication Authentication `json:"-" yaml:"-" survey:"-"`
 
 		// Token is the "X-Kafka-Lenses-Token" request header's value.
 		// If not empty, overrides any `Authentication` settings.
@@ -37,7 +36,7 @@ type (
 		//
 		// For general-purpose usecase the recommendation is to let this field empty and
 		// fill the `Authentication` field instead.
-		Token string `json:"token,omitempty" yaml:"Token" toml:"Token" survey:"-"`
+		Token string `json:"token,omitempty" yaml:"Token" survey:"-"`
 
 		// Timeout specifies the timeout for connection establishment.
 		//
@@ -46,7 +45,7 @@ type (
 		// Such as "300ms", "-1.5h" or "2h45m".
 		// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 		// Example: "5s" for 5 seconds, "5m" for 5 minutes and so on.
-		Timeout string `json:"timeout,omitempty" yaml:"Timeout" toml:"Timeout" survey:"timeout"`
+		Timeout string `json:"timeout,omitempty" yaml:"Timeout" survey:"timeout"`
 		// Debug activates the debug mode, it logs every request, the configuration (except the `Password`)
 		// and its raw response before decoded but after gzip reading.
 		//
@@ -56,7 +55,7 @@ type (
 		//
 		//
 		// Defaults to false.
-		Debug bool `json:"debug,omitempty" yaml:"Debug" toml:"Debug" survey:"debug"`
+		Debug bool `json:"debug,omitempty" yaml:"Debug" survey:"debug"`
 	} /* Why a whole Configuration struct while we could just pass those 3 params?
 	Because we may need more fields in the future,
 	and it's always a good practise to start like this on those type of packages.
@@ -66,6 +65,100 @@ type (
 	*/
 
 )
+
+func jsonUnmarshalConfiguration(b []byte, c *Configuration) error {
+	// first unmarshal the known types.
+	if err := json.Unmarshal(b, c); err != nil {
+		return err
+	}
+	// second, get all by map[string]string
+	var raw map[string]json.RawMessage
+	err := json.Unmarshal(b, &raw)
+	if err != nil {
+		return err
+	}
+
+	// check if contains the "authentication" key.
+	auth, ok := raw["authentication"]
+	if !ok {
+		return nil
+	}
+
+	// we got the auth interface, now try to unmarshal to the known auth types we have.
+	var (
+		tryBasicAuth    BasicAuthentication
+		tryKerberosAuth KerberosAuthentication
+	)
+
+	bb, err := auth.MarshalJSON()
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(bb, &tryBasicAuth)
+	if err == nil {
+		// conf := c.(*Configuration)
+		// conf.Authentication = tryBasicAuth
+		c.Authentication = tryBasicAuth
+	} else {
+		err = json.Unmarshal(bb, &tryKerberosAuth)
+		if err == nil {
+			c.Authentication = tryKerberosAuth
+		}
+	}
+
+	return err
+}
+
+func yamlUnmarshalConfiguration(b []byte, c *Configuration) error {
+	// first unmarshal the known types.
+	if err := yaml.Unmarshal(b, c); err != nil {
+		return err
+	}
+	// second, get all by map[string]string
+	var tree yaml.MapSlice
+	err := yaml.Unmarshal(b, &tree)
+	if err != nil {
+		return err
+	}
+
+	// check if contains the "Authentication" key.
+	var auth yaml.MapSlice
+	for _, v := range tree {
+		if key, ok := v.Key.(string); ok && key == "Authentication" {
+			// yaml.MapSlice{yaml.MapItem{Key:"Username", Value:"testuser"}, yaml.MapItem{Key:"Password", Value:"testpassword"}}
+			auth = v.Value.(yaml.MapSlice)
+			break
+		}
+	}
+
+	if len(auth) == 0 {
+		return nil
+	}
+
+	// we got the auth yaml item, now try to unmarshal to the known auth types we have.
+	var (
+		tryBasicAuth    BasicAuthentication
+		tryKerberosAuth KerberosAuthentication
+	)
+
+	bb, err := yaml.Marshal(auth)
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(bb, &tryBasicAuth)
+	if err == nil {
+		c.Authentication = tryBasicAuth
+	} else {
+		err = yaml.Unmarshal(bb, &tryKerberosAuth)
+		if err == nil {
+			c.Authentication = tryKerberosAuth
+		}
+	}
+
+	return err
+}
 
 // FormatHost will try to make sure that the schema:host:port pattern is followed on the `Host` field.
 func (c *Configuration) FormatHost() {
@@ -155,12 +248,12 @@ func (c *Configuration) Fill(other Configuration) bool {
 
 // UnmarshalFunc is the most standard way to declare a Decoder/Unmarshaler to read the configurations and more.
 // See `ReadConfiguration` and `ReadConfigurationFromFile` for more.
-type UnmarshalFunc func(in []byte, outPtr interface{}) error
+type UnmarshalFunc func(in []byte, outPtr *Configuration) error
 
 // ReadConfiguration reads and decodes Configuration from an io.Reader based on a custom unmarshaler.
 // This can be useful to read configuration via network or files (see `ReadConfigurationFromFile`).
 // Sets the `outPtr`. Retruns a non-nil error on any unmarshaler's errors.
-func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc, outPtr interface{}) error {
+func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc, outPtr *Configuration) error {
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
@@ -177,7 +270,7 @@ func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc, outPtr interface{
 //
 // Accepts the absolute or the relative path of the configuration file.
 // Sets the `outPtr`. Retruns a non-nil error if parsing or decoding the file failed or file doesn't exist.
-func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc, outPtr interface{}) error {
+func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc, outPtr *Configuration) error {
 	// get the abs
 	// which will try to find the 'filename' from current working dir as well.
 	absPath, err := filepath.Abs(filename)
@@ -200,11 +293,10 @@ func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc, outPt
 // 1. JSON
 // 2. YAML
 // 3. TOML
-func TryReadConfigurationFromFile(filename string, outPtr interface{}) (err error) {
+func TryReadConfigurationFromFile(filename string, outPtr *Configuration) (err error) {
 	tries := []UnmarshalFunc{
-		json.Unmarshal,
-		yaml.Unmarshal,
-		toml.Unmarshal,
+		jsonUnmarshalConfiguration,
+		yamlUnmarshalConfiguration,
 	}
 
 	for _, unmarshaler := range tries {
@@ -218,12 +310,12 @@ func TryReadConfigurationFromFile(filename string, outPtr interface{}) (err erro
 }
 
 var configurationPossibleFilenames = []string{
-	"lenses-cli.yml", "lenses-cli.yaml", "lenses-cli.json", "lenses-cli.tml",
-	".lenses-cli.yml", ".lenses-cli.yaml", ".lenses-cli.json", ".lenses-cli.tml",
-	"lenses.yml", "lenses.yaml", "lenses.json", "lenses.tml",
-	".lenses.yml", ".lenses.yaml", ".lenses.json", ".lenses.tml"} // no patterns in order to be easier to remove or modify these.
+	"lenses-cli.yml", "lenses-cli.yaml", "lenses-cli.json",
+	".lenses-cli.yml", ".lenses-cli.yaml", ".lenses-cli.json",
+	"lenses.yml", "lenses.yaml", "lenses.json",
+	".lenses.yml", ".lenses.yaml", ".lenses.json"} // no patterns in order to be easier to remove or modify these.
 
-func lookupConfiguration(dir string, outPtr interface{}) bool {
+func lookupConfiguration(dir string, outPtr *Configuration) bool {
 	for _, filename := range configurationPossibleFilenames {
 		fullpath := filepath.Join(dir, filename)
 		err := TryReadConfigurationFromFile(fullpath, outPtr)
@@ -269,7 +361,7 @@ var DefaultConfigurationHomeDir = filepath.Join(HomeDir(), ".lenses")
 // from the current user's home directory/.lenses, the lookup is based on
 // the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromHome(outPtr interface{}) bool {
+func TryReadConfigurationFromHome(outPtr *Configuration) bool {
 	return lookupConfiguration(DefaultConfigurationHomeDir, outPtr)
 }
 
@@ -277,7 +369,7 @@ func TryReadConfigurationFromHome(outPtr interface{}) bool {
 // from the (client's caller's) executable path that started the current process.
 // The lookup is based on the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromExecutable(outPtr interface{}) bool {
+func TryReadConfigurationFromExecutable(outPtr *Configuration) bool {
 	executablePath, err := os.Executable()
 	if err != nil {
 		return false
@@ -292,7 +384,7 @@ func TryReadConfigurationFromExecutable(outPtr interface{}) bool {
 // from the current working directory, note that it may differs from the executable path.
 // The lookup is based on the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromCurrentWorkingDir(outPtr interface{}) bool {
+func TryReadConfigurationFromCurrentWorkingDir(outPtr *Configuration) bool {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return false
@@ -306,8 +398,8 @@ func TryReadConfigurationFromCurrentWorkingDir(outPtr interface{}) bool {
 // Accepts the absolute or the relative path of the configuration file.
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
-func ReadConfigurationFromJSON(filename string, outPtr interface{}) error {
-	return ReadConfigurationFromFile(filename, json.Unmarshal, outPtr)
+func ReadConfigurationFromJSON(filename string, outPtr *Configuration) error {
+	return ReadConfigurationFromFile(filename, jsonUnmarshalConfiguration, outPtr)
 }
 
 // ReadConfigurationFromYAML reads and decodes Configuration from a yaml file, i.e `configuration.yml`.
@@ -315,18 +407,6 @@ func ReadConfigurationFromJSON(filename string, outPtr interface{}) error {
 // Accepts the absolute or the relative path of the configuration file.
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
-func ReadConfigurationFromYAML(filename string, outPtr interface{}) error {
-	return ReadConfigurationFromFile(filename, yaml.Unmarshal, outPtr)
-}
-
-// ReadConfigurationFromTOML reads and decodess Configuration from a toml-compatible document file.
-// Read more about toml's implementation at:
-// https://github.com/toml-lang/toml
-//
-//
-// Accepts the absolute or the relative path of the configuration file.
-// Parsing error will result to a panic.
-// Error may occur when the file doesn't exists or is not formatted correctly.
-func ReadConfigurationFromTOML(filename string, outPtr interface{}) error {
-	return ReadConfigurationFromFile(filename, toml.Unmarshal, outPtr)
+func ReadConfigurationFromYAML(filename string, outPtr *Configuration) error {
+	return ReadConfigurationFromFile(filename, yamlUnmarshalConfiguration, outPtr)
 }

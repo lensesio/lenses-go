@@ -36,8 +36,7 @@ func makeTestFile(t *testing.T, filename string) (*os.File, func()) {
 	return f, teardown
 }
 
-func testConfigurationFile(t *testing.T, filename, contents string, reader func(string, interface{}) error) {
-	t.Parallel()
+func testConfigurationFile(t *testing.T, filename, contents string, reader func(string, *lenses.Configuration) error) {
 	f, teardown := makeTestFile(t, filename)
 	defer teardown()
 
@@ -49,14 +48,6 @@ func testConfigurationFile(t *testing.T, filename, contents string, reader func(
 	}
 
 	if !reflect.DeepEqual(got, expectedConfiguration) {
-		// Output format:
-		/*
-			configuration_test.go:51: error reading configuration from file: 'C:\Users\kataras\AppData\Local\Temp\configuration.json373943803'
-			expected:
-			lenses.Configuration{Host:"https://landoop.com", User:"testuser", Password:"testpassword", Timeout:"11s", Debug:true}
-			but got:
-			lenses.Configuration{Host:"", User:"testuser", Password:"testpassword", Timeout:"11s", Debug:true}
-		*/
 		t.Fatalf("error reading configuration from file: '%s'\nexpected:\n%#v\nbut got:\n%#v", f.Name(), expectedConfiguration, got)
 		if testDebug {
 			t.Fatalf("\ncontents of the file:\n%s", contents)
@@ -68,14 +59,13 @@ func TestReadConfigurationFromJSON(t *testing.T) {
 	contents := fmt.Sprintf(`
         {
             "host": "%s",
-            "user": "%s",
-            "password": "%s",
+			"authentication": {"username": "%s", "password": "%s"},
             "timeout": "%s",
             "debug": %v
         }`,
 		expectedConfiguration.Host,
-		expectedConfiguration.User,
-		expectedConfiguration.Password,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Username,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Password,
 		expectedConfiguration.Timeout,
 		expectedConfiguration.Debug)
 	testConfigurationFile(t, "configuration.json", contents, lenses.ReadConfigurationFromJSON)
@@ -83,32 +73,17 @@ func TestReadConfigurationFromJSON(t *testing.T) {
 
 func TestReadConfigurationFromYAML(t *testing.T) {
 	contents := fmt.Sprintf(`
-            Host: %s
-            User: %s
-            Password: %s
-            Timeout: %s
-            Debug: %v
+Host: %s
+Authentication:
+  Username: "%s"
+  Password: "%s"
+Timeout: %s
+Debug: %v
         `,
 		expectedConfiguration.Host,
-		expectedConfiguration.User,
-		expectedConfiguration.Password,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Username,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Password,
 		expectedConfiguration.Timeout,
 		expectedConfiguration.Debug)
 	testConfigurationFile(t, "configuration.yml", contents, lenses.ReadConfigurationFromYAML)
-}
-
-func TestReadConfigurationFromTOML(t *testing.T) {
-	contents := fmt.Sprintf(`
-        Host = "%s"
-        User = "%s"
-        Password = "%s"
-        Timeout = "%s"
-        Debug = %v
-    `,
-		expectedConfiguration.Host,
-		expectedConfiguration.User,
-		expectedConfiguration.Password,
-		expectedConfiguration.Timeout,
-		expectedConfiguration.Debug)
-	testConfigurationFile(t, "configuration.tml", contents, lenses.ReadConfigurationFromTOML)
 }
