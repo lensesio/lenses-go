@@ -170,7 +170,7 @@ func yamlUnmarshalConfiguration(b []byte, c *Configuration) error {
 		if k, ok := v.Key.(string); ok {
 			isBasicAuth := k == "BasicAuthentication"
 			isKerberosAuth := k == "KerberosAuthentication"
-			if isBasicAuth || isKerberosAuth {
+			if isBasicAuth || isKerberosAuth { // should be one of those, no both, so exit if at least one found.
 				bb, err := yaml.Marshal(v.Value)
 				if err != nil {
 					return err
@@ -193,6 +193,36 @@ func yamlUnmarshalConfiguration(b []byte, c *Configuration) error {
 				return nil
 			}
 		}
+	}
+
+	// no new format found, let's do a loop again to do a backwards compatibility check for "User" and "Password" fields -> BasicAuthentication.
+	var username, password string
+
+	for _, v := range tree {
+		if k, ok := v.Key.(string); ok {
+			if username != "" && password != "" {
+				break
+			}
+
+			switch k {
+			case "User":
+				// usernameB, err := yaml.Marshal(v.Value)
+				// if err != nil {
+				// 	return err
+				// }
+				// username = strings.TrimSuffix(string(usernameB), "\n")
+				// No, let's do that simpler:
+				username, ok = v.Value.(string) // safe set.
+			case "Password":
+				password, ok = v.Value.(string) // safe set.
+			}
+		}
+	}
+
+	// both must set in order to be a valid BasicAuthentication.
+	if username != "" && password != "" {
+		c.Authentication = BasicAuthentication{Username: username, Password: password}
+		return nil
 	}
 
 	return fmt.Errorf("yaml: unknown or missing authentication key")

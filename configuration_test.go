@@ -76,7 +76,7 @@ func TestReadConfigurationFromJSONBackwardsCompatibility(t *testing.T) {
 	contents := fmt.Sprintf(`
         {
             "host": "%s",
-			"user": "%s",
+            "user": "%s",
             "password": "%s",
             "timeout": "%s",
             "debug": %v
@@ -113,6 +113,22 @@ Host: %s
 BasicAuthentication:
   Username: "%s"
   Password: "%s"
+Timeout: %s
+Debug: %v
+        `,
+		expectedConfiguration.Host,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Username,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Password,
+		expectedConfiguration.Timeout,
+		expectedConfiguration.Debug)
+	testConfigurationFile(t, "configuration.yml", contents, lenses.ReadConfigurationFromYAML)
+}
+
+func TestReadConfigurationFromYAMLBackwardsCompatibility(t *testing.T) {
+	contents := fmt.Sprintf(`
+Host: %s
+User: "%s"
+Password: "%s"
 Timeout: %s
 Debug: %v
         `,
