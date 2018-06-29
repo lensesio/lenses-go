@@ -37,8 +37,8 @@ var (
 
 // BasicAuthentication for Lenses, accepts raw username and password.
 type BasicAuthentication struct {
-	Username string `json:"username" yaml:"Username" toml:"Usermame" survey:"username"`
-	Password string `json:"password,omitempty" yaml:"Password" toml:"Password" survey:"-"`
+	Username string `json:"username" yaml:"Username" survey:"username"`
+	Password string `json:"password,omitempty" yaml:"Password" survey:"-"`
 }
 
 // Auth implements the `Authentication` for the `BasicAuthentication`.
@@ -87,8 +87,16 @@ func (auth BasicAuthentication) Auth(c *Client) error {
 
 // KerberosAuthentication can be used as alternative option of the `BasicAuthentication` for a more secure way to connect to the lenses backend box.
 type KerberosAuthentication struct {
-	ConfFile string                       `json:"confFile" yaml:"ConfFile" toml:"ConfFile" survey:"conf"`
-	Method   KerberosAuthenticationMethod `json:"method" yaml:"Method" toml:"Method" survey:"-"`
+	ConfFile string                       `json:"confFile" yaml:"ConfFile" survey:"conf"`
+	Method   KerberosAuthenticationMethod `json:"-" yaml:"-" survey:"-"`
+}
+
+func jsonUnmarshalKerberosAuthentication(b []byte, auth *KerberosAuthentication) error {
+	return fmt.Errorf("json: kerberos: unknown or missing authentication method key")
+}
+
+func yamlUnmarshalKerberosAuthentication(b []byte, auth *KerberosAuthentication) error {
+	return fmt.Errorf("yaml: kerberos: unknown or missing authentication method key")
 }
 
 // Auth implements the `Authentication` for the `KerberosAuthentication`.
@@ -158,11 +166,11 @@ var (
 //
 // The `KerberosAuthentication` calls its `NewClient`.
 type KerberosWithPassword struct {
-	Username string `json:"username" yaml:"Username" toml:"Usermame" survey:"username"`
-	Password string `json:"password,omitempty" yaml:"Password" toml:"Password" survey:"-"`
+	Username string `json:"username" yaml:"Username" survey:"username"`
+	Password string `json:"password,omitempty" yaml:"Password" survey:"-"`
 
 	// Realm is optional, if empty then default is used.
-	Realm string `json:"realm" yaml:"Realm" toml:"Realm" survey:"realm"`
+	Realm string `json:"realm" yaml:"Realm" survey:"realm"`
 }
 
 var emptyClient client.Client
@@ -181,12 +189,12 @@ func (m KerberosWithPassword) NewClient() (client.Client, error) {
 //
 // The `KerberosAuthentication` calls its `NewClient`.
 type KerberosWithKeytab struct {
-	Username string `json:"username" yaml:"Username" toml:"Usermame" survey:"username"`
+	Username string `json:"username" yaml:"Username" survey:"username"`
 
 	// Realm is optional, if empty then default is used.
-	Realm string `json:"realm" yaml:"Realm" toml:"Realm" survey:"realm"`
+	Realm string `json:"realm" yaml:"Realm" survey:"realm"`
 	// KeytabFile the keytab file path.
-	KeytabFile string `json:"keytabFile" yaml:"KeytabFile" toml:"KeytabFile" survey:"keytab"`
+	KeytabFile string `json:"keytabFile" yaml:"KeytabFile" survey:"keytab"`
 }
 
 // NewClient implements the `KerberosAuthenticationMethod` for the `KerberosWithKeytab`.
@@ -210,7 +218,7 @@ func (m KerberosWithKeytab) NewClient() (client.Client, error) {
 // The `KerberosAuthentication` calls its `NewClient`.
 type KerberosFromCCache struct {
 	// CCacheFile should be filled with the ccache file path.
-	CCacheFile string `json:"ccacheFile" yaml:"CCacheFile" toml:"CCacheFile" survey:"ccache"`
+	CCacheFile string `json:"ccacheFile" yaml:"CCacheFile" survey:"ccache"`
 }
 
 // NewClient implements the `KerberosAuthenticationMethod` for the `KerberosFromCCache`.

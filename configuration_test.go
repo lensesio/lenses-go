@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/landoop/lenses-go"
@@ -59,7 +60,7 @@ func TestReadConfigurationFromJSON(t *testing.T) {
 	contents := fmt.Sprintf(`
         {
             "host": "%s",
-			"authentication": {"username": "%s", "password": "%s"},
+			"basic_authentication": {"username": "%s", "password": "%s"},
             "timeout": "%s",
             "debug": %v
         }`,
@@ -71,10 +72,28 @@ func TestReadConfigurationFromJSON(t *testing.T) {
 	testConfigurationFile(t, "configuration.json", contents, lenses.ReadConfigurationFromJSON)
 }
 
+func TestWriteConfigurationToJSON(t *testing.T) {
+	expectedContents := fmt.Sprintf(`{"host":"%s","basic_authentication":{"username":"%s","password":"%s"},"timeout":"%s","debug":%v}`,
+		expectedConfiguration.Host,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Username,
+		expectedConfiguration.Authentication.(lenses.BasicAuthentication).Password,
+		expectedConfiguration.Timeout,
+		expectedConfiguration.Debug)
+
+	b, err := lenses.ConfigurationJSONMarshal(expectedConfiguration)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if expected, got := strings.TrimSpace(expectedContents), strings.TrimSpace(string(b)); expected != got {
+		t.Fatalf("expected result json to be written as:\n'%s'\nbut:\n'%s'", expected, got)
+	}
+}
+
 func TestReadConfigurationFromYAML(t *testing.T) {
 	contents := fmt.Sprintf(`
 Host: %s
-Authentication:
+BasicAuthentication:
   Username: "%s"
   Password: "%s"
 Timeout: %s

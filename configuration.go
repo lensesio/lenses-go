@@ -1,6 +1,7 @@
 package lenses
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -66,48 +67,74 @@ type (
 
 )
 
+var commaSep = []byte(",")
+
+// ConfigurationJSONMarshal retruns the json string as bytes of the given `Configuration` structure.
+func ConfigurationJSONMarshal(c Configuration) ([]byte, error) {
+	b, err := json.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.Authentication == nil {
+		return nil, nil
+	}
+
+	switch auth := c.Authentication.(type) {
+	case BasicAuthentication:
+		bb, err := json.Marshal(auth)
+		if err != nil {
+			return nil, err
+		}
+		bb = append([]byte(`,"basic_authentication":`), bb...)
+		b = bytes.Replace(b, commaSep, append(bb, commaSep...), 1)
+	case KerberosAuthentication:
+	}
+
+	return b, nil
+}
+
 func jsonUnmarshalConfiguration(b []byte, c *Configuration) error {
 	// first unmarshal the known types.
 	if err := json.Unmarshal(b, c); err != nil {
 		return err
 	}
-	// second, get all by map[string]string
+	// second, get all.
 	var raw map[string]json.RawMessage
 	err := json.Unmarshal(b, &raw)
 	if err != nil {
 		return err
 	}
 
-	// check if contains the "authentication" key.
-	auth, ok := raw["authentication"]
-	if !ok {
-		return nil
-	}
+	// check if contains a valid authentication key.
+	for k, v := range raw {
+		isBasicAuth := k == "basic_authentication"
+		isKerberosAuth := k == "kerberos_authentication"
+		if isBasicAuth || isKerberosAuth {
+			bb, err := v.MarshalJSON()
+			if err != nil {
+				return err
+			}
 
-	// we got the auth interface, now try to unmarshal to the known auth types we have.
-	var (
-		tryBasicAuth    BasicAuthentication
-		tryKerberosAuth KerberosAuthentication
-	)
+			if isBasicAuth {
+				var auth BasicAuthentication
+				if err = json.Unmarshal(bb, &auth); err != nil {
+					return err
+				}
+				c.Authentication = auth
+				return nil
+			}
 
-	bb, err := auth.MarshalJSON()
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(bb, &tryBasicAuth)
-	if err == nil {
-		// conf := c.(*Configuration)
-		// conf.Authentication = tryBasicAuth
-		c.Authentication = tryBasicAuth
-	} else {
-		err = json.Unmarshal(bb, &tryKerberosAuth)
-		if err == nil {
-			c.Authentication = tryKerberosAuth
+			var auth KerberosAuthentication
+			if err = json.Unmarshal(bb, &auth); err != nil {
+				return err
+			}
+			c.Authentication = auth
+			return nil
 		}
 	}
 
-	return err
+	return fmt.Errorf("json: unknown or missing authentication key")
 }
 
 func yamlUnmarshalConfiguration(b []byte, c *Configuration) error {
@@ -115,49 +142,44 @@ func yamlUnmarshalConfiguration(b []byte, c *Configuration) error {
 	if err := yaml.Unmarshal(b, c); err != nil {
 		return err
 	}
-	// second, get all by map[string]string
+	// second, get all.
 	var tree yaml.MapSlice
 	err := yaml.Unmarshal(b, &tree)
 	if err != nil {
 		return err
 	}
 
-	// check if contains the "Authentication" key.
-	var auth yaml.MapSlice
+	// check if contains a valid authentication key.
 	for _, v := range tree {
-		if key, ok := v.Key.(string); ok && key == "Authentication" {
-			// yaml.MapSlice{yaml.MapItem{Key:"Username", Value:"testuser"}, yaml.MapItem{Key:"Password", Value:"testpassword"}}
-			auth = v.Value.(yaml.MapSlice)
-			break
+		if k, ok := v.Key.(string); ok {
+			isBasicAuth := k == "BasicAuthentication"
+			isKerberosAuth := k == "KerberosAuthentication"
+			if isBasicAuth || isKerberosAuth {
+				bb, err := yaml.Marshal(v.Value)
+				if err != nil {
+					return err
+				}
+
+				if isBasicAuth {
+					var auth BasicAuthentication
+					if err = yaml.Unmarshal(bb, &auth); err != nil {
+						return err
+					}
+					c.Authentication = auth
+					return nil
+				}
+
+				var auth KerberosAuthentication
+				if err = yaml.Unmarshal(bb, &auth); err != nil {
+					return err
+				}
+				c.Authentication = auth
+				return nil
+			}
 		}
 	}
 
-	if len(auth) == 0 {
-		return nil
-	}
-
-	// we got the auth yaml item, now try to unmarshal to the known auth types we have.
-	var (
-		tryBasicAuth    BasicAuthentication
-		tryKerberosAuth KerberosAuthentication
-	)
-
-	bb, err := yaml.Marshal(auth)
-	if err != nil {
-		return err
-	}
-
-	err = yaml.Unmarshal(bb, &tryBasicAuth)
-	if err == nil {
-		c.Authentication = tryBasicAuth
-	} else {
-		err = yaml.Unmarshal(bb, &tryKerberosAuth)
-		if err == nil {
-			c.Authentication = tryKerberosAuth
-		}
-	}
-
-	return err
+	return fmt.Errorf("yaml: unknown or missing authentication key")
 }
 
 // FormatHost will try to make sure that the schema:host:port pattern is followed on the `Host` field.
