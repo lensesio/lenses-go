@@ -70,7 +70,7 @@ auth := lenses.KerberosAuthentication{
 
 ```go
 // Prepare the client's configuration based on the host and the authentication above.
-config := lenses.Configuration{Host: "domain.com", Authentication: auth, Timeout: "15s", Debug: true}
+config := lenses.ClientConfiguration{Host: "domain.com", Authentication: auth, Timeout: "15s", Debug: true}
 
 // Creating the client using the configuration.
 client, err := lenses.OpenConnection(config) // or (config, lenses.UsingClient(customClient)/UsingToken(ready token string))
