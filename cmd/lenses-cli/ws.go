@@ -94,11 +94,14 @@ func newLiveLSQLCommand() *cobra.Command {
 				return fmt.Errorf("query should not be empty")
 			}
 
-			currentConfig := configManager.getCurrent()
-
+			currentConfig := configManager.config.GetCurrent()
+			basicAuth, isBasicAuth := currentConfig.Authentication.(lenses.BasicAuthentication)
+			if !isBasicAuth {
+				return fmt.Errorf("not able to create a live connection using a non-basic authentication method at the moment")
+			}
 			conn, err := lenses.OpenLiveConnection(lenses.LiveConfiguration{
-				User:     currentConfig.User,
-				Password: currentConfig.Password,
+				User:     basicAuth.Username,
+				Password: basicAuth.Password,
 				Host:     currentConfig.Host,
 				Debug:    currentConfig.Debug,
 			})

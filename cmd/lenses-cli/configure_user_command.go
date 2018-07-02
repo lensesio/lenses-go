@@ -31,14 +31,18 @@ func init() {
 
 func isValidConfigurationContext(name string) bool {
 	currentContext := configManager.config.CurrentContext
-	configManager.setCurrent(name)
+	configManager.config.SetCurrent(name)
 	isValid := setupClient() == nil
-	configManager.setCurrent(currentContext)
+	configManager.config.SetCurrent(currentContext)
 	return isValid
 }
 
 func printConfigurationContext(cmd *cobra.Command, name string) bool {
 	currentContextName := configManager.config.CurrentContext
+	if len(configManager.config.Contexts) == 0 {
+		return false
+	}
+
 	c, ok := configManager.config.Contexts[name]
 	if !ok {
 		return false // this should never happen.
@@ -53,9 +57,6 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 		info = "invalid"
 	}
 
-	if cfg.Password != "" {
-		cfg.Password = "****"
-	}
 	if cfg.Token != "" {
 		cfg.Token = "****"
 	}
@@ -65,6 +66,8 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "%s [%s]\n", name, info)
+
+	// show only filled but no authentication.
 	printJSON(cmd, cfg)
 
 	return isValid
@@ -139,7 +142,7 @@ func newConfigurationContextCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// normally the cli would throw "client: credentials missing or invalid" if the current context's configuration
 			// are invalid, but in the case of "context" command, we skip that setup on the root command.
-			if !configManager.currentContextExists() {
+			if !configManager.config.CurrentContextExists() {
 				return fmt.Errorf("current context does not exist, please use the `configure` command first")
 			}
 			name := configManager.config.CurrentContext
@@ -173,11 +176,15 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 
 			name := args[0]
 			removeContextWillChangeContext := configManager.config.CurrentContext == name
-			deleted := configManager.removeContext(name)
+			deleted := configManager.config.RemoveContext(name)
 
 			if !deleted {
 				// failed when no found this context or if we can't upgrade to another one.
 				return echo(cmd, "unable to delete context '%s', at least one more valid context should be present", name)
+			}
+
+			if err := configManager.save(); err != nil {
+				return echo(cmd, "error while saving the configuration after deletion of the '%s' context: %v", name, err)
 			}
 
 			succMsg := fmt.Sprintf("'%s' context deleted", name)
@@ -263,7 +270,7 @@ func newConfigureCommand() *cobra.Command {
 		Example:       exampleString(`configure`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !configManager.isValid() || reset {
+			if !configManager.config.IsValid() || reset {
 				// This is the only command and place the user has direct interaction with the CLI
 				// and it's not used by a third-party tool because of the survey.
 				// So, print our "banner" :)
@@ -279,9 +286,43 @@ func newConfigureCommand() *cobra.Command {
 					   `)
 				}
 
-				currentConfig := configManager.getCurrent()
+				currentConfig := configManager.config.GetCurrent()
+
+				var (
+					defUsername  string
+					defKrbFile   string
+					defKrbRealm  string
+					defKrbKeytab string
+					defKrbCCache string
+				)
+
+				switch auth := currentConfig.Authentication.(type) {
+				case lenses.BasicAuthentication:
+					defUsername = auth.Username
+				case lenses.KerberosAuthentication:
+					defKrbFile = auth.ConfFile
+
+					switch authMethod := auth.Method.(type) {
+					case lenses.KerberosWithPassword:
+						defUsername = authMethod.Username
+						defKrbRealm = authMethod.Realm
+					case lenses.KerberosWithKeytab:
+						defUsername = authMethod.Username
+						defKrbRealm = authMethod.Realm
+						defKrbKeytab = authMethod.KeytabFile
+					case lenses.KerberosFromCCache:
+						defKrbCCache = authMethod.CCacheFile
+					}
+				}
 
 				qs := []*survey.Question{
+					{
+						Name: "debug",
+						Prompt: &survey.Confirm{
+							Message: "Enable debug mode?",
+							Default: currentConfig.Debug,
+						},
+					},
 					{
 						Name: "host",
 						Prompt: &survey.Input{
@@ -291,90 +332,190 @@ func newConfigureCommand() *cobra.Command {
 						},
 						Validate: survey.Required,
 					},
-					// basic or user/or/and pass + kerberos
-					{
-						Name: "user",
-						Prompt: &survey.Input{
-							Message: "User",
-							Default: currentConfig.User,
-							Help:    "This is the user credential used for gain access to the API.",
-						},
-						// Validate: survey.Required,
-					},
-					{
-						Name: "password",
-						Prompt: &survey.Password{
-							Message: "Password",
-							Help:    "This is the user's password credential, necessary to gain access to the API.",
-						},
-						// Validate: survey.Required,
-					},
-					{
-						Name: "debug",
-						Prompt: &survey.Confirm{
-							Message: "Enable debug mode?",
-							Default: currentConfig.Debug,
-						},
-					},
 				}
 
 				if err := survey.Ask(qs, currentConfig); err != nil {
 					return err
 				}
 
-				var shouldConfigureKerberos bool
-				if err := survey.AskOne(&survey.Confirm{
-					Message: "Enable kerberos authentication?",
-					Default: false,
-				}, &shouldConfigureKerberos, nil); err != nil {
+				var (
+					basicAuthAns    = "basic authentication (default)"
+					kerberosAuthAns = "kerberos (three methods)"
+				)
+
+				var authAns string
+
+				if err := survey.AskOne(&survey.Select{
+					Message: fmt.Sprintf("How would you like to be authenticated?"),
+					Options: []string{basicAuthAns, kerberosAuthAns},
+				}, &authAns, nil); err != nil {
 					return err
 				}
 
-				if shouldConfigureKerberos {
-					qsKerberos := []*survey.Question{
+				switch authAns {
+				case kerberosAuthAns:
+					var kerberosAuth lenses.KerberosAuthentication
+
+					// get the krb5 conf file for all of the kerberos methods and ask for a method.
+					if err := survey.AskOne(&survey.Input{
+						Message: "krb5.conf file location",
+						Default: defKrbFile,
+						Help:    "This is the local kerberos configuration file.",
+					}, &kerberosAuth.ConfFile, survey.Required); err != nil {
+						return err
+					}
+
+					var (
+						kerberosWithPassAns   = "kerberos with password"
+						kerberosWithKeytabAns = "kerberos with keytab file"
+						kerberosFromCCacheAns = "kerberos from ccache file"
+					)
+
+					var authMethodAns string
+
+					if err := survey.AskOne(&survey.Select{
+						// Message: fmt.Sprintf("Please select one of the following kerberos authentication methods"),
+						// Options: []string{kerberosWithPassAns, kerberosWithKeytabAns, kerberosFromCCacheAns},
+						// TODO:
+						// Other two options disabled, they're working on client-side
+						// but need more custom unmarshlal/marshaling to read and write those from and to files before adding them as user options,
+						// the rest is ready when done with it.
+						Message: fmt.Sprintf("Please continue by seting the kerberos authentication method"),
+						Options: []string{kerberosWithPassAns},
+					}, &authMethodAns, nil); err != nil {
+						return err
+					}
+
+					switch authMethodAns {
+					case kerberosWithPassAns:
+
+						qs = []*survey.Question{
+							{
+								Name: "realm",
+								Prompt: &survey.Input{
+									Message: "Realm",
+									Default: defKrbRealm,
+									Help:    "This is the realm, if empty then the default realm will be used.",
+								},
+							},
+							{
+								Name: "username",
+								Prompt: &survey.Input{
+									Message: "Username",
+									Default: defUsername,
+									Help:    "This is the user credential used for gain access to the API.",
+								},
+								Validate: survey.Required,
+							},
+							{
+								Name: "password",
+								Prompt: &survey.Password{
+									Message: "Password",
+									Help:    "This is the user's password credential, necessary to gain access to the API.",
+								},
+								Validate: survey.Required,
+							},
+						}
+
+						var kerberosMethod lenses.KerberosWithPassword
+						if err := survey.Ask(qs, &kerberosMethod); err != nil {
+							return err
+						}
+
+						kerberosAuth.Method = kerberosMethod
+					case kerberosWithKeytabAns:
+
+						qs = []*survey.Question{
+							{
+								Name: "realm",
+								Prompt: &survey.Input{
+									Message: "Realm",
+									Default: defKrbRealm,
+									Help:    "This is the realm, if empty then the default realm will be used.",
+								},
+							},
+							{
+								Name: "username",
+								Prompt: &survey.Input{
+									Message: "Username",
+									Default: defUsername,
+									Help:    "This is the user credential used for gain access to the API.",
+								},
+								Validate: survey.Required,
+							},
+							{
+								Name: "keytab",
+								Prompt: &survey.Input{
+									Message: "Keytab file location",
+									Default: defKrbKeytab,
+									Help:    "This is the local generated keytab file location.",
+								},
+							},
+						}
+
+						var kerberosMethod lenses.KerberosWithKeytab
+						if err := survey.Ask(qs, &kerberosMethod); err != nil {
+							return err
+						}
+
+						kerberosAuth.Method = kerberosMethod
+					case kerberosFromCCacheAns:
+						qs = []*survey.Question{
+							{
+								Name: "ccache",
+								Prompt: &survey.Input{
+									Message: "CCache file location",
+									Default: defKrbCCache,
+									Help:    "This is the local ccache file location.",
+								},
+							},
+						}
+
+						var kerberosMethod lenses.KerberosFromCCache
+						if err := survey.Ask(qs, &kerberosMethod); err != nil {
+							return err
+						}
+
+						kerberosAuth.Method = kerberosMethod
+					default:
+						return fmt.Errorf("what?")
+					}
+
+					currentConfig.Authentication = kerberosAuth
+				default:
+					// basic auth.
+					qs = []*survey.Question{
 						{
-							Name: "conf",
+							Name: "username",
 							Prompt: &survey.Input{
-								Message: "krb5.conf file location",
-								Default: currentConfig.Kerberos.ConfFile,
-								Help:    "This is the local kerberos configuration file.",
+								Message: "Username",
+								Default: defUsername,
+								Help:    "This is the user credential used for gain access to the API.",
 							},
 							Validate: survey.Required,
 						},
-						// basic or user/or/and pass + kerberos
 						{
-							Name: "realm",
-							Prompt: &survey.Input{
-								Message: "Realm",
-								Default: currentConfig.Kerberos.Realm,
-								Help:    "This is the realm, if empty then the default realm will be used.",
+							Name: "password",
+							Prompt: &survey.Password{
+								Message: "Password",
+								Help:    "This is the user's password credential, necessary to gain access to the API.",
 							},
-						},
-						{
-							Name: "keytab",
-							Prompt: &survey.Input{
-								Message: "Keytab file location",
-								Default: currentConfig.Kerberos.KeyTabFile,
-								Help:    "This is the local generated keytab file location.",
-							},
-						},
-						{
-							Name: "ccache",
-							Prompt: &survey.Input{
-								Message: "CCache file location",
-								Default: currentConfig.Kerberos.CCacheFile,
-								Help:    "This is the local ccache file location.",
-							},
+							Validate: survey.Required,
 						},
 					}
 
-					if err := survey.Ask(qsKerberos, &currentConfig.Kerberos); err != nil {
+					var basicAuth lenses.BasicAuthentication
+					if err := survey.Ask(qs, &basicAuth); err != nil {
 						return err
 					}
-				} else if reset {
-					// empty it if disabled on --reset so saved as it should and to be able to fire empty password error on encrypt.
-					currentConfig.Kerberos = lenses.KerberosAuthentication{}
+
+					currentConfig.Authentication = basicAuth
 				}
+
+				// } else if reset {
+				// 	// empty it if disabled on --reset so saved as it should and to be able to fire empty password error on encrypt.
+				// 	currentConfig.Authentication = lenses.BasicAuthentication{}
+				// }
 
 				//
 				// If all ok continue by saving the result to the desired system filepath.
@@ -484,26 +625,34 @@ func decryptString(encryptedRaw string, keyBase string) (plainTextString string,
 
 var defaultConfigFilepath = filepath.Join(lenses.DefaultConfigurationHomeDir, "lenses-cli.yml")
 
-func encryptPassword(cfg *lenses.Configuration) error {
-	if cfg.Kerberos.IsValid() && cfg.Password == "" { // if kerberos conf is valid and pass is empty here, skip encrypt, at least for now.
-		return nil
-	}
-	if cfg.Password == "" {
-		return fmt.Errorf("empty password")
+func encryptPassword(cfg *lenses.ClientConfiguration) error {
+	// if cfg.Kerberos.IsValid() && cfg.Password == "" { // if kerberos conf is valid and pass is empty here, skip encrypt, at least for now.
+	// 	return nil
+	// }
+	if basicAuth, isBasicAuth := cfg.Authentication.(lenses.BasicAuthentication); isBasicAuth {
+		if basicAuth.Password == "" {
+			return fmt.Errorf("empty password")
+		}
+
+		p, err := encryptString(basicAuth.Password, cfg.Host)
+		if err != nil {
+			return err
+		}
+
+		basicAuth.Password = p
+		cfg.Authentication = basicAuth
 	}
 
-	p, err := encryptString(cfg.Password, cfg.Host)
-	if err != nil {
-		return err
-	}
-
-	cfg.Password = p
 	return nil
 }
 
-func decryptPassword(cfg *lenses.Configuration) {
-	p, _ := decryptString(cfg.Password, cfg.Host)
-	cfg.Password = p
+func decryptPassword(cfg *lenses.ClientConfiguration) {
+	if basicAuth, isBasicAuth := cfg.Authentication.(lenses.BasicAuthentication); isBasicAuth {
+		p, _ := decryptString(basicAuth.Password, cfg.Host)
+		basicAuth.Password = p
+		cfg.Authentication = basicAuth
+	}
+
 }
 
 func newLoginCommand() *cobra.Command {
@@ -520,7 +669,7 @@ func newLoginCommand() *cobra.Command {
 			}
 
 			out := cmd.OutOrStdout()
-			signedUser := client.User()
+			signedUser := client.User
 			fmt.Fprintf(out, "Welcome %s[%s],\ntype 'help' to learn more about the available commands or 'exit' to terminate.\n",
 				signedUser.Name, strings.Join(signedUser.Roles, ", "))
 			// read the input pipe, on each read its buffer consumed, so loop 'forever' here.
@@ -625,7 +774,7 @@ func newGetUserInfoCommand() *cobra.Command {
 		Example:          exampleString("user"),
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if user := client.User(); user.Name != "" {
+			if user := client.User; user.Name != "" {
 				// if logged in using the user password, then we have those info,
 				// let's print it as well.
 				return printJSON(cmd, user)

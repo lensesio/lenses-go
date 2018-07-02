@@ -76,31 +76,52 @@ func UsingToken(tok string) ConnectionOption {
 
 		c.Config.Token = tok
 	}
+}
 
+// WithContext sets the current context, the environment to load configuration from.
+//
+// See the `Configuration` structure and the `OpenConnection` function for more.
+func WithContext(contextName string) ConnectionOption {
+	return func(c *Client) {
+		if contextName == "" {
+			contextName = DefaultContextKey
+		}
+
+		c.configFull.SetCurrent(contextName)
+	}
 }
 
 // OpenConnection creates & returns a new Landoop's Lenses API bridge interface
-// based on the passed Configuration and the (optional) options.
+// based on the passed `ClientConfiguration` and the (optional) options.
 // OpenConnection authenticates the user and returns a valid ready-to-use `*lenses.Client`.
 // If failed to communicate with the server then it returns a nil client and a non-nil error.
 //
 // Usage:
 // auth := lenses.BasicAuthentication{Username: "user", Password: "pass"}
-// config := lenses.Configuration{Host: "domain.com", Authentication: auth, Timeout: "15s"}
+// config := lenses.ClientConfiguration{Host: "domain.com", Authentication: auth, Timeout: "15s"}
 // client, err := lenses.OpenConnection(config) // or (config, lenses.UsingClient/UsingToken)
 // if err != nil { panic(err) }
 // client.DeleteTopic("topicName")
 //
 // Read more by navigating to the `Client` type documentation.
-func OpenConnection(cfg Configuration, options ...ConnectionOption) (*Client, error) {
-	config := &cfg
-	c := &Client{Config: config}
+func OpenConnection(cfg ClientConfiguration, options ...ConnectionOption) (*Client, error) {
+	// We accept only `ClientConfiguration` and not the full `Configuration` for use ease.
+	clientConfig := &cfg
+
+	full := &Configuration{
+		CurrentContext: DefaultContextKey,
+		Contexts: map[string]*ClientConfiguration{
+			DefaultContextKey: clientConfig,
+		},
+	}
+
+	c := &Client{configFull: full, Config: clientConfig}
 	for _, opt := range options {
 		opt(c)
 	}
 
-	if !config.IsValid() {
-		return nil, fmt.Errorf("invalid configuration: Token or (User or Password) missing")
+	if !clientConfig.IsValid() {
+		return nil, fmt.Errorf("invalid configuration: Token or Authentication missing")
 	}
 
 	// if client is not set-ed by any option, set it to a new one,
@@ -112,17 +133,17 @@ func OpenConnection(cfg Configuration, options ...ConnectionOption) (*Client, er
 	}
 
 	// i.e `UsingToken`.
-	if config.Token != "" {
-		golog.Debugf("Connecting using just the token: %s", config.Token)
+	if clientConfig.Token != "" {
+		golog.Debugf("Connecting using just the token: %s", clientConfig.Token)
 		// User will be empty but it does its job.
 		return c, nil
 	}
 
-	if c.Config.Authentication == nil {
+	if clientConfig.Authentication == nil {
 		return nil, fmt.Errorf("client: auth failure: authenticator missing")
 	}
 
-	if err := c.Config.Authentication.Auth(c); err != nil {
+	if err := clientConfig.Authentication.Auth(c); err != nil {
 		return nil, fmt.Errorf("client: auth failure: %v", err)
 	}
 
@@ -130,7 +151,7 @@ func OpenConnection(cfg Configuration, options ...ConnectionOption) (*Client, er
 		return nil, fmt.Errorf("client: login failure: token is undefined")
 	}
 
-	if config.Debug {
+	if clientConfig.Debug {
 		golog.SetLevel("debug")
 		golog.Debugf("Connected on %s with token: %s.\nUser details: %#+v",
 			c.Config.Host, c.User.Token, c.User)

@@ -1,8 +1,6 @@
 package lenses
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,17 +9,39 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+)
 
-	"gopkg.in/yaml.v2"
+const (
+	currentContextKeyJSON = "currentContext"
+	currentContextKeyYAML = "CurrentContext"
+
+	contextsKeyJSON = "contexts"
+	contextsKeyYAML = "Contexts"
+
+	basicAuthenticationKeyJSON = "basic_authentication"
+	basicAuthenticationKeyYAML = "BasicAuthentication"
+
+	kerberosAuthenticationKeyJSON = "kerberos_authentication"
+	kerberosAuthenticationKeyYAML = "KerberosAuthentication"
 )
 
 type (
 	// Configuration contains the necessary information
-	// that client needs to connect and talk to the lenses backend server.
+	// that `OpenConnection` needs to create a new client which connects and talks to the lenses backend box.
+	//
+	// Optionally, the `Contexts` map of string and client configuration values can be filled to map different environments.
+	// Use of `WithContext` `ConnectionOption` to select a specific `ClientConfiguration`, otherwise the first one is selected,
+	// this will also amend the `CurrentContext` via the top-level `OpenConnection` function.
 	//
 	// Configuration can be loaded via JSON or YAML.
 	Configuration struct {
-		// Host is the network address that your lenses backend is listening for incoming requests.
+		CurrentContext string
+		Contexts       map[string]*ClientConfiguration
+	}
+
+	// ClientConfiguration contains the necessary information to a client to connect to the lenses backend box.
+	ClientConfiguration struct {
+		// Host is the network shema  address and port that your lenses backend box is listening on.
 		Host string `json:"host" yaml:"Host" survey:"host"`
 
 		// Authentication, in order to gain access using different kind of options.
@@ -57,179 +77,166 @@ type (
 		//
 		// Defaults to false.
 		Debug bool `json:"debug,omitempty" yaml:"Debug" survey:"debug"`
-	} /* Why a whole Configuration struct while we could just pass those 3 params?
-	Because we may need more fields in the future,
-	and it's always a good practise to start like this on those type of packages.
-	Another reason to not move those fields inside the Client itself is because
-	we can load them via files, i.e in `OpenConnection`, we pass out options that are only runtime
-	functions, they can't load via files.
-	*/
-
+	}
 )
 
-var commaSep = []byte(",")
-
-// ConfigurationJSONMarshal retruns the json string as bytes of the given `Configuration` structure.
-func ConfigurationJSONMarshal(c Configuration) ([]byte, error) {
-	b, err := json.Marshal(c)
-	if err != nil {
-		return nil, err
+// IsValid returns the result of the contexts' ClientConfiguration#IsValid.
+func (c *Configuration) IsValid() bool {
+	// for a whole configuration to be valid we need to check each contexts' configs as well.
+	if len(c.Contexts) == 0 {
+		return false
 	}
 
-	if c.Authentication == nil {
-		return nil, nil
-	}
-
-	switch auth := c.Authentication.(type) {
-	case BasicAuthentication:
-		bb, err := json.Marshal(auth)
-		if err != nil {
-			return nil, err
+	for _, cfg := range c.Contexts {
+		if !cfg.IsValid() {
+			return false
 		}
-		bb = append([]byte(`,"basic_authentication":`), bb...)
-		b = bytes.Replace(b, commaSep, append(bb, commaSep...), 1)
-	case KerberosAuthentication:
 	}
 
-	return b, nil
+	return len(c.Contexts) > 0
 }
 
-func jsonUnmarshalConfiguration(b []byte, c *Configuration) error {
-	// first unmarshal the known types.
-	if err := json.Unmarshal(b, c); err != nil {
-		return err
-	}
-	// second, get all.
-	var raw map[string]json.RawMessage
-	err := json.Unmarshal(b, &raw)
-	if err != nil {
-		return err
+// IsValid returns true if the configuration contains the necessary fields, otherwise false.
+func (c *ClientConfiguration) IsValid() bool {
+	if len(c.Host) == 0 {
+		return false
 	}
 
-	// check if contains a valid authentication key.
-	for k, v := range raw {
-		isBasicAuth := k == "basic_authentication"
-		isKerberosAuth := k == "kerberos_authentication"
-		if isBasicAuth || isKerberosAuth {
-			bb, err := v.MarshalJSON()
-			if err != nil {
-				return err
-			}
+	c.FormatHost()
 
-			if isBasicAuth {
-				var auth BasicAuthentication
-				if err = json.Unmarshal(bb, &auth); err != nil {
-					return err
-				}
-				c.Authentication = auth
-				return nil
-			}
-
-			var auth KerberosAuthentication
-			if err = json.Unmarshal(bb, &auth); err != nil {
-				return err
-			}
-			c.Authentication = auth
-			return nil
-		}
-	}
-
-	// no new format found, let's do a backwards compatibility for "user" and "password" fields -> BasicAuthentication.
-	if usernameJSON, passwordJSON := raw["user"], raw["password"]; len(usernameJSON) > 0 && len(passwordJSON) > 0 {
-		// need to escape those "\"...\"".
-		var auth BasicAuthentication
-		if err := json.Unmarshal(usernameJSON, &auth.Username); err != nil {
-			return err
-		}
-
-		if err := json.Unmarshal(passwordJSON, &auth.Password); err != nil {
-			return err
-		}
-
-		c.Authentication = auth
-		return nil
-	}
-
-	return fmt.Errorf("json: unknown or missing authentication key")
+	return c.Host != "" && (c.Token != "" || c.Authentication != nil)
 }
 
-func yamlUnmarshalConfiguration(b []byte, c *Configuration) error {
-	// first unmarshal the known types.
-	if err := yaml.Unmarshal(b, c); err != nil {
-		return err
-	}
-	// second, get all.
-	var tree yaml.MapSlice
-	err := yaml.Unmarshal(b, &tree)
-	if err != nil {
-		return err
+// DefaultContextKey is used to set an empty client configuration when no custom context available.
+var DefaultContextKey = "master"
+
+// GetCurrent returns the specific current client configuration based on the `CurrentContext`.
+func (c *Configuration) GetCurrent() *ClientConfiguration {
+	if c.Contexts == nil {
+		c.Contexts = make(map[string]*ClientConfiguration)
 	}
 
-	// check if contains a valid authentication key.
-	for _, v := range tree {
-		if k, ok := v.Key.(string); ok {
-			isBasicAuth := k == "BasicAuthentication"
-			isKerberosAuth := k == "KerberosAuthentication"
-			if isBasicAuth || isKerberosAuth { // should be one of those, no both, so exit if at least one found.
-				bb, err := yaml.Marshal(v.Value)
-				if err != nil {
-					return err
-				}
+	if cfg, has := c.Contexts[c.CurrentContext]; has {
+		// c.FormatHost()
+		return cfg
+	}
 
-				if isBasicAuth {
-					var auth BasicAuthentication
-					if err = yaml.Unmarshal(bb, &auth); err != nil {
-						return err
-					}
-					c.Authentication = auth
-					return nil
-				}
+	cfg := new(ClientConfiguration)
+	if c.CurrentContext == "" {
+		c.CurrentContext = DefaultContextKey // the default one if missing.
+	}
 
-				var auth KerberosAuthentication
-				if err = yaml.Unmarshal(bb, &auth); err != nil {
-					return err
+	c.Contexts[c.CurrentContext] = cfg
+	return cfg
+}
+
+// RemoveTokens removes the `Token` from all client configurations.
+func (c *Configuration) RemoveTokens() {
+	for _, v := range c.Contexts {
+		v.Token = ""
+	}
+}
+
+// SetCurrent overrides the `CurrentContext`, just this.
+func (c *Configuration) SetCurrent(currentContextName string) {
+	c.CurrentContext = currentContextName
+}
+
+// CurrentContextExists just checks if the `CurrentContext` exists in the `Contexts` map.
+func (c *Configuration) CurrentContextExists() bool {
+	_, exists := c.Contexts[c.CurrentContext]
+	return exists
+}
+
+// RemoveContext deletes a context based on its name/key.
+// It will change if there is an available context to set as current, if can't find then the operation stops.
+// Returns true if found and removed and can change to something valid, otherwise false.
+func (c *Configuration) RemoveContext(contextName string) bool {
+	if _, ok := c.Contexts[contextName]; ok {
+
+		canBeRemoved := false
+		// we are going to remove the current context, let's check if we can change the current context to a valid one first.
+		if c.CurrentContext == contextName {
+			for name, cfg := range c.Contexts {
+				if name == contextName {
+					continue // skip the context we want to delete of course.
 				}
-				c.Authentication = auth
-				return nil
+				if cfg.IsValid() { // set the current to the first valid one.
+					canBeRemoved = true
+					c.SetCurrent(name)
+					break
+				}
 			}
+		} else {
+			canBeRemoved = true
 		}
-	}
 
-	// no new format found, let's do a loop again to do a backwards compatibility check for "User" and "Password" fields -> BasicAuthentication.
-	var username, password string
-
-	for _, v := range tree {
-		if k, ok := v.Key.(string); ok {
-			if username != "" && password != "" {
-				break
-			}
-
-			switch k {
-			case "User":
-				// usernameB, err := yaml.Marshal(v.Value)
-				// if err != nil {
-				// 	return err
-				// }
-				// username = strings.TrimSuffix(string(usernameB), "\n")
-				// No, let's do that simpler:
-				username, ok = v.Value.(string) // safe set.
-			case "Password":
-				password, ok = v.Value.(string) // safe set.
-			}
+		if canBeRemoved {
+			delete(c.Contexts, contextName)
 		}
+
+		return canBeRemoved
 	}
 
-	// both must set in order to be a valid BasicAuthentication.
-	if username != "" && password != "" {
-		c.Authentication = BasicAuthentication{Username: username, Password: password}
-		return nil
+	return false
+}
+
+// Clone will returns a deep clone of the this `Configuration`.
+func (c *Configuration) Clone() Configuration {
+	clone := Configuration{CurrentContext: c.CurrentContext}
+	clone.Contexts = make(map[string]*ClientConfiguration, len(c.Contexts))
+	for k, v := range c.Contexts {
+		vCopy := *v
+		clone.Contexts[k] = &vCopy
 	}
 
-	return fmt.Errorf("yaml: unknown or missing authentication key")
+	return clone
+}
+
+// FillCurrent fills the specific client configuration based on the `CurrentContext` if it's valid.
+func (c *Configuration) FillCurrent(cfg ClientConfiguration) {
+	context := c.CurrentContext
+
+	if _, ok := c.Contexts[context]; !ok {
+		if cfg.IsValid() {
+			c.Contexts[context] = &cfg
+		}
+	} else {
+		c.Contexts[context].Fill(cfg)
+	}
+}
+
+// Fill iterates over the "other" ClientConfiguration's fields
+// it checks if a field is not empty,
+// if it's then it sets the value to the "c" ClientConfiguration's particular field.
+//
+// It returns true if the final configuration is valid by calling the `IsValid`.
+func (c *ClientConfiguration) Fill(other ClientConfiguration) bool {
+	if v := other.Host; v != "" && v != c.Host {
+		c.Host = v
+	}
+
+	if other.Authentication != nil {
+		c.Authentication = other.Authentication
+	}
+
+	if v := other.Token; v != "" && v != c.Token {
+		c.Token = v
+	}
+
+	if v := other.Timeout; v != "" && v != c.Timeout {
+		c.Timeout = v
+	}
+
+	if c.Debug != other.Debug {
+		c.Debug = other.Debug
+	}
+
+	return c.IsValid()
 }
 
 // FormatHost will try to make sure that the schema:host:port pattern is followed on the `Host` field.
-func (c *Configuration) FormatHost() {
+func (c *ClientConfiguration) FormatHost() {
 	if len(c.Host) == 0 {
 		return
 	}
@@ -270,48 +277,16 @@ func (c *Configuration) FormatHost() {
 	}
 }
 
-// IsValid returns true if the configuration contains the necessary fields, otherwise false.
-func (c *Configuration) IsValid() bool {
-	if len(c.Host) == 0 {
-		return false
-	}
-
-	c.FormatHost()
-
-	return c.Host != "" && (c.Token != "" || c.Authentication != nil)
+// IsBasicAuth reports whether the authentication is basic.
+func (c *ClientConfiguration) IsBasicAuth() (BasicAuthentication, bool) {
+	auth, isBasicAuth := c.Authentication.(BasicAuthentication)
+	return auth, isBasicAuth
 }
 
-// Fill iterates over the "other" Configuration's fields
-// it checks if a field is not empty,
-// if it's then it sets the value to the "c" Configuration's particular field.
-//
-// It returns true if the final configuration is valid by calling the `IsValid`.
-//
-// Example of usage:
-// Load configuration from flags directly, on the command run
-// the file was loaded, if any, then try to check if flags given but give prioriy to flags(the "other").
-func (c *Configuration) Fill(other Configuration) bool {
-	if v := other.Host; v != "" && v != c.Host {
-		c.Host = v
-	}
-
-	if other.Authentication != nil { // && c.Authentication == nil {
-		c.Authentication = other.Authentication
-	}
-
-	if v := other.Token; v != "" && v != c.Token {
-		c.Token = v
-	}
-
-	if v := other.Timeout; v != "" && v != c.Timeout {
-		c.Timeout = v
-	}
-
-	if c.Debug != other.Debug {
-		c.Debug = other.Debug
-	}
-
-	return c.IsValid()
+// IsKerberosAuth reports whether the authentication is kerberos-based.
+func (c *ClientConfiguration) IsKerberosAuth() (KerberosAuthentication, bool) {
+	auth, isKerberosAuth := c.Authentication.(KerberosAuthentication)
+	return auth, isKerberosAuth
 }
 
 // UnmarshalFunc is the most standard way to declare a Decoder/Unmarshaler to read the configurations and more.
@@ -331,7 +306,7 @@ func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc, outPtr *Configura
 }
 
 // ReadConfigurationFromFile reads and decodes Configuration from a file based on a custom unmarshaler,
-// `ReadConfigurationFromJSON`, `ReadConfigurationFromYAML` and `ReadConfigurationFromTOML` are the internal users,
+// `ReadConfigurationFromJSON` and `ReadConfigurationFromYAML` are the internal users,
 // but the end-developer can use any custom type of decoder to read a configuration file with ease using this function,
 // but keep note that the default behavior of the fields depend on the existing unmarshalers, use these tag names to map
 // your decoder's properties.
@@ -360,11 +335,10 @@ func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc, outPt
 // It will try to read it with one of these built'n lexers/formats:
 // 1. JSON
 // 2. YAML
-// 3. TOML
 func TryReadConfigurationFromFile(filename string, outPtr *Configuration) (err error) {
 	tries := []UnmarshalFunc{
-		jsonUnmarshalConfiguration,
-		yamlUnmarshalConfiguration,
+		ConfigurationUnmarshalJSON,
+		ConfigurationUnmarshalYAML,
 	}
 
 	for _, unmarshaler := range tries {
@@ -374,14 +348,16 @@ func TryReadConfigurationFromFile(filename string, outPtr *Configuration) (err e
 		}
 	}
 
-	return fmt.Errorf("configuration file '%s' does not exist or it is not formatted to a compatible document: JSON, YAML, TOML", filename)
+	return fmt.Errorf("configuration file '%s' does not exist or it is not formatted to a compatible document: JSON, YAML", filename)
 }
 
 var configurationPossibleFilenames = []string{
+	"lenses.yml", "lenses.yaml", "lenses.json",
+	".lenses.yml", ".lenses.yaml", ".lenses.json",
+	// client and cli can share the exactly configuration if caller loads from home dir.
 	"lenses-cli.yml", "lenses-cli.yaml", "lenses-cli.json",
 	".lenses-cli.yml", ".lenses-cli.yaml", ".lenses-cli.json",
-	"lenses.yml", "lenses.yaml", "lenses.json",
-	".lenses.yml", ".lenses.yaml", ".lenses.json"} // no patterns in order to be easier to remove or modify these.
+} // no patterns in order to be easier to remove or modify these.
 
 func lookupConfiguration(dir string, outPtr *Configuration) bool {
 	for _, filename := range configurationPossibleFilenames {
@@ -467,7 +443,7 @@ func TryReadConfigurationFromCurrentWorkingDir(outPtr *Configuration) bool {
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
 func ReadConfigurationFromJSON(filename string, outPtr *Configuration) error {
-	return ReadConfigurationFromFile(filename, jsonUnmarshalConfiguration, outPtr)
+	return ReadConfigurationFromFile(filename, ConfigurationUnmarshalJSON, outPtr)
 }
 
 // ReadConfigurationFromYAML reads and decodes Configuration from a yaml file, i.e `configuration.yml`.
@@ -476,5 +452,5 @@ func ReadConfigurationFromJSON(filename string, outPtr *Configuration) error {
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
 func ReadConfigurationFromYAML(filename string, outPtr *Configuration) error {
-	return ReadConfigurationFromFile(filename, yamlUnmarshalConfiguration, outPtr)
+	return ReadConfigurationFromFile(filename, ConfigurationUnmarshalYAML, outPtr)
 }

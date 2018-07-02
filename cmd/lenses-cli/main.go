@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -47,9 +48,9 @@ var rootCmd = &cobra.Command{
 	SuggestionsMinimumDistance: 1,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		// check for old config, if found then convert to its new format before anything else.
-		if err := configManager.applyCompatibility(); err != nil {
-			return err
-		}
+		// if err := configManager.applyCompatibility(); err != nil {
+		// 	return err
+		// }
 
 		ok, err := configManager.load()
 		// if command is "configure" and the configuration is invalid at this point, don't give a failure,
@@ -61,7 +62,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		// it's not nil, if context does not exist then it would throw an error.
-		currentConfig := configManager.getCurrent()
+		currentConfig := configManager.config.GetCurrent()
 		for !ok {
 			if err != nil {
 				return err
@@ -83,16 +84,18 @@ var rootCmd = &cobra.Command{
 		if cmd.Name() == "login" {
 			currentConfig.Token = ""
 
-			//  and fire any errors if host or user or pass are not there.
-			if currentConfig.User == "" || currentConfig.Password == "" || currentConfig.Host == "" {
-				// return fmt.Errorf("cannot retrieve credentials, please setup the configuration using the '%s' command first", "configure")
-				//
-				if err := newConfigureCommand().Execute(); err != nil {
-					return err
-				}
+			if basicAuth, isBasicAuth := currentConfig.Authentication.(lenses.BasicAuthentication); isBasicAuth {
+				//  and fire any errors if host or user or pass are not there.
+				if currentConfig.Host == "" || basicAuth.Username == "" || basicAuth.Password == "" {
+					// return fmt.Errorf("cannot retrieve credentials, please setup the configuration using the '%s' command first", "configure")
+					//
+					if err := newConfigureCommand().Execute(); err != nil {
+						return err
+					}
 
-				// add a new line, so the login's session welcome messages has its place.
-				fmt.Fprintln(cmd.OutOrStdout())
+					// add a new line, so the login's session welcome messages has its place.
+					fmt.Fprintln(cmd.OutOrStdout())
+				}
 			}
 
 			return nil
@@ -112,9 +115,7 @@ var rootCmd = &cobra.Command{
 }
 
 func setupClient() (err error) {
-	currentConfig := configManager.getCurrent()
-	currentConfig.FormatHost()
-	client, err = lenses.OpenConnection(*currentConfig)
+	client, err = lenses.OpenConnection(*configManager.config.GetCurrent())
 	// if err == nil {
 	// 	currentConfig.Token = client.GetAccessToken()
 	// }
@@ -160,18 +161,23 @@ var (
 	errResourceNotGoodMessage       string
 )
 
-type errorMap map[error]string
+type errorMap map[int]string
 
 func mapError(err error, messages errorMap) error {
-	if messages == nil {
-		return err
+	if err == nil {
+		return nil
 	}
 
-	if errMsg, ok := messages[err]; ok {
-		return fmt.Errorf(errMsg)
+	// catch any errors that should be described by the command that gave that error.
+	if resourceErr, ok := err.(lenses.ResourceError); ok {
+		if messages != nil {
+			if errMsg, ok := messages[resourceErr.Code()]; ok {
+				return errors.New(errMsg)
+			}
+		}
 	}
 
-	return err // otherwise just print the error as it's.
+	return err
 }
 
 var configManager *configurationManager
@@ -185,9 +191,9 @@ func main() {
 		// each errResourceXXXMessage should be declared inside the command,
 		// they are global variables and that's because we don't want to get dirdy on each resource command, don't change it unless discussion.
 		err = mapError(err, errorMap{
-			lenses.ErrResourceNotFound:      errResourceNotFoundMessage,
-			lenses.ErrResourceNotAccessible: errResourceNotAccessibleMessage,
-			lenses.ErrResourceNotGood:       errResourceNotGoodMessage,
+			404: errResourceNotFoundMessage,
+			403: errResourceNotAccessibleMessage,
+			400: errResourceNotGoodMessage,
 		})
 
 		// always new line because of the unix terminal.

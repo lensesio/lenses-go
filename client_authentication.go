@@ -38,7 +38,7 @@ var (
 // BasicAuthentication for Lenses, accepts raw username and password.
 type BasicAuthentication struct {
 	Username string `json:"username" yaml:"Username" survey:"username"`
-	Password string `json:"password,omitempty" yaml:"Password" survey:"-"`
+	Password string `json:"password,omitempty" yaml:"Password" survey:"password"`
 }
 
 // Auth implements the `Authentication` for the `BasicAuthentication`.
@@ -53,7 +53,6 @@ func (auth BasicAuthentication) Auth(c *Client) error {
 
 	resp, err := c.Do(http.MethodPost, "api/login", contentTypeJSON, []byte(userAuthJSON))
 	if err != nil {
-		resp.Body.Close()
 		return fmt.Errorf("%s or kerberos authentication is required", err.Error())
 	}
 
@@ -91,12 +90,22 @@ type KerberosAuthentication struct {
 	Method   KerberosAuthenticationMethod `json:"-" yaml:"-" survey:"-"`
 }
 
-func jsonUnmarshalKerberosAuthentication(b []byte, auth *KerberosAuthentication) error {
-	return fmt.Errorf("json: kerberos: unknown or missing authentication method key")
+// WithPassword reports whether the kerberos authentication is with username, password (and realm).
+func (auth KerberosAuthentication) WithPassword() (KerberosWithPassword, bool) {
+	method, isWithPassword := auth.Method.(KerberosWithPassword)
+	return method, isWithPassword
 }
 
-func yamlUnmarshalKerberosAuthentication(b []byte, auth *KerberosAuthentication) error {
-	return fmt.Errorf("yaml: kerberos: unknown or missing authentication method key")
+// WithKeytab reports whether the kerberos authentication is with a keytab file, username (and realm).
+func (auth KerberosAuthentication) WithKeytab() (KerberosWithKeytab, bool) {
+	method, isWithKeytab := auth.Method.(KerberosWithKeytab)
+	return method, isWithKeytab
+}
+
+// FromCCache reports whether the kerberos authentication is loaded from a ccache file.
+func (auth KerberosAuthentication) FromCCache() (KerberosFromCCache, bool) {
+	method, isFromCCache := auth.Method.(KerberosFromCCache)
+	return method, isFromCCache
 }
 
 // Auth implements the `Authentication` for the `KerberosAuthentication`.
@@ -137,7 +146,6 @@ func (auth KerberosAuthentication) Auth(c *Client) error {
 
 	resp, err := c.Do(http.MethodGet, "/api/auth", contentTypeJSON, nil)
 	if err != nil {
-		resp.Body.Close() // can come from the header, so body stills open close it to avoid memory leaks.
 		return fmt.Errorf("kerberos failure: unable to send SPNEGO header: %v", err)
 	}
 
@@ -167,7 +175,7 @@ var (
 // The `KerberosAuthentication` calls its `NewClient`.
 type KerberosWithPassword struct {
 	Username string `json:"username" yaml:"Username" survey:"username"`
-	Password string `json:"password,omitempty" yaml:"Password" survey:"-"`
+	Password string `json:"password,omitempty" yaml:"Password" survey:"password"`
 
 	// Realm is optional, if empty then default is used.
 	Realm string `json:"realm" yaml:"Realm" survey:"realm"`

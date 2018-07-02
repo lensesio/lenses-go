@@ -27,7 +27,8 @@ type User struct {
 // Client is the lenses http client.
 // It contains the necessary API calls to communicate and develop via lenses.
 type Client struct {
-	Config *Configuration
+	Config     *ClientConfiguration
+	configFull *Configuration // not exported, used for `ConnectionOptions`.
 	// PersistentRequestModifier can be used to modify the *http.Request before send it to the backend.
 	PersistentRequestModifier RequestOption
 
