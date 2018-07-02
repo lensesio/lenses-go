@@ -67,6 +67,12 @@ type (
 		// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 		// Example: "5s" for 5 seconds, "5m" for 5 minutes and so on.
 		Timeout string `json:"timeout,omitempty" yaml:"Timeout" survey:"timeout"`
+
+		// Insecure tells the client to connect even if the cert is invalid.
+		// Turn that to true if you get errors about invalid certifications for the specific host domain.
+		//
+		// Defaults to false.
+		Insecure bool `json:"insecure,omitempty" yaml:"Insecure" survey:"insecure"`
 		// Debug activates the debug mode, it logs every request, the configuration (except the `Password`)
 		// and its raw response before decoded but after gzip reading.
 		//

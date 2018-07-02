@@ -324,6 +324,14 @@ func newConfigureCommand() *cobra.Command {
 						},
 					},
 					{
+						Name: "insecure",
+						Prompt: &survey.Confirm{
+							Help:    "If you answer yes, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure.",
+							Message: "the server's certificate should not be checked for validity",
+							Default: currentConfig.Insecure,
+						},
+					},
+					{
 						Name: "host",
 						Prompt: &survey.Input{
 							Message: "Host",

@@ -77,6 +77,7 @@ func newConfigurationManager(cmd *cobra.Command) *configurationManager {
 	set.StringVar(&m.kerberosCCache, "kerberos-ccache", "", "--kerberos-ccache=/tmpl/krb5-ccache.txt")
 
 	set.StringVar(&m.flags.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
+	set.BoolVar(&m.flags.Insecure, "insecure", false, "--insecure=true")
 	set.StringVar(&m.flags.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
 	set.BoolVar(&m.flags.Debug, "debug", false, "print some information that are necessary for debugging")
 

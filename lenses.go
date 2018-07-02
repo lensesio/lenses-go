@@ -29,7 +29,7 @@ func getTimeout(httpClient *http.Client, timeoutStr string) time.Duration {
 	return httpClient.Timeout
 }
 
-func getTransportLayer(httpClient *http.Client, timeout time.Duration) (t http.RoundTripper) {
+func getTransportLayer(httpClient *http.Client, timeout time.Duration, insecure bool) (t http.RoundTripper) {
 	if t := httpClient.Transport; t != nil {
 		return t
 	}
@@ -37,7 +37,10 @@ func getTransportLayer(httpClient *http.Client, timeout time.Duration) (t http.R
 	httpTransport := &http.Transport{
 		// Disable HTTP/2.
 		TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
-		// TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	if insecure {
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	if timeout > 0 {
@@ -59,7 +62,7 @@ func UsingClient(httpClient *http.Client) ConnectionOption {
 		// config's timeout has priority if the httpClient passed has smaller or not-seted timeout.
 		timeout := getTimeout(httpClient, c.Config.Timeout)
 
-		transport := getTransportLayer(httpClient, timeout)
+		transport := getTransportLayer(httpClient, timeout, c.Config.Insecure)
 		httpClient.Transport = transport
 
 		c.client = httpClient
