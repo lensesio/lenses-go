@@ -285,6 +285,7 @@ func newTopicCreateCommand() *cobra.Command {
 			}
 
 			if err := client.CreateTopic(topic.TopicName, topic.Replication, topic.Partitions, topic.Configs); err != nil {
+				errResourceNotGoodMessage = fmt.Sprintf("unable to create topic with name '%s', already exists", topic.TopicName)
 				return err
 			}
 
