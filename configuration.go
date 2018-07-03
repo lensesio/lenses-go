@@ -57,7 +57,7 @@ type (
 		//
 		// For general-purpose usecase the recommendation is to let this field empty and
 		// fill the `Authentication` field instead.
-		Token string `json:"token,omitempty" yaml:"Token" survey:"-"`
+		Token string `json:"token,omitempty" yaml:"Token,omitempty" survey:"-"`
 
 		// Timeout specifies the timeout for connection establishment.
 		//
@@ -66,13 +66,13 @@ type (
 		// Such as "300ms", "-1.5h" or "2h45m".
 		// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 		// Example: "5s" for 5 seconds, "5m" for 5 minutes and so on.
-		Timeout string `json:"timeout,omitempty" yaml:"Timeout" survey:"timeout"`
+		Timeout string `json:"timeout,omitempty" yaml:"Timeout,omitempty" survey:"timeout"`
 
 		// Insecure tells the client to connect even if the cert is invalid.
 		// Turn that to true if you get errors about invalid certifications for the specific host domain.
 		//
 		// Defaults to false.
-		Insecure bool `json:"insecure,omitempty" yaml:"Insecure" survey:"insecure"`
+		Insecure bool `json:"insecure,omitempty" yaml:"Insecure,omitempty" survey:"insecure"`
 		// Debug activates the debug mode, it logs every request, the configuration (except the `Password`)
 		// and its raw response before decoded but after gzip reading.
 		//
@@ -82,7 +82,7 @@ type (
 		//
 		//
 		// Defaults to false.
-		Debug bool `json:"debug,omitempty" yaml:"Debug" survey:"debug"`
+		Debug bool `json:"debug,omitempty" yaml:"Debug,omitempty" survey:"debug"`
 	}
 )
 

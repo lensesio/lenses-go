@@ -171,7 +171,7 @@ func ConfigurationUnmarshalYAML(b []byte, c *Configuration) error {
 						}
 
 						var auth KerberosAuthentication
-						if err = yaml.Unmarshal(bb, &auth); err != nil {
+						if err = kerberosAuthenticationUnmarshalYAML(bb, &auth); err != nil {
 							return err
 						}
 						clientConfig.Authentication = auth
@@ -214,6 +214,6 @@ func ConfigurationUnmarshalYAML(b []byte, c *Configuration) error {
 	return nil
 }
 
-func kerberosAuthenticationMarshalYAML(b []byte, auth *KerberosAuthentication) error {
+func kerberosAuthenticationUnmarshalYAML(b []byte, auth *KerberosAuthentication) error {
 	return fmt.Errorf("not implemented yet")
 }

@@ -14,17 +14,52 @@ import (
 
 const testDebug = false
 
-var expectedConfiguration = Configuration{
-	CurrentContext: "master",
-	Contexts: map[string]*ClientConfiguration{
-		"master": {
-			Host:           "https://landoop.com",
-			Authentication: BasicAuthentication{Username: "testuser", Password: "testpassword"},
-			Timeout:        "11s",
-			Debug:          true,
+var (
+	testCurrentContextField                     = "master"
+	testHostField                               = "https://landoop.com"
+	testUsernameField                           = "testuser"
+	testPasswordField                           = "testpassword"
+	testBasicAuthenticationField                = BasicAuthentication{Username: testUsernameField, Password: testPasswordField}
+	testKerberosConfFileField                   = "/etc/krb5.conf"
+	testKerberosRealmField                      = "my.default"
+	testKerberosAuthenticationWithPasswordField = KerberosAuthentication{
+		ConfFile: testKerberosConfFileField,
+		Method: KerberosWithPassword{
+			Realm:    testKerberosRealmField,
+			Username: testUsernameField,
+			Password: testPasswordField,
 		},
-	},
-}
+	}
+	testTimeoutField  = "11s"
+	testInsecureField = true
+	testDebugField    = true
+)
+
+var (
+	expectedConfigurationBasicAuthentication = Configuration{
+		CurrentContext: testCurrentContextField,
+		Contexts: map[string]*ClientConfiguration{
+			testCurrentContextField: {
+				Host:           testHostField,
+				Authentication: testBasicAuthenticationField,
+				Timeout:        testTimeoutField,
+				Debug:          testDebugField,
+			},
+		},
+	}
+
+	expectedConfigurationKerberosAuthenticationWithPassword = Configuration{
+		CurrentContext: testCurrentContextField,
+		Contexts: map[string]*ClientConfiguration{
+			testCurrentContextField: {
+				Host:           testHostField,
+				Authentication: testKerberosAuthenticationWithPasswordField,
+				Timeout:        testTimeoutField,
+				Debug:          testDebugField,
+			},
+		},
+	}
+)
 
 func makeTestFile(t *testing.T, filename string) (*os.File, func()) {
 	f, err := ioutil.TempFile("", filename)
@@ -40,7 +75,7 @@ func makeTestFile(t *testing.T, filename string) (*os.File, func()) {
 	return f, teardown
 }
 
-func testConfigurationFile(t *testing.T, filename, contents string, reader func(string, *Configuration) error) {
+func testConfigurationFile(t *testing.T, filename, contents string, reader func(string, *Configuration) error, expected Configuration) {
 	f, teardown := makeTestFile(t, filename)
 	defer teardown()
 
@@ -51,8 +86,8 @@ func testConfigurationFile(t *testing.T, filename, contents string, reader func(
 		t.Fatalf("[%s] while reading contents: '%s': %v,", t.Name(), contents, err)
 	}
 
-	if !reflect.DeepEqual(got, expectedConfiguration) {
-		t.Fatalf("[%s] error reading configuration from file: '%s'\nexpected:\n%#v\nbut got:\n%#v", t.Name(), f.Name(), expectedConfiguration, got)
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("[%s] error reading configuration from file: '%s'\nexpected:\n%#v\nbut got:\n%#v", t.Name(), f.Name(), expected, got)
 		if testDebug {
 			t.Fatalf(" \ncontents of the file:\n%s", contents)
 		}
@@ -64,7 +99,7 @@ func TestReadConfigurationFromJSON(t *testing.T) {
         {
 			"currentContext": "%s",
 			"contexts": {
-				"master": {
+				"%s": {
 					"host": "%s",
 					"basic_authentication": {"username": "%s", "password": "%s"},
 					"timeout": "%s",
@@ -72,13 +107,14 @@ func TestReadConfigurationFromJSON(t *testing.T) {
 				}
 			}
 		}`,
-		expectedConfiguration.CurrentContext,
-		expectedConfiguration.GetCurrent().Host,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Username,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Password,
-		expectedConfiguration.GetCurrent().Timeout,
-		expectedConfiguration.GetCurrent().Debug)
-	testConfigurationFile(t, "configuration.json", contents, ReadConfigurationFromJSON)
+		testCurrentContextField,
+		testCurrentContextField,
+		testHostField,
+		testUsernameField,
+		testPasswordField,
+		testTimeoutField,
+		testDebugField)
+	testConfigurationFile(t, "configuration.json", contents, ReadConfigurationFromJSON, expectedConfigurationBasicAuthentication)
 }
 
 func TestReadConfigurationFromJSONBackwardsCompatibility(t *testing.T) {
@@ -86,7 +122,7 @@ func TestReadConfigurationFromJSONBackwardsCompatibility(t *testing.T) {
         {
 			"currentContext": "%s",
 			"contexts": {
-				"master": {
+				"%s": {
 					"host": "%s",
 					"user": "%s",
 					"password": "%s",
@@ -95,25 +131,27 @@ func TestReadConfigurationFromJSONBackwardsCompatibility(t *testing.T) {
 				}
 			}
 		}`,
-		expectedConfiguration.CurrentContext,
-		expectedConfiguration.GetCurrent().Host,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Username,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Password,
-		expectedConfiguration.GetCurrent().Timeout,
-		expectedConfiguration.GetCurrent().Debug)
-	testConfigurationFile(t, "configuration.json", contents, ReadConfigurationFromJSON)
+		testCurrentContextField,
+		testCurrentContextField,
+		testHostField,
+		testUsernameField,
+		testPasswordField,
+		testTimeoutField,
+		testDebugField)
+	testConfigurationFile(t, "configuration.json", contents, ReadConfigurationFromJSON, expectedConfigurationBasicAuthentication)
 }
 
 func TestWriteConfigurationToJSON(t *testing.T) {
-	expectedContents := fmt.Sprintf(`{"currentContext":"%s","contexts":{"master":{"host":"%s","basic_authentication":{"username":"%s","password":"%s"},"timeout":"%s","debug":%v}}}`,
-		expectedConfiguration.CurrentContext,
-		expectedConfiguration.GetCurrent().Host,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Username,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Password,
-		expectedConfiguration.GetCurrent().Timeout,
-		expectedConfiguration.GetCurrent().Debug)
+	expectedContents := fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","basic_authentication":{"username":"%s","password":"%s"},"timeout":"%s","debug":%v}}}`,
+		testCurrentContextField,
+		testCurrentContextField,
+		testHostField,
+		testUsernameField,
+		testPasswordField,
+		testTimeoutField,
+		testDebugField)
 
-	b, err := ConfigurationMarshalJSON(expectedConfiguration)
+	b, err := ConfigurationMarshalJSON(expectedConfigurationBasicAuthentication)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +165,7 @@ func TestReadConfigurationFromYAML(t *testing.T) {
 	contents := fmt.Sprintf(`
 CurrentContext: %s
 Contexts:
-    master:
+    %s:
         Host: %s
         BasicAuthentication:
             Username: "%s"
@@ -135,66 +173,57 @@ Contexts:
         Timeout: %s
         Debug: %v
 `,
-		expectedConfiguration.CurrentContext,
-		expectedConfiguration.GetCurrent().Host,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Username,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Password,
-		expectedConfiguration.GetCurrent().Timeout,
-		expectedConfiguration.GetCurrent().Debug)
-	testConfigurationFile(t, "configuration.yml", contents, ReadConfigurationFromYAML)
+		testCurrentContextField,
+		testCurrentContextField,
+		testHostField,
+		testUsernameField,
+		testPasswordField,
+		testTimeoutField,
+		testDebugField)
+	testConfigurationFile(t, "configuration.yml", contents, ReadConfigurationFromYAML, expectedConfigurationBasicAuthentication)
 }
 
 func TestReadConfigurationFromYAMLBackwardsCompatibility(t *testing.T) {
 	contents := fmt.Sprintf(`
         CurrentContext: %s
         Contexts:
-            master:
+            %s:
                 Host: %s
                 User: %s
                 Password: %s
                 Timeout: %s
                 Debug: %v
         `,
-		expectedConfiguration.CurrentContext,
-		expectedConfiguration.GetCurrent().Host,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Username,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Password,
-		expectedConfiguration.GetCurrent().Timeout,
-		expectedConfiguration.GetCurrent().Debug)
-	testConfigurationFile(t, "configuration.yml", contents, ReadConfigurationFromYAML)
+		testCurrentContextField,
+		testCurrentContextField,
+		testHostField,
+		testUsernameField,
+		testPasswordField,
+		testTimeoutField,
+		testDebugField)
+	testConfigurationFile(t, "configuration.yml", contents, ReadConfigurationFromYAML, expectedConfigurationBasicAuthentication)
 }
 
 func TestWriteConfigurationToYAML(t *testing.T) {
-	// 	expectedContents := fmt.Sprintf(`CurrentContext: %s
-	// Contexts:
-	//   master:
-	//     Host: %s
-	//     Token: ""
-	//     Timeout: %s
-	//     Debug: %v
-	//     BasicAuthentication:
-	//       Username: %s
-	//       Password: %s
-	//       `,
 	expectedContents := fmt.Sprintf(`CurrentContext: %s
 Contexts:
-  master:
+  %s:
     Host: %s
-    Token: ""
     Timeout: %s
     Debug: %v
     BasicAuthentication:
       Username: %s
       Password: %s`,
-		expectedConfiguration.CurrentContext,
-		expectedConfiguration.GetCurrent().Host,
-		expectedConfiguration.GetCurrent().Timeout,
-		expectedConfiguration.GetCurrent().Debug,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Username,
-		expectedConfiguration.GetCurrent().Authentication.(BasicAuthentication).Password,
+		testCurrentContextField,
+		testCurrentContextField,
+		testHostField,
+		testTimeoutField,
+		testDebugField,
+		testUsernameField,
+		testPasswordField,
 	)
 
-	b, err := ConfigurationMarshalYAML(expectedConfiguration)
+	b, err := ConfigurationMarshalYAML(expectedConfigurationBasicAuthentication)
 	if err != nil {
 		t.Fatal(err)
 	}
