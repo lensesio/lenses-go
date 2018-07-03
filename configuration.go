@@ -234,8 +234,13 @@ func (c *ClientConfiguration) Fill(other ClientConfiguration) bool {
 		c.Timeout = v
 	}
 
-	if c.Debug != other.Debug {
-		c.Debug = other.Debug
+	// set only when true.
+	if v := other.Debug; v {
+		c.Debug = v
+	}
+
+	if v := other.Insecure; v {
+		c.Insecure = v
 	}
 
 	return c.IsValid()

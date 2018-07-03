@@ -47,6 +47,11 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 	if !ok {
 		return false // this should never happen.
 	}
+
+	if c.Authentication == nil {
+		return true // temp auto-generated on config manager, let's no print it, return true to skip any edit/delete question.
+	}
+
 	c.FormatHost()
 	cfg := *c
 

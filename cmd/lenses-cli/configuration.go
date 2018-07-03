@@ -15,12 +15,11 @@ import (
 
 type configurationManager struct {
 	config *lenses.Configuration
-	flags  lenses.ClientConfiguration
-	// TODO:
-	user, pass, kerberosConf, kerberosRealm, kerberosKeytab, kerberosCCache string
+	// flags below.
+	currentContext, host, timeout, token, user, pass, kerberosConf, kerberosRealm, kerberosKeytab, kerberosCCache string
+	insecure, debug                                                                                               bool
 
 	filepath string
-	fromFile bool // if the configuration was SUCCESSFULLY loaded from --config flag.
 }
 
 func makeAuthFromFlags(user, pass, kerberosConf, kerberosRealm, kerberosKeytab, kerberosCCache string) (lenses.Authentication, bool) {
@@ -42,12 +41,30 @@ func makeAuthFromFlags(user, pass, kerberosConf, kerberosRealm, kerberosKeytab, 
 		return auth, true
 	}
 
-	if user == "" || pass != "" {
+	if user != "" && pass != "" {
 		return lenses.BasicAuthentication{Username: user, Password: pass}, true
 	}
 
 	return nil, false
 }
+
+/*
+1. config home file not found, flags set, command run based on flags if authentication flags passed, don't save. (PASS)
+
+2. config home file not found, neither auth flags passed, auto run configure command: cannot retrieve credentials, please configure below;
+   save the configuration on the home file and run the command based on the passed configuration. (PASS)
+
+3. config home file found, run the command based on that. (PASS)
+
+4. config home file found, some flags set, set the filled flags to the config, override, and run the command, don't save. (PASS)
+
+5. config home file not found, the --config flag passed and found, run the command based on that, don't save. (PASS)
+
+6. config home file found, the --config flag passed and found, override the home's and run based on the --config, don't save. (PASS)
+
+7. config home file not found, neither auth flags passed but command was one of "context" or "contexts" then show empty screen. (PASS)
+  7.1 f "configure" command thne must show the create configuration survey. (PASS)
+*/
 
 func newConfigurationManager(cmd *cobra.Command) *configurationManager {
 	m := &configurationManager{
@@ -58,9 +75,9 @@ func newConfigurationManager(cmd *cobra.Command) *configurationManager {
 
 	set := cmd.PersistentFlags()
 
-	set.StringVar(&m.config.CurrentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
+	set.StringVar(&m.currentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
 
-	set.StringVar(&m.flags.Host, "host", "", "--host=https://example.com")
+	set.StringVar(&m.host, "host", "", "--host=https://example.com")
 	// basic auth.
 
 	// if --kerberos-conf set and not other kerberos-* flag set,
@@ -76,10 +93,10 @@ func newConfigurationManager(cmd *cobra.Command) *configurationManager {
 	// if --kerberos-ccache & --kerberos-conf set then auth from kerberos ccache file.
 	set.StringVar(&m.kerberosCCache, "kerberos-ccache", "", "--kerberos-ccache=/tmpl/krb5-ccache.txt")
 
-	set.StringVar(&m.flags.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
-	set.BoolVar(&m.flags.Insecure, "insecure", false, "--insecure=true")
-	set.StringVar(&m.flags.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
-	set.BoolVar(&m.flags.Debug, "debug", false, "print some information that are necessary for debugging")
+	set.StringVar(&m.timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
+	set.BoolVar(&m.insecure, "insecure", false, "--insecure=true")
+	set.StringVar(&m.token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
+	set.BoolVar(&m.debug, "debug", false, "print some information that are necessary for debugging")
 
 	set.StringVar(&m.filepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml or json)")
 	return m
@@ -88,26 +105,51 @@ func newConfigurationManager(cmd *cobra.Command) *configurationManager {
 const currentContextEnvKey = "LENSES_CLI_CONTEXT"
 
 func (m *configurationManager) load() (bool, error) {
-	c := m.config
+	c := m.config // never nil here.
+
 	var found bool
 
-	contextFlag := c.CurrentContext
 	if m.filepath != "" {
 		// must read from file, otherwise fail.
 		if err := lenses.TryReadConfigurationFromFile(m.filepath, c); err != nil {
 			return false, err
 		}
 		found = true
-		m.fromFile = true
 	} else if found = lenses.TryReadConfigurationFromCurrentWorkingDir(c); found {
 	} else if found = lenses.TryReadConfigurationFromExecutable(c); found {
 	} else if found = lenses.TryReadConfigurationFromHome(c); found {
 	}
 
+	// check --context flag (prio) and the configuration's one, if it's there and set the current context upfront.
+	currentContext := c.CurrentContext
+	currentContextChanged := false
+	if flag := m.currentContext; flag != "" && flag != currentContext {
+		currentContext = flag
+		currentContextChanged = true
+	} else if currentContext == "" {
+		currentContext = lenses.DefaultContextKey
+	}
+
+	c.SetCurrent(currentContext)
+
+	// authentication flags passed, override or set the particular authentication method.
+	if authFromFlags, ok := makeAuthFromFlags(m.user, m.pass, m.kerberosConf, m.kerberosRealm, m.kerberosKeytab, m.kerberosCCache); ok {
+		c.GetCurrent().Authentication = authFromFlags
+	}
+
+	// flags have always priority, so transfer any non-empty client configuration flag to the current,
+	// so far we don't care about the configuration file found or not.
+	c.GetCurrent().Fill(lenses.ClientConfiguration{
+		Host:     m.host,
+		Token:    m.token,
+		Timeout:  m.timeout,
+		Insecure: m.insecure,
+		Debug:    m.debug,
+	})
+
 	if found {
-		if contextFlag != "" && contextFlag != c.CurrentContext {
+		if currentContextChanged {
 			// save the config, the current context changed.
-			c.CurrentContext = contextFlag
 			for _, v := range c.Contexts {
 				decryptPassword(v)
 			}
@@ -131,13 +173,11 @@ func (m *configurationManager) load() (bool, error) {
 		}
 	}
 
-	m.config.FillCurrent(m.flags)
-
-	if m.config.CurrentContext != "" && !m.config.CurrentContextExists() {
+	if c.CurrentContext != "" && !c.CurrentContextExists() {
 		return false, fmt.Errorf("unknown context '%s' given, please use the `configure --context="+c.CurrentContext+" --reset`", c.CurrentContext)
 	}
 
-	return m.config.IsValid(), nil
+	return c.IsValid(), nil
 }
 
 func (m *configurationManager) save() error {
@@ -174,29 +214,3 @@ func (m *configurationManager) save() error {
 
 	return nil
 }
-
-// func (m *configurationManager) applyCompatibility() error {
-// 	var (
-// 		found     bool
-// 		oldFormat lenses.ClientConfiguration // <>
-// 	)
-
-// 	// here we just fetch whatever is valid.
-// 	if found = m.filepath != "" && (lenses.TryReadConfigurationFromFile(m.filepath, &oldFormat) == nil); found {
-// 		m.fromFile = true
-// 	} else if found = lenses.TryReadConfigurationFromCurrentWorkingDir(&oldFormat); found {
-// 	} else if found = lenses.TryReadConfigurationFromExecutable(&oldFormat); found {
-// 	} else if found = lenses.TryReadConfigurationFromHome(&oldFormat); found {
-// 	}
-
-// 	if !found || !oldFormat.IsValid() {
-// 		return nil
-// 	}
-
-// 	decryptPassword(&oldFormat) // decrypt before save.
-// 	if m.config.GetCurrent().Fill(oldFormat) {
-// 		return m.save()
-// 	}
-
-// 	return nil
-// }
