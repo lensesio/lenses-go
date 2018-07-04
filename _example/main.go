@@ -26,10 +26,10 @@ func main() {
 	*/
 
 	// Prepare the client's configuration based on the host and the authentication above.
-	config := lenses.ClientConfig{Host: "domain.com", Authentication: auth, Timeout: "15s", Debug: true}
+	clientConfig := lenses.ClientConfig{Host: "domain.com", Authentication: auth, Timeout: "15s", Debug: true}
 
 	// Creating the client using the configuration.
-	client, err := lenses.OpenConnection(config) // or (config, lenses.UsingClient(customClient)/UsingToken(ready token string))
+	client, err := lenses.OpenConnection(clientConfig) // or (config, lenses.UsingClient(customClient)/UsingToken(ready token string))
 	if err != nil {
 		// handle error.
 		panic(err)

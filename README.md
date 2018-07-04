@@ -74,10 +74,10 @@ auth := lenses.KerberosAuthentication{
 
 ```go
 // Prepare the client's configuration based on the host and the authentication above.
-config := lenses.ClientConfig{Host: "domain.com", Authentication: auth, Timeout: "15s", Debug: true}
+currentConfig := lenses.ClientConfig{Host: "domain.com", Authentication: auth, Timeout: "15s", Debug: true}
 
 // Creating the client using the configuration.
-client, err := lenses.OpenConnection(config)
+client, err := lenses.OpenConnection(currentConfig)
 if err != nil {
     // handle error.
 }
@@ -93,9 +93,9 @@ ReadConfig(r io.Reader, unmarshaler UnmarshalFunc, outPtr *Config) error
 
 // ReadConfigFromFile reads and decodes Config from a file based on a custom unmarshaler,
 // `ReadConfigFromJSON` and `ReadConfigFromYAML` are the internal users,
-// but the end-developer can use any custom type of decoder to read a configuration file with ease using this function,
-// but keep note that the default behavior of the fields depend on the existing unmarshalers, use these tag names to map
-// your decoder's properties.
+// but the end-developer can use any custom type of decoder to read a configuration file
+// with ease using this function, but keep note that the default behavior of the fields
+// depend on the existing unmarshalers, use these tag names to map your decoder's properties.
 //
 // Accepts the absolute or the relative path of the configuration file.
 // Sets the `outPtr`. Retruns a non-nil error if parsing or decoding the file failed or file doesn't exist.
@@ -141,6 +141,36 @@ ReadConfigFromJSON(filename string, outPtr *Config) error
 // Error may occur when the file doesn't exists or is not formatted correctly.
 ReadConfigFromYAML(filename string, outPtr *Config) error
 ```
+
+**Example Code:**
+
+```yaml
+# file: ./lenses.yml
+CurrentContext: main
+Contexts:
+  main:
+    Host: https://landoop.com
+    Kerberos:
+      ConfFile: /etc/krb5.conf
+      WithPassword:
+        Username: the_username
+        Password: the_password
+        Realm: empty_for_default
+```
+
+**Usage:**
+
+```go
+var config lenses.Config
+err := lenses.ReadConfigFromYAML("./lenses.yml", &config)
+if err != nil {
+    // handle error.
+}
+
+client, err := lenses.OpenConnection(*config.GetCurrent())
+```
+
+> `Config` contains contains tons of capabilities and helpers, you can quickly check them by navigating to the [config.go](config.go) source file.
 
 ### API Calls
 
