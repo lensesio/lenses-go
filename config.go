@@ -430,7 +430,7 @@ var DefaultConfigurationHomeDir = filepath.Join(HomeDir(), ".lenses")
 // TryReadConfigFromHome will try to read the `Config`
 // from the current user's home directory/.lenses, the lookup is based on
 // the common configuration filename pattern:
-// lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
+// lenses-cli.json, lenses-cli.yml or lenses.json and lenses.yml.
 func TryReadConfigFromHome(outPtr *Config) bool {
 	return lookupConfiguration(DefaultConfigurationHomeDir, outPtr)
 }
@@ -438,7 +438,7 @@ func TryReadConfigFromHome(outPtr *Config) bool {
 // TryReadConfigFromExecutable will try to read the `Config`
 // from the (client's caller's) executable path that started the current process.
 // The lookup is based on the common configuration filename pattern:
-// lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
+// lenses-cli.json, lenses-cli.yml or lenses.json and lenses.yml.
 func TryReadConfigFromExecutable(outPtr *Config) bool {
 	executablePath, err := os.Executable()
 	if err != nil {
@@ -453,7 +453,7 @@ func TryReadConfigFromExecutable(outPtr *Config) bool {
 // TryReadConfigFromCurrentWorkingDir will try to read the `Config`
 // from the current working directory, note that it may differs from the executable path.
 // The lookup is based on the common configuration filename pattern:
-// lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
+// lenses-cli.json, lenses-cli.yml or lenses.json and lenses.yml.
 func TryReadConfigFromCurrentWorkingDir(outPtr *Config) bool {
 	workingDir, err := os.Getwd()
 	if err != nil {
