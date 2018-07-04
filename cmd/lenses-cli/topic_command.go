@@ -380,7 +380,7 @@ func newTopicUpdateCommand() *cobra.Command {
 				return err
 			}
 
-			return echo(cmd, "Configuration updated for topic %s", topic.Name)
+			return echo(cmd, "Config updated for topic %s", topic.Name)
 		},
 	}
 

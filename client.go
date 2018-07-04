@@ -27,8 +27,8 @@ type User struct {
 // Client is the lenses http client.
 // It contains the necessary API calls to communicate and develop via lenses.
 type Client struct {
-	Config     *ClientConfiguration
-	configFull *Configuration // not exported, used for `ConnectionOptions`.
+	Config     *ClientConfig
+	configFull *Config // not exported, used for `ConnectionOptions`.
 	// PersistentRequestModifier can be used to modify the *http.Request before send it to the backend.
 	PersistentRequestModifier RequestOption
 
@@ -1605,7 +1605,7 @@ func (c *CreateUpdateConnectorPayload) ApplyAndValidateName() error {
 //
 //
 // name (string) – Name of the connector to create
-// config (map) – Configuration parameters for the connector. All values should be strings.
+// config (map) – Config parameters for the connector. All values should be strings.
 //
 // Read more at: https://docs.confluent.io/current/connect/restapi.html#post--connectors
 //

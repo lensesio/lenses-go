@@ -638,7 +638,7 @@ func decryptString(encryptedRaw string, keyBase string) (plainTextString string,
 
 var defaultConfigFilepath = filepath.Join(lenses.DefaultConfigurationHomeDir, "lenses-cli.yml")
 
-func encryptPassword(cfg *lenses.ClientConfiguration) error {
+func encryptPassword(cfg *lenses.ClientConfig) error {
 	// if cfg.Kerberos.IsValid() && cfg.Password == "" { // if kerberos conf is valid and pass is empty here, skip encrypt, at least for now.
 	// 	return nil
 	// }
@@ -659,7 +659,7 @@ func encryptPassword(cfg *lenses.ClientConfiguration) error {
 	return nil
 }
 
-func decryptPassword(cfg *lenses.ClientConfiguration) {
+func decryptPassword(cfg *lenses.ClientConfig) {
 	if basicAuth, isBasicAuth := cfg.Authentication.(lenses.BasicAuthentication); isBasicAuth {
 		p, _ := decryptString(basicAuth.Password, cfg.Host)
 		basicAuth.Password = p

@@ -83,7 +83,7 @@ func UsingToken(tok string) ConnectionOption {
 
 // WithContext sets the current context, the environment to load configuration from.
 //
-// See the `Configuration` structure and the `OpenConnection` function for more.
+// See the `Config` structure and the `OpenConnection` function for more.
 func WithContext(contextName string) ConnectionOption {
 	return func(c *Client) {
 		if contextName == "" {
@@ -95,25 +95,25 @@ func WithContext(contextName string) ConnectionOption {
 }
 
 // OpenConnection creates & returns a new Landoop's Lenses API bridge interface
-// based on the passed `ClientConfiguration` and the (optional) options.
+// based on the passed `ClientConfig` and the (optional) options.
 // OpenConnection authenticates the user and returns a valid ready-to-use `*lenses.Client`.
 // If failed to communicate with the server then it returns a nil client and a non-nil error.
 //
 // Usage:
 // auth := lenses.BasicAuthentication{Username: "user", Password: "pass"}
-// config := lenses.ClientConfiguration{Host: "domain.com", Authentication: auth, Timeout: "15s"}
+// config := lenses.ClientConfig{Host: "domain.com", Authentication: auth, Timeout: "15s"}
 // client, err := lenses.OpenConnection(config) // or (config, lenses.UsingClient/UsingToken)
 // if err != nil { panic(err) }
 // client.DeleteTopic("topicName")
 //
 // Read more by navigating to the `Client` type documentation.
-func OpenConnection(cfg ClientConfiguration, options ...ConnectionOption) (*Client, error) {
-	// We accept only `ClientConfiguration` and not the full `Configuration` for use ease.
+func OpenConnection(cfg ClientConfig, options ...ConnectionOption) (*Client, error) {
+	// We accept only `ClientConfig` and not the full `Config` for use ease.
 	clientConfig := &cfg
 
-	full := &Configuration{
+	full := &Config{
 		CurrentContext: DefaultContextKey,
-		Contexts: map[string]*ClientConfiguration{
+		Contexts: map[string]*ClientConfig{
 			DefaultContextKey: clientConfig,
 		},
 	}

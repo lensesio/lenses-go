@@ -14,7 +14,7 @@ import (
 )
 
 type configurationManager struct {
-	config *lenses.Configuration
+	config *lenses.Config
 	// flags below.
 	currentContext, host, timeout, token, user, pass, kerberosConf, kerberosRealm, kerberosKeytab, kerberosCCache string
 	insecure, debug                                                                                               bool
@@ -68,8 +68,8 @@ func makeAuthFromFlags(user, pass, kerberosConf, kerberosRealm, kerberosKeytab, 
 
 func newConfigurationManager(cmd *cobra.Command) *configurationManager {
 	m := &configurationManager{
-		config: &lenses.Configuration{
-			Contexts: make(map[string]*lenses.ClientConfiguration),
+		config: &lenses.Config{
+			Contexts: make(map[string]*lenses.ClientConfig),
 		},
 	}
 
@@ -111,13 +111,13 @@ func (m *configurationManager) load() (bool, error) {
 
 	if m.filepath != "" {
 		// must read from file, otherwise fail.
-		if err := lenses.TryReadConfigurationFromFile(m.filepath, c); err != nil {
+		if err := lenses.TryReadConfigFromFile(m.filepath, c); err != nil {
 			return false, err
 		}
 		found = true
-	} else if found = lenses.TryReadConfigurationFromCurrentWorkingDir(c); found {
-	} else if found = lenses.TryReadConfigurationFromExecutable(c); found {
-	} else if found = lenses.TryReadConfigurationFromHome(c); found {
+	} else if found = lenses.TryReadConfigFromCurrentWorkingDir(c); found {
+	} else if found = lenses.TryReadConfigFromExecutable(c); found {
+	} else if found = lenses.TryReadConfigFromHome(c); found {
 	}
 
 	// check --context flag (prio) and the configuration's one, if it's there and set the current context upfront.
@@ -139,7 +139,7 @@ func (m *configurationManager) load() (bool, error) {
 
 	// flags have always priority, so transfer any non-empty client configuration flag to the current,
 	// so far we don't care about the configuration file found or not.
-	c.GetCurrent().Fill(lenses.ClientConfiguration{
+	c.GetCurrent().Fill(lenses.ClientConfig{
 		Host:     m.host,
 		Token:    m.token,
 		Timeout:  m.timeout,

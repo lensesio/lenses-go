@@ -18,29 +18,44 @@ const (
 	contextsKeyJSON = "contexts"
 	contextsKeyYAML = "Contexts"
 
-	basicAuthenticationKeyJSON = "basic_authentication"
-	basicAuthenticationKeyYAML = "BasicAuthentication"
+	basicAuthenticationKeyJSON = "basic"
+	basicAuthenticationKeyYAML = "Basic"
 
-	kerberosAuthenticationKeyJSON = "kerberos_authentication"
-	kerberosAuthenticationKeyYAML = "KerberosAuthentication"
+	kerberosAuthenticationKeyJSON = "kerberos"
+	kerberosAuthenticationKeyYAML = "Kerberos"
+
+	kerberosConfFileKeyJSON = "confFile"
+	kerberosConfFileKeyYAML = "ConfFile"
+
+	kerberosMethodKeyJSON = "method"
+	kerberosMethodKeyYAML = "Method"
+
+	kerberosWithPasswordMethodKeyJSON = "withPassword"
+	kerberosWithPasswordMethodKeyYAML = "WithPassword"
+
+	kerberosWithKeytabMethodKeyJSON = "withKeytab"
+	kerberosWithKeytabMethodKeyYAML = "WithKeytab"
+
+	kerberosFromCCacheMethodKeyJSON = "fromCCache"
+	kerberosFromCCacheMethodKeyYAML = "FromCCache"
 )
 
 type (
-	// Configuration contains the necessary information
+	// Config contains the necessary information
 	// that `OpenConnection` needs to create a new client which connects and talks to the lenses backend box.
 	//
 	// Optionally, the `Contexts` map of string and client configuration values can be filled to map different environments.
-	// Use of `WithContext` `ConnectionOption` to select a specific `ClientConfiguration`, otherwise the first one is selected,
+	// Use of `WithContext` `ConnectionOption` to select a specific `ClientConfig`, otherwise the first one is selected,
 	// this will also amend the `CurrentContext` via the top-level `OpenConnection` function.
 	//
-	// Configuration can be loaded via JSON or YAML.
-	Configuration struct {
+	// Config can be loaded via JSON or YAML.
+	Config struct {
 		CurrentContext string
-		Contexts       map[string]*ClientConfiguration
+		Contexts       map[string]*ClientConfig
 	}
 
-	// ClientConfiguration contains the necessary information to a client to connect to the lenses backend box.
-	ClientConfiguration struct {
+	// ClientConfig contains the necessary information to a client to connect to the lenses backend box.
+	ClientConfig struct {
 		// Host is the network shema  address and port that your lenses backend box is listening on.
 		Host string `json:"host" yaml:"Host" survey:"host"`
 
@@ -86,8 +101,8 @@ type (
 	}
 )
 
-// IsValid returns the result of the contexts' ClientConfiguration#IsValid.
-func (c *Configuration) IsValid() bool {
+// IsValid returns the result of the contexts' ClientConfig#IsValid.
+func (c *Config) IsValid() bool {
 	// for a whole configuration to be valid we need to check each contexts' configs as well.
 	if len(c.Contexts) == 0 {
 		return false
@@ -103,7 +118,7 @@ func (c *Configuration) IsValid() bool {
 }
 
 // IsValid returns true if the configuration contains the necessary fields, otherwise false.
-func (c *ClientConfiguration) IsValid() bool {
+func (c *ClientConfig) IsValid() bool {
 	if len(c.Host) == 0 {
 		return false
 	}
@@ -117,9 +132,9 @@ func (c *ClientConfiguration) IsValid() bool {
 var DefaultContextKey = "master"
 
 // GetCurrent returns the specific current client configuration based on the `CurrentContext`.
-func (c *Configuration) GetCurrent() *ClientConfiguration {
+func (c *Config) GetCurrent() *ClientConfig {
 	if c.Contexts == nil {
-		c.Contexts = make(map[string]*ClientConfiguration)
+		c.Contexts = make(map[string]*ClientConfig)
 	}
 
 	if cfg, has := c.Contexts[c.CurrentContext]; has {
@@ -127,7 +142,7 @@ func (c *Configuration) GetCurrent() *ClientConfiguration {
 		return cfg
 	}
 
-	cfg := new(ClientConfiguration)
+	cfg := new(ClientConfig)
 	if c.CurrentContext == "" {
 		c.CurrentContext = DefaultContextKey // the default one if missing.
 	}
@@ -137,19 +152,19 @@ func (c *Configuration) GetCurrent() *ClientConfiguration {
 }
 
 // RemoveTokens removes the `Token` from all client configurations.
-func (c *Configuration) RemoveTokens() {
+func (c *Config) RemoveTokens() {
 	for _, v := range c.Contexts {
 		v.Token = ""
 	}
 }
 
 // SetCurrent overrides the `CurrentContext`, just this.
-func (c *Configuration) SetCurrent(currentContextName string) {
+func (c *Config) SetCurrent(currentContextName string) {
 	c.CurrentContext = currentContextName
 }
 
 // CurrentContextExists just checks if the `CurrentContext` exists in the `Contexts` map.
-func (c *Configuration) CurrentContextExists() bool {
+func (c *Config) CurrentContextExists() bool {
 	_, exists := c.Contexts[c.CurrentContext]
 	return exists
 }
@@ -157,7 +172,7 @@ func (c *Configuration) CurrentContextExists() bool {
 // RemoveContext deletes a context based on its name/key.
 // It will change if there is an available context to set as current, if can't find then the operation stops.
 // Returns true if found and removed and can change to something valid, otherwise false.
-func (c *Configuration) RemoveContext(contextName string) bool {
+func (c *Config) RemoveContext(contextName string) bool {
 	if _, ok := c.Contexts[contextName]; ok {
 
 		canBeRemoved := false
@@ -187,10 +202,10 @@ func (c *Configuration) RemoveContext(contextName string) bool {
 	return false
 }
 
-// Clone will returns a deep clone of the this `Configuration`.
-func (c *Configuration) Clone() Configuration {
-	clone := Configuration{CurrentContext: c.CurrentContext}
-	clone.Contexts = make(map[string]*ClientConfiguration, len(c.Contexts))
+// Clone will returns a deep clone of the this `Config`.
+func (c *Config) Clone() Config {
+	clone := Config{CurrentContext: c.CurrentContext}
+	clone.Contexts = make(map[string]*ClientConfig, len(c.Contexts))
 	for k, v := range c.Contexts {
 		vCopy := *v
 		clone.Contexts[k] = &vCopy
@@ -200,7 +215,7 @@ func (c *Configuration) Clone() Configuration {
 }
 
 // FillCurrent fills the specific client configuration based on the `CurrentContext` if it's valid.
-func (c *Configuration) FillCurrent(cfg ClientConfiguration) {
+func (c *Config) FillCurrent(cfg ClientConfig) {
 	context := c.CurrentContext
 
 	if _, ok := c.Contexts[context]; !ok {
@@ -212,12 +227,12 @@ func (c *Configuration) FillCurrent(cfg ClientConfiguration) {
 	}
 }
 
-// Fill iterates over the "other" ClientConfiguration's fields
+// Fill iterates over the "other" ClientConfig's fields
 // it checks if a field is not empty,
-// if it's then it sets the value to the "c" ClientConfiguration's particular field.
+// if it's then it sets the value to the "c" ClientConfig's particular field.
 //
 // It returns true if the final configuration is valid by calling the `IsValid`.
-func (c *ClientConfiguration) Fill(other ClientConfiguration) bool {
+func (c *ClientConfig) Fill(other ClientConfig) bool {
 	if v := other.Host; v != "" && v != c.Host {
 		c.Host = v
 	}
@@ -247,7 +262,7 @@ func (c *ClientConfiguration) Fill(other ClientConfiguration) bool {
 }
 
 // FormatHost will try to make sure that the schema:host:port pattern is followed on the `Host` field.
-func (c *ClientConfiguration) FormatHost() {
+func (c *ClientConfig) FormatHost() {
 	if len(c.Host) == 0 {
 		return
 	}
@@ -289,25 +304,25 @@ func (c *ClientConfiguration) FormatHost() {
 }
 
 // IsBasicAuth reports whether the authentication is basic.
-func (c *ClientConfiguration) IsBasicAuth() (BasicAuthentication, bool) {
+func (c *ClientConfig) IsBasicAuth() (BasicAuthentication, bool) {
 	auth, isBasicAuth := c.Authentication.(BasicAuthentication)
 	return auth, isBasicAuth
 }
 
 // IsKerberosAuth reports whether the authentication is kerberos-based.
-func (c *ClientConfiguration) IsKerberosAuth() (KerberosAuthentication, bool) {
+func (c *ClientConfig) IsKerberosAuth() (KerberosAuthentication, bool) {
 	auth, isKerberosAuth := c.Authentication.(KerberosAuthentication)
 	return auth, isKerberosAuth
 }
 
 // UnmarshalFunc is the most standard way to declare a Decoder/Unmarshaler to read the configurations and more.
-// See `ReadConfiguration` and `ReadConfigurationFromFile` for more.
-type UnmarshalFunc func(in []byte, outPtr *Configuration) error
+// See `ReadConfig` and `ReadConfigFromFile` for more.
+type UnmarshalFunc func(in []byte, outPtr *Config) error
 
-// ReadConfiguration reads and decodes Configuration from an io.Reader based on a custom unmarshaler.
-// This can be useful to read configuration via network or files (see `ReadConfigurationFromFile`).
+// ReadConfig reads and decodes Config from an io.Reader based on a custom unmarshaler.
+// This can be useful to read configuration via network or files (see `ReadConfigFromFile`).
 // Sets the `outPtr`. Retruns a non-nil error on any unmarshaler's errors.
-func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc, outPtr *Configuration) error {
+func ReadConfig(r io.Reader, unmarshaler UnmarshalFunc, outPtr *Config) error {
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
@@ -316,15 +331,15 @@ func ReadConfiguration(r io.Reader, unmarshaler UnmarshalFunc, outPtr *Configura
 	return unmarshaler(data, outPtr)
 }
 
-// ReadConfigurationFromFile reads and decodes Configuration from a file based on a custom unmarshaler,
-// `ReadConfigurationFromJSON` and `ReadConfigurationFromYAML` are the internal users,
+// ReadConfigFromFile reads and decodes Config from a file based on a custom unmarshaler,
+// `ReadConfigFromJSON` and `ReadConfigFromYAML` are the internal users,
 // but the end-developer can use any custom type of decoder to read a configuration file with ease using this function,
 // but keep note that the default behavior of the fields depend on the existing unmarshalers, use these tag names to map
 // your decoder's properties.
 //
 // Accepts the absolute or the relative path of the configuration file.
 // Sets the `outPtr`. Retruns a non-nil error if parsing or decoding the file failed or file doesn't exist.
-func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc, outPtr *Configuration) error {
+func ReadConfigFromFile(filename string, unmarshaler UnmarshalFunc, outPtr *Config) error {
 	// get the abs
 	// which will try to find the 'filename' from current working dir as well.
 	absPath, err := filepath.Abs(filename)
@@ -337,23 +352,23 @@ func ReadConfigurationFromFile(filename string, unmarshaler UnmarshalFunc, outPt
 		return err
 	}
 
-	err = ReadConfiguration(f, unmarshaler, outPtr)
+	err = ReadConfig(f, unmarshaler, outPtr)
 	f.Close()
 	return err
 }
 
-// TryReadConfigurationFromFile will try to read a specific file and unmarshal to `Configuration`.
+// TryReadConfigFromFile will try to read a specific file and unmarshal to `Config`.
 // It will try to read it with one of these built'n lexers/formats:
 // 1. JSON
 // 2. YAML
-func TryReadConfigurationFromFile(filename string, outPtr *Configuration) (err error) {
+func TryReadConfigFromFile(filename string, outPtr *Config) (err error) {
 	tries := []UnmarshalFunc{
 		ConfigurationUnmarshalJSON,
 		ConfigurationUnmarshalYAML,
 	}
 
 	for _, unmarshaler := range tries {
-		err = ReadConfigurationFromFile(filename, unmarshaler, outPtr)
+		err = ReadConfigFromFile(filename, unmarshaler, outPtr)
 		if err == nil { // if decoded without any issues, then return that as soon as possible.
 			return
 		}
@@ -370,10 +385,10 @@ var configurationPossibleFilenames = []string{
 	".lenses-cli.yml", ".lenses-cli.yaml", ".lenses-cli.json",
 } // no patterns in order to be easier to remove or modify these.
 
-func lookupConfiguration(dir string, outPtr *Configuration) bool {
+func lookupConfiguration(dir string, outPtr *Config) bool {
 	for _, filename := range configurationPossibleFilenames {
 		fullpath := filepath.Join(dir, filename)
-		err := TryReadConfigurationFromFile(fullpath, outPtr)
+		err := TryReadConfigFromFile(fullpath, outPtr)
 		if err == nil {
 			return true
 		}
@@ -412,19 +427,19 @@ func HomeDir() (homeDir string) {
 // by default it's the $HOME/.lenses directory.
 var DefaultConfigurationHomeDir = filepath.Join(HomeDir(), ".lenses")
 
-// TryReadConfigurationFromHome will try to read the `Configuration`
+// TryReadConfigFromHome will try to read the `Config`
 // from the current user's home directory/.lenses, the lookup is based on
 // the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromHome(outPtr *Configuration) bool {
+func TryReadConfigFromHome(outPtr *Config) bool {
 	return lookupConfiguration(DefaultConfigurationHomeDir, outPtr)
 }
 
-// TryReadConfigurationFromExecutable will try to read the `Configuration`
+// TryReadConfigFromExecutable will try to read the `Config`
 // from the (client's caller's) executable path that started the current process.
 // The lookup is based on the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromExecutable(outPtr *Configuration) bool {
+func TryReadConfigFromExecutable(outPtr *Config) bool {
 	executablePath, err := os.Executable()
 	if err != nil {
 		return false
@@ -435,11 +450,11 @@ func TryReadConfigurationFromExecutable(outPtr *Configuration) bool {
 	return lookupConfiguration(executablePath, outPtr)
 }
 
-// TryReadConfigurationFromCurrentWorkingDir will try to read the `Configuration`
+// TryReadConfigFromCurrentWorkingDir will try to read the `Config`
 // from the current working directory, note that it may differs from the executable path.
 // The lookup is based on the common configuration filename pattern:
 // lenses-cli.json, lenses-cli.yml, lenses-cli.yml or lenses.json, lenses.yml and lenses.tml.
-func TryReadConfigurationFromCurrentWorkingDir(outPtr *Configuration) bool {
+func TryReadConfigFromCurrentWorkingDir(outPtr *Config) bool {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return false
@@ -448,20 +463,20 @@ func TryReadConfigurationFromCurrentWorkingDir(outPtr *Configuration) bool {
 	return lookupConfiguration(workingDir, outPtr)
 }
 
-// ReadConfigurationFromJSON reads and decodes Configuration from a json file, i.e `configuration.json`.
+// ReadConfigFromJSON reads and decodes Config from a json file, i.e `configuration.json`.
 //
 // Accepts the absolute or the relative path of the configuration file.
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
-func ReadConfigurationFromJSON(filename string, outPtr *Configuration) error {
-	return ReadConfigurationFromFile(filename, ConfigurationUnmarshalJSON, outPtr)
+func ReadConfigFromJSON(filename string, outPtr *Config) error {
+	return ReadConfigFromFile(filename, ConfigurationUnmarshalJSON, outPtr)
 }
 
-// ReadConfigurationFromYAML reads and decodes Configuration from a yaml file, i.e `configuration.yml`.
+// ReadConfigFromYAML reads and decodes Config from a yaml file, i.e `configuration.yml`.
 //
 // Accepts the absolute or the relative path of the configuration file.
 // Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
-func ReadConfigurationFromYAML(filename string, outPtr *Configuration) error {
-	return ReadConfigurationFromFile(filename, ConfigurationUnmarshalYAML, outPtr)
+func ReadConfigFromYAML(filename string, outPtr *Config) error {
+	return ReadConfigFromFile(filename, ConfigurationUnmarshalYAML, outPtr)
 }

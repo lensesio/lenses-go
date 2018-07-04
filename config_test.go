@@ -1,4 +1,3 @@
-// Black-box testing for the configuration readers.
 package lenses
 
 import (
@@ -10,50 +9,41 @@ import (
 	"testing"
 )
 
-// TODO: will fail atm, will be fixed when CLI adapts the latest client's API changes.
-
 const testDebug = false
 
 var (
-	testCurrentContextField                     = "master"
-	testHostField                               = "https://landoop.com"
-	testUsernameField                           = "testuser"
-	testPasswordField                           = "testpassword"
-	testBasicAuthenticationField                = BasicAuthentication{Username: testUsernameField, Password: testPasswordField}
-	testKerberosConfFileField                   = "/etc/krb5.conf"
-	testKerberosRealmField                      = "my.default"
-	testKerberosAuthenticationWithPasswordField = KerberosAuthentication{
-		ConfFile: testKerberosConfFileField,
-		Method: KerberosWithPassword{
-			Realm:    testKerberosRealmField,
-			Username: testUsernameField,
-			Password: testPasswordField,
-		},
+	testCurrentContextField             = "master"
+	testHostField                       = "https://landoop.com"
+	testUsernameField                   = "testuser"
+	testPasswordField                   = "testpassword"
+	testBasicAuthenticationField        = BasicAuthentication{Username: testUsernameField, Password: testPasswordField}
+	testKerberosConfFileField           = "/etc/krb5.conf"
+	testKerberosRealmField              = "my.default"
+	testKerberosKeytabField             = "/tmp/my.keytab"
+	testKerberosCCacheField             = "/tmp/ccache.file"
+	testKerberosMethodWithPasswordField = KerberosWithPassword{
+		Realm:    testKerberosRealmField,
+		Username: testUsernameField,
+		Password: testPasswordField,
 	}
-	testTimeoutField  = "11s"
-	testInsecureField = true
-	testDebugField    = true
+	testKerberosMethodWithKeytabField = KerberosWithKeytab{
+		Username:   testUsernameField,
+		Realm:      testKerberosRealmField,
+		KeytabFile: testKerberosKeytabField,
+	}
+	testKerberosMethodFromCCacheField = KerberosFromCCache{CCacheFile: testKerberosCCacheField}
+	testTimeoutField                  = "11s"
+	testInsecureField                 = true
+	testDebugField                    = true
 )
 
 var (
-	expectedConfigurationBasicAuthentication = Configuration{
+	expectedConfigurationBasicAuthentication = Config{
 		CurrentContext: testCurrentContextField,
-		Contexts: map[string]*ClientConfiguration{
+		Contexts: map[string]*ClientConfig{
 			testCurrentContextField: {
 				Host:           testHostField,
 				Authentication: testBasicAuthenticationField,
-				Timeout:        testTimeoutField,
-				Debug:          testDebugField,
-			},
-		},
-	}
-
-	expectedConfigurationKerberosAuthenticationWithPassword = Configuration{
-		CurrentContext: testCurrentContextField,
-		Contexts: map[string]*ClientConfiguration{
-			testCurrentContextField: {
-				Host:           testHostField,
-				Authentication: testKerberosAuthenticationWithPasswordField,
 				Timeout:        testTimeoutField,
 				Debug:          testDebugField,
 			},
@@ -75,13 +65,13 @@ func makeTestFile(t *testing.T, filename string) (*os.File, func()) {
 	return f, teardown
 }
 
-func testConfigurationFile(t *testing.T, filename, contents string, reader func(string, *Configuration) error, expected Configuration) {
+func testConfigurationFile(t *testing.T, filename, contents string, reader func(string, *Config) error, expected Config) {
 	f, teardown := makeTestFile(t, filename)
 	defer teardown()
 
 	f.WriteString(contents)
 
-	var got Configuration
+	var got Config
 	if err := reader(f.Name(), &got); err != nil {
 		t.Fatalf("[%s] while reading contents: '%s': %v,", t.Name(), contents, err)
 	}
@@ -94,14 +84,14 @@ func testConfigurationFile(t *testing.T, filename, contents string, reader func(
 	}
 }
 
-func TestReadConfigurationFromJSON(t *testing.T) {
+func TestReadConfigFromJSON(t *testing.T) {
 	contents := fmt.Sprintf(`
         {
 			"currentContext": "%s",
 			"contexts": {
 				"%s": {
 					"host": "%s",
-					"basic_authentication": {"username": "%s", "password": "%s"},
+					"%s": {"username": "%s", "password": "%s"},
 					"timeout": "%s",
 					"debug": %v
 				}
@@ -110,14 +100,15 @@ func TestReadConfigurationFromJSON(t *testing.T) {
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
+		basicAuthenticationKeyJSON,
 		testUsernameField,
 		testPasswordField,
 		testTimeoutField,
 		testDebugField)
-	testConfigurationFile(t, "configuration.json", contents, ReadConfigurationFromJSON, expectedConfigurationBasicAuthentication)
+	testConfigurationFile(t, "configuration.json", contents, ReadConfigFromJSON, expectedConfigurationBasicAuthentication)
 }
 
-func TestReadConfigurationFromJSONBackwardsCompatibility(t *testing.T) {
+func TestReadConfigFromJSONBackwardsCompatibility(t *testing.T) {
 	contents := fmt.Sprintf(`
         {
 			"currentContext": "%s",
@@ -138,14 +129,15 @@ func TestReadConfigurationFromJSONBackwardsCompatibility(t *testing.T) {
 		testPasswordField,
 		testTimeoutField,
 		testDebugField)
-	testConfigurationFile(t, "configuration.json", contents, ReadConfigurationFromJSON, expectedConfigurationBasicAuthentication)
+	testConfigurationFile(t, "configuration.json", contents, ReadConfigFromJSON, expectedConfigurationBasicAuthentication)
 }
 
-func TestWriteConfigurationToJSON(t *testing.T) {
-	expectedContents := fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","basic_authentication":{"username":"%s","password":"%s"},"timeout":"%s","debug":%v}}}`,
+func TestWriteConfigToJSON(t *testing.T) {
+	expectedContents := fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","%s":{"username":"%s","password":"%s"},"timeout":"%s","debug":%v}}}`,
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
+		basicAuthenticationKeyJSON,
 		testUsernameField,
 		testPasswordField,
 		testTimeoutField,
@@ -161,13 +153,13 @@ func TestWriteConfigurationToJSON(t *testing.T) {
 	}
 }
 
-func TestReadConfigurationFromYAML(t *testing.T) {
+func TestReadConfigFromYAML(t *testing.T) {
 	contents := fmt.Sprintf(`
 CurrentContext: %s
 Contexts:
     %s:
         Host: %s
-        BasicAuthentication:
+        %s:
             Username: "%s"
             Password: "%s"
         Timeout: %s
@@ -176,14 +168,15 @@ Contexts:
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
+		basicAuthenticationKeyYAML,
 		testUsernameField,
 		testPasswordField,
 		testTimeoutField,
 		testDebugField)
-	testConfigurationFile(t, "configuration.yml", contents, ReadConfigurationFromYAML, expectedConfigurationBasicAuthentication)
+	testConfigurationFile(t, "configuration.yml", contents, ReadConfigFromYAML, expectedConfigurationBasicAuthentication)
 }
 
-func TestReadConfigurationFromYAMLBackwardsCompatibility(t *testing.T) {
+func TestReadConfigFromYAMLBackwardsCompatibility(t *testing.T) {
 	contents := fmt.Sprintf(`
         CurrentContext: %s
         Contexts:
@@ -201,17 +194,17 @@ func TestReadConfigurationFromYAMLBackwardsCompatibility(t *testing.T) {
 		testPasswordField,
 		testTimeoutField,
 		testDebugField)
-	testConfigurationFile(t, "configuration.yml", contents, ReadConfigurationFromYAML, expectedConfigurationBasicAuthentication)
+	testConfigurationFile(t, "configuration.yml", contents, ReadConfigFromYAML, expectedConfigurationBasicAuthentication)
 }
 
-func TestWriteConfigurationToYAML(t *testing.T) {
+func TestWriteConfigToYAML(t *testing.T) {
 	expectedContents := fmt.Sprintf(`CurrentContext: %s
 Contexts:
   %s:
     Host: %s
     Timeout: %s
     Debug: %v
-    BasicAuthentication:
+    %s:
       Username: %s
       Password: %s`,
 		testCurrentContextField,
@@ -219,6 +212,7 @@ Contexts:
 		testHostField,
 		testTimeoutField,
 		testDebugField,
+		basicAuthenticationKeyYAML,
 		testUsernameField,
 		testPasswordField,
 	)

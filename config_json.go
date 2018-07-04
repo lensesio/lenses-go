@@ -8,8 +8,8 @@ import (
 
 var commaSep = []byte(",")
 
-// ConfigurationMarshalJSON returns the JSON encoding of "c" `Configuration`.
-func ConfigurationMarshalJSON(c Configuration) ([]byte, error) {
+// ConfigurationMarshalJSON returns the JSON encoding of "c" `Config`.
+func ConfigurationMarshalJSON(c Config) ([]byte, error) {
 	if len(c.Contexts) == 0 {
 		return nil, fmt.Errorf("json write: contexts can not be empty")
 	}
@@ -49,9 +49,9 @@ func ConfigurationMarshalJSON(c Configuration) ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// ConfigurationUnmarshalJSON parses the JSON-encoded `Configuration` and stores the result
-// in the `Configuration` pointed to by "c".
-func ConfigurationUnmarshalJSON(b []byte, c *Configuration) error {
+// ConfigurationUnmarshalJSON parses the JSON-encoded `Config` and stores the result
+// in the `Config` pointed to by "c".
+func ConfigurationUnmarshalJSON(b []byte, c *Config) error {
 	var keys map[string]json.RawMessage
 	err := json.Unmarshal(b, &keys)
 	if err != nil {
@@ -69,7 +69,7 @@ func ConfigurationUnmarshalJSON(b []byte, c *Configuration) error {
 
 		if key == contextsKeyJSON {
 			if c.Contexts == nil {
-				c.Contexts = make(map[string]*ClientConfiguration)
+				c.Contexts = make(map[string]*ClientConfig)
 			}
 
 			bb, err := value.MarshalJSON()
@@ -88,7 +88,7 @@ func ConfigurationUnmarshalJSON(b []byte, c *Configuration) error {
 			}
 
 			for k, v := range contextsJSON {
-				var clientConfig ClientConfiguration
+				var clientConfig ClientConfig
 				if err := clientConfigurationUnmarshalJSON(v, &clientConfig); err != nil {
 					return err // exit on first failure.
 				}
@@ -101,8 +101,8 @@ func ConfigurationUnmarshalJSON(b []byte, c *Configuration) error {
 	return nil
 }
 
-// clientConfigurationMarshalJSON retruns the json string as bytes of the given `ClientConfiguration` structure.
-func clientConfigurationMarshalJSON(c ClientConfiguration) ([]byte, error) {
+// clientConfigurationMarshalJSON retruns the json string as bytes of the given `ClientConfig` structure.
+func clientConfigurationMarshalJSON(c ClientConfig) ([]byte, error) {
 	b, err := json.Marshal(c)
 	if err != nil {
 		return nil, err
@@ -112,21 +112,71 @@ func clientConfigurationMarshalJSON(c ClientConfiguration) ([]byte, error) {
 		return nil, nil
 	}
 
+	var (
+		authenticationKey string
+		content           []byte
+	)
+
 	switch auth := c.Authentication.(type) {
 	case BasicAuthentication:
-		bb, err := json.Marshal(auth)
+		content, err = json.Marshal(auth)
 		if err != nil {
 			return nil, err
 		}
-		bb = append(append(commaSep, []byte(fmt.Sprintf(`"%s":`, basicAuthenticationKeyJSON))...), bb...)
-		b = bytes.Replace(b, commaSep, append(bb, commaSep...), 1)
+		authenticationKey = basicAuthenticationKeyJSON
 	case KerberosAuthentication:
+		content, err = kerberosAuthenticationMarshalJSON(auth)
+		if err != nil {
+			return nil, err
+		}
+		authenticationKey = kerberosAuthenticationKeyJSON
 	}
+
+	content = append(append(commaSep, []byte(fmt.Sprintf(`"%s":`, authenticationKey))...), content...)
+	b = bytes.Replace(b, commaSep, append(content, commaSep...), 1)
 
 	return b, nil
 }
 
-func clientConfigurationUnmarshalJSON(b []byte, c *ClientConfiguration) error {
+var rightBrace byte = '}'
+
+func kerberosAuthenticationMarshalJSON(auth KerberosAuthentication) ([]byte, error) {
+	if auth.Method == nil {
+		return nil, fmt.Errorf("json write: kerberos authentication: method missing")
+	}
+
+	// {"confFile":"/etc/krb5.conf"}
+	b, err := json.Marshal(auth)
+	if err != nil {
+		return nil, err
+	}
+
+	// {"username":"testuser","password":"testpassword","realm":"my.default"}
+	content, err := json.Marshal(auth.Method)
+	if err != nil {
+		return nil, err
+	}
+
+	var methodKey string
+
+	switch auth.Method.(type) {
+	case KerberosWithPassword:
+		methodKey = kerberosWithPasswordMethodKeyJSON
+	case KerberosWithKeytab:
+		methodKey = kerberosWithKeytabMethodKeyJSON
+	case KerberosFromCCache:
+		methodKey = kerberosFromCCacheMethodKeyJSON
+	}
+
+	// ,"withPassword":{"username":"testuser","password":"testpassword","realm":"my.default"}
+	content = append(append(commaSep, []byte(fmt.Sprintf(`"%s":`, methodKey))...), content...)
+
+	// {"confFile":"/etc/krb5.conf","withPassword":{"username":"testuser","password":"testpassword","realm":"my.default"}}
+	b = append(b[0:len(b)-1], append(content, rightBrace)...)
+	return b, nil
+}
+
+func clientConfigurationUnmarshalJSON(b []byte, c *ClientConfig) error {
 	// first unmarshal the known types.
 	if err := json.Unmarshal(b, c); err != nil {
 		return err
@@ -158,7 +208,7 @@ func clientConfigurationUnmarshalJSON(b []byte, c *ClientConfiguration) error {
 			}
 
 			var auth KerberosAuthentication
-			if err = json.Unmarshal(bb, &auth); err != nil {
+			if err = kerberosAuthenticationUnmarshalJSON(bb, &auth); err != nil {
 				return err
 			}
 			c.Authentication = auth
@@ -185,6 +235,53 @@ func clientConfigurationUnmarshalJSON(b []byte, c *ClientConfiguration) error {
 	return fmt.Errorf("json: unknown or missing authentication key")
 }
 
-func kerberosAuthenticationMarshalJSON(b []byte, auth *KerberosAuthentication) error {
-	return fmt.Errorf("not implemented yet")
+func kerberosAuthenticationUnmarshalJSON(b []byte, auth *KerberosAuthentication) error {
+	var raw map[string]json.RawMessage
+	err := json.Unmarshal(b, &raw)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range raw {
+		if key == kerberosConfFileKeyJSON {
+			if err = json.Unmarshal(value, &auth.ConfFile); err != nil {
+				return err
+			}
+			continue
+		}
+
+		bb, err := value.MarshalJSON()
+		if err != nil {
+			return err
+		}
+
+		switch key {
+		case kerberosWithPasswordMethodKeyJSON:
+			var method KerberosWithPassword
+			if err = json.Unmarshal(bb, &method); err != nil {
+				return err
+			}
+			auth.Method = method
+		case kerberosWithKeytabMethodKeyJSON:
+			var method KerberosWithKeytab
+			if err = json.Unmarshal(bb, &method); err != nil {
+				return err
+			}
+			auth.Method = method
+		case kerberosFromCCacheMethodKeyJSON:
+			var method KerberosFromCCache
+			if err = json.Unmarshal(bb, &method); err != nil {
+				return err
+			}
+			auth.Method = method
+		default:
+			return fmt.Errorf("json: unexpected key: %s", key)
+		}
+	}
+
+	if auth.Method == nil {
+		return fmt.Errorf("json: kerberos: no authentication method found inside")
+	}
+
+	return nil
 }

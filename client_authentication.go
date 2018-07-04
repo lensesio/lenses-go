@@ -86,7 +86,7 @@ func (auth BasicAuthentication) Auth(c *Client) error {
 
 // KerberosAuthentication can be used as alternative option of the `BasicAuthentication` for a more secure way to connect to the lenses backend box.
 type KerberosAuthentication struct {
-	ConfFile string                       `json:"confFile" yaml:"ConfFile" survey:"conf"`
+	ConfFile string                       `json:"confFile" yaml:"ConfFile" survey:"-"` // keep those, useful for marshal.
 	Method   KerberosAuthenticationMethod `json:"-" yaml:"-" survey:"-"`
 }
 

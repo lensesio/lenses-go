@@ -9,8 +9,8 @@ import (
 
 var newLineB = []byte("\n")
 
-// ConfigurationMarshalYAML returns the YAML encoding of "c" `Configuration`.
-func ConfigurationMarshalYAML(c Configuration) ([]byte, error) {
+// ConfigurationMarshalYAML returns the YAML encoding of "c" `Config`.
+func ConfigurationMarshalYAML(c Config) ([]byte, error) {
 	if len(c.Contexts) == 0 {
 		return nil, fmt.Errorf("yaml write: contexts can not be empty")
 	}
@@ -45,36 +45,85 @@ func ConfigurationMarshalYAML(c Configuration) ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// clientConfigurationMarshalYAML retruns the yaml string as bytes of the given `ClientConfiguration` structure.
-func clientConfigurationMarshalYAML(c ClientConfiguration) ([]byte, error) {
+// clientConfigurationMarshalYAML retruns the yaml string as bytes of the given `ClientConfig` structure.
+func clientConfigurationMarshalYAML(c ClientConfig) ([]byte, error) {
+	if c.Authentication == nil {
+		return nil, nil
+	}
+
 	b, err := yaml.Marshal(c)
 	if err != nil {
 		return nil, err
 	}
 
-	if c.Authentication == nil {
-		return nil, nil
-	}
+	var (
+		authenticationKey string
+		content           []byte
+	)
 
 	switch auth := c.Authentication.(type) {
 	case BasicAuthentication:
-		bb, err := yaml.Marshal(auth)
+		content, err = yaml.Marshal(auth) // basic auth is ok, doesn't contain any nested interface.
 		if err != nil {
 			return nil, err
 		}
-
-		newLinesCount := bytes.Count(bb, newLineB) // no trailing new line.
-		bb = bytes.Replace(bb, newLineB, append(newLineB, []byte("  ")...), newLinesCount-1)
-		b = append(b, append(append([]byte(fmt.Sprintf(`%s:`, basicAuthenticationKeyYAML)), []byte("\n  ")...), bb...)...)
+		authenticationKey = basicAuthenticationKeyYAML
 	case KerberosAuthentication:
+		content, err = kerberosAuthenticationMarshalYAML(auth)
+		if err != nil {
+			return nil, err
+		}
+		authenticationKey = kerberosAuthenticationKeyYAML
 	}
+
+	content = toYAMLNode(content)
+	b = append(b, append(append([]byte(fmt.Sprintf(`%s:`, authenticationKey)), newLineWithSpaces...), content...)...)
 
 	return b, nil
 }
 
-// ConfigurationUnmarshalYAML parses the YAML-encoded `Configuration` and stores the result
-// in the `Configuration` pointed to by "c".
-func ConfigurationUnmarshalYAML(b []byte, c *Configuration) error {
+var newLineWithSpaces = append(newLineB, []byte("  ")...)
+
+func toYAMLNode(content []byte) []byte {
+	newLinesCount := bytes.Count(content, newLineB) // no trailing new line.
+	return bytes.Replace(content, newLineB, newLineWithSpaces, newLinesCount-1)
+}
+
+func kerberosAuthenticationMarshalYAML(auth KerberosAuthentication) ([]byte, error) {
+	if auth.Method == nil {
+		return nil, fmt.Errorf("yaml write: kerberos authentication: method missing")
+	}
+
+	b, err := yaml.Marshal(auth)
+	if err != nil {
+		return nil, err
+	}
+
+	content, err := yaml.Marshal(auth.Method)
+	if err != nil {
+		return nil, err
+	}
+
+	var methodKey string
+
+	switch auth.Method.(type) {
+	case KerberosWithPassword:
+		methodKey = kerberosWithPasswordMethodKeyYAML
+	case KerberosWithKeytab:
+		methodKey = kerberosWithKeytabMethodKeyYAML
+	case KerberosFromCCache:
+		methodKey = kerberosFromCCacheMethodKeyYAML
+	}
+
+	content = toYAMLNode(content)
+	b = append(b, append(append([]byte(fmt.Sprintf(`%s:`, methodKey)), newLineWithSpaces...), content...)...)
+
+	return b, nil
+}
+
+// ConfigurationUnmarshalYAML parses the YAML-encoded `Config` and stores the result
+// in the `Config` pointed to by "c".
+func ConfigurationUnmarshalYAML(b []byte, c *Config) error {
 	var tree yaml.MapSlice
 	err := yaml.Unmarshal(b, &tree)
 	if err != nil {
@@ -108,14 +157,14 @@ func ConfigurationUnmarshalYAML(b []byte, c *Configuration) error {
 			}
 
 			if c.Contexts == nil {
-				c.Contexts = make(map[string]*ClientConfiguration)
+				c.Contexts = make(map[string]*ClientConfig)
 			}
 
 			/*
 				yaml.MapSlice{
 					yaml.MapItem{Key:"master", Value:yaml.MapSlice{
 						yaml.MapItem{Key:"Host", Value:"https://landoop.com"},
-						yaml.MapItem{Key:"BasicAuthentication", Value:yaml.MapSlice{
+						yaml.MapItem{Key:"Basic", Value:yaml.MapSlice{
 							yaml.MapItem{Key:"Username", Value:"testuser"},
 							yaml.MapItem{Key:"Password", Value:"testpassword"}}},
 						yaml.MapItem{Key:"Timeout", Value:"11s"},
@@ -135,7 +184,7 @@ func ConfigurationUnmarshalYAML(b []byte, c *Configuration) error {
 					return fmt.Errorf("yaml: unable to unmarshal context '%s', not a valid map type", contextKey)
 				}
 
-				clientConfig := new(ClientConfiguration)
+				clientConfig := new(ClientConfig)
 				bb, err := yaml.Marshal(contextTree)
 				if err != nil {
 					return err
@@ -215,5 +264,62 @@ func ConfigurationUnmarshalYAML(b []byte, c *Configuration) error {
 }
 
 func kerberosAuthenticationUnmarshalYAML(b []byte, auth *KerberosAuthentication) error {
-	return fmt.Errorf("not implemented yet")
+	var tree yaml.MapSlice
+	err := yaml.Unmarshal(b, &tree)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range tree {
+		key, ok := item.Key.(string)
+		if !ok {
+			return fmt.Errorf("yaml: expected '%v' key to be string", item.Key)
+		}
+
+		if key == kerberosConfFileKeyYAML {
+			auth.ConfFile, _ = item.Value.(string)
+			continue
+		}
+
+		methodField, ok := item.Value.(yaml.MapSlice)
+		if !ok {
+			// we search for a `MapSlice` which will contain the method's properties first,
+			// next will check if the key is a valid one too.
+			continue
+		}
+
+		bb, err := yaml.Marshal(methodField)
+		if err != nil {
+			return err
+		}
+
+		switch key {
+		case kerberosWithPasswordMethodKeyYAML:
+			var method KerberosWithPassword
+			if err = yaml.Unmarshal(bb, &method); err != nil {
+				return err
+			}
+			auth.Method = method
+		case kerberosWithKeytabMethodKeyYAML:
+			var method KerberosWithKeytab
+			if err = yaml.Unmarshal(bb, &method); err != nil {
+				return err
+			}
+			auth.Method = method
+		case kerberosFromCCacheMethodKeyYAML:
+			var method KerberosFromCCache
+			if err = yaml.Unmarshal(bb, &method); err != nil {
+				return err
+			}
+			auth.Method = method
+		default:
+			return fmt.Errorf("yaml: unexpected key: %s", key)
+		}
+	}
+
+	if auth.Method == nil {
+		return fmt.Errorf("yaml: kerberos: no authentication method found inside")
+	}
+
+	return nil
 }
