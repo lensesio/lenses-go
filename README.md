@@ -170,7 +170,7 @@ if err != nil {
 client, err := lenses.OpenConnection(*config.GetCurrent())
 ```
 
-> `Config` contains contains tons of capabilities and helpers, you can quickly check them by navigating to the [config.go](config.go) source file.
+> `Config` contains tons of capabilities and helpers, you can quickly check them by navigating to the [config.go](config.go) source file.
 
 ### API Calls
 
