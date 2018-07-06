@@ -32,6 +32,7 @@ type Client struct {
 	// PersistentRequestModifier can be used to modify the *http.Request before send it to the backend.
 	PersistentRequestModifier RequestOption
 
+	// Progress                  func(current, total int64)
 	// User is generated on `lenses#OpenConnection` function based on the `Config#Authentication`.
 	User User
 
@@ -50,11 +51,11 @@ func acquireBuffer(b []byte) *bytes.Buffer {
 	return noOpBuffer
 }
 
-// isAuthorized is called inside the `Client#do` and it closes the body reader if no accessible.
+// isAuthorized is called inside the `Client#Do` and it closes the body reader if no accessible.
 // 401	Unauthorized	[RFC7235, Section 3.1]
 func isAuthorized(resp *http.Response) bool { return resp.StatusCode != http.StatusUnauthorized }
 
-// isOK is called inside the `Client#do` and it closes the body reader if no accessible.
+// isOK is called inside the `Client#Do` and it closes the body reader if no accessible.
 func isOK(resp *http.Response) bool {
 	return resp.StatusCode == http.StatusOK ||
 		resp.StatusCode == http.StatusCreated || /* see CreateOrUpdateConnector for the `StatusCreated` */
@@ -135,7 +136,7 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 
 	uri := c.Config.Host + "/" + path
 
-	golog.Debugf("Client#do.req:\n\turi: %s:%s\n\tsend: %s", method, uri, string(send))
+	golog.Debugf("Client#Do.req:\n\turi: %s:%s\n\tsend: %s", method, uri, string(send))
 
 	req, err := http.NewRequest(method, uri, acquireBuffer(send))
 	if err != nil {
@@ -170,7 +171,7 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 
 	// here will print all the headers, including the token (because it may be useful for debugging)
 	// --so bug reporters should be careful here to invalidate the token after that.
-	golog.Debugf("Client#do.req.Headers: %#+v", req.Header)
+	golog.Debugf("Client#Do.req.Headers: %#+v", req.Header)
 
 	// send the request and check the response for any connection & authorization errors here.
 	resp, err := c.client.Do(req)
@@ -252,6 +253,8 @@ func (c *Client) acquireResponseBodyStream(resp *http.Response) (io.ReadCloser, 
 	return reader, err
 }
 
+const bufN = 512
+
 // ReadResponseBody is the lower-level method of client to read the result of a `Client#Do`, it closes the body stream.
 //
 // See `ReadJSON` too.
@@ -261,6 +264,40 @@ func (c *Client) ReadResponseBody(resp *http.Response) ([]byte, error) {
 		return nil, err
 	}
 
+	/*
+			var body []byte
+
+			if c.Progress != nil {
+				var (
+					total   = resp.ContentLength
+					current int64
+				)
+
+				for {
+					buf := make([]byte, bufN)
+					readen, readErr := reader.Read(buf)
+					// Callers should always process the n > 0 bytes returned before
+					// considering the error err. Doing so correctly handles I/O errors
+					// that happen after reading some bytes and also both of the
+					// allowed EOF behaviors.
+					if readen > 0 {
+						current += int64(readen)
+						body = append(body, buf[:readen]...)
+						c.Progress(current, total) // call it every x ms or let the user decide?
+					}
+					if readErr != nil {
+						if readErr == io.EOF {
+							break
+						}
+
+						return nil, readErr
+					}
+				}
+			} else {
+				body, err = ioutil.ReadAll(reader)
+		    }
+	*/
+
 	body, err := ioutil.ReadAll(reader)
 	if err = reader.Close(); err != nil {
 		return nil, err
@@ -269,7 +306,7 @@ func (c *Client) ReadResponseBody(resp *http.Response) ([]byte, error) {
 	if c.Config.Debug {
 		rawBodyString := string(body)
 		// print both body and error, because both of them may be formated by the `readResponseBody`'s caller.
-		golog.Debugf("Client#do.resp:\n\tbody: %s\n\terror: %v", rawBodyString, err)
+		golog.Debugf("Client#Do.resp:\n\tbody: %s\n\terror: %v", rawBodyString, err)
 	}
 
 	// return the body.
@@ -285,7 +322,13 @@ func (c *Client) ReadJSON(resp *http.Response, valuePtr interface{}) error {
 		return err
 	}
 
-	return json.Unmarshal(b, valuePtr)
+	err = json.Unmarshal(b, valuePtr)
+	if c.Config.Debug {
+		if syntaxErr, ok := err.(*json.SyntaxError); ok {
+			golog.Errorf("Client#ReadJSON: syntax error at offset %d: %s", syntaxErr.Offset, syntaxErr.Error())
+		}
+	}
+	return err
 }
 
 // GetAccessToken returns the access token that
@@ -912,9 +955,9 @@ type (
 	// TopicMetadata describes the data received from the `GetTopicsMetadata`
 	// and the payload to send on the `CreateTopicMetadata`.
 	TopicMetadata struct {
-		KeyType   string `json:"keyType,omitempty" yaml:"KeyType"`
-		ValueType string `json:"valueType,omitempty" yaml:"ValueType"`
-		TopicName string `json:"topicName" yaml:"TopicName"`
+		TopicName string `json:"topicName" yaml:"TopicName" header:"Topic"`
+		KeyType   string `json:"keyType,omitempty" yaml:"KeyType" header:"Key /,NULL"`
+		ValueType string `json:"valueType,omitempty" yaml:"ValueType" header:"Value Type,NULL"`
 
 		ValueSchemaRaw string `json:"valueSchema,omitempty" yaml:"ValueSchema,omitempty"` // for response read.
 		KeySchemaRaw   string `json:"keySchema,omitempty" yaml:"KeySchema,omitempty"`     // for response read.
@@ -1160,7 +1203,7 @@ type Topic struct {
 	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
 	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
 	Timestamp            int64              `json:"timestamp"`
-	Config               []KV               `json:"config" header:"Configs,len"`
+	Config               []KV               `json:"config" header:"Configs,count"`
 	ConsumersGroup       []ConsumersGroup   `json:"consumers"`
 	MessagesPerPartition []PartitionMessage `json:"messagesPerPartition"`
 	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`

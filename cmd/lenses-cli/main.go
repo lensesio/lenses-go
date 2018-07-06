@@ -116,10 +116,6 @@ var rootCmd = &cobra.Command{
 
 func setupClient() (err error) {
 	client, err = lenses.OpenConnection(*configManager.config.GetCurrent())
-	// if err == nil {
-	// 	currentConfig.Token = client.GetAccessToken()
-	// }
-
 	return
 }
 
@@ -184,6 +180,8 @@ var configManager *configurationManager
 
 func main() {
 	rootCmd.SetVersionTemplate(buildVersionTmpl())
+	// bite.RegisterMachineFriendlyFlagTo(rootCmd.PersistentFlags(), nil)
+
 	configManager = newConfigurationManager(rootCmd)
 
 	if err := rootCmd.Execute(); err != nil {

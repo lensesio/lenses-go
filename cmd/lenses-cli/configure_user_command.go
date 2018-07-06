@@ -642,28 +642,42 @@ func encryptPassword(cfg *lenses.ClientConfig) error {
 	// if cfg.Kerberos.IsValid() && cfg.Password == "" { // if kerberos conf is valid and pass is empty here, skip encrypt, at least for now.
 	// 	return nil
 	// }
-	if basicAuth, isBasicAuth := cfg.Authentication.(lenses.BasicAuthentication); isBasicAuth {
-		if basicAuth.Password == "" {
-			return fmt.Errorf("empty password")
-		}
-
-		p, err := encryptString(basicAuth.Password, cfg.Host)
+	if auth, ok := cfg.IsBasicAuth(); ok && auth.Password != "" {
+		p, err := encryptString(auth.Password, cfg.Host)
 		if err != nil {
 			return err
 		}
 
-		basicAuth.Password = p
-		cfg.Authentication = basicAuth
+		auth.Password = p
+		cfg.Authentication = auth
+	} else if auth, ok := cfg.IsKerberosAuth(); ok {
+		if withPass, ok := auth.WithPassword(); ok {
+			p, err := encryptString(withPass.Password, cfg.Host)
+			if err != nil {
+				return err
+			}
+
+			withPass.Password = p
+			auth.Method = withPass
+			cfg.Authentication = auth
+		}
 	}
 
 	return nil
 }
 
 func decryptPassword(cfg *lenses.ClientConfig) {
-	if basicAuth, isBasicAuth := cfg.Authentication.(lenses.BasicAuthentication); isBasicAuth {
-		p, _ := decryptString(basicAuth.Password, cfg.Host)
-		basicAuth.Password = p
-		cfg.Authentication = basicAuth
+	if auth, ok := cfg.IsBasicAuth(); ok && auth.Password != "" {
+		p, _ := decryptString(auth.Password, cfg.Host)
+		auth.Password = p
+		cfg.Authentication = auth
+	} else if auth, ok := cfg.IsKerberosAuth(); ok {
+		if withPass, ok := auth.WithPassword(); ok {
+			p, _ := decryptString(withPass.Password, cfg.Host)
+			withPass.Password = p
+			auth.Method = withPass
+			cfg.Authentication = auth
+		}
 	}
 
 }

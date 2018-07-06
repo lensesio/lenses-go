@@ -16,7 +16,7 @@ func init() {
 }
 
 func newTopicsGroupCommand() *cobra.Command {
-	var namesOnly, noJSON bool
+	var namesOnly, unwrap bool
 
 	root := &cobra.Command{
 		Use:           "topics",
@@ -29,9 +29,9 @@ func newTopicsGroupCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				sort.Strings(topicNames)
 
-				if noJSON {
-					sort.Strings(topicNames)
+				if unwrap {
 					for _, name := range topicNames {
 						fmt.Fprintln(cmd.OutOrStdout(), name)
 					}
@@ -39,6 +39,7 @@ func newTopicsGroupCommand() *cobra.Command {
 				}
 
 				return printJSON(cmd, outlineStringResults("name", topicNames))
+				// return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", topicNames))
 			}
 
 			topics, err := client.GetTopics()
@@ -51,15 +52,16 @@ func newTopicsGroupCommand() *cobra.Command {
 			})
 
 			return printJSON(cmd, topics)
-			// TODO:
-			// return printTable(cmd, topics, func(t lenses.Topic) bool {
+			// lenses-cli topics --machine-friendly will print all information as JSON,
+			// lenses-cli topics [--machine-friend=false] will print the necessary(struct fields tagged as "header") information as Table.
+			// return bite.PrintObject(cmd, topics, func(t lenses.Topic) bool {
 			// 	return !t.IsControlTopic
 			// })
 		},
 	}
 
 	root.Flags().BoolVar(&namesOnly, "names", false, "--names")
-	root.Flags().BoolVar(&noJSON, "no-json", false, "--no-json")
+	root.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap")
 
 	canPrintJSON(root)
 
@@ -69,7 +71,7 @@ func newTopicsGroupCommand() *cobra.Command {
 }
 
 type topicMetadataView struct {
-	lenses.TopicMetadata `yaml:",inline"`
+	lenses.TopicMetadata `yaml:",inline" header:"inline"`
 	ValueSchema          json.RawMessage `json:"valueSchema" yaml:"-"` // for view-only.
 	KeySchema            json.RawMessage `json:"keySchema" yaml:"-"`   // for view-only.
 }
@@ -148,6 +150,7 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 			}
 
 			return printJSON(cmd, viewMeta)
+			// return bite.PrintObject(cmd, viewMeta)
 		},
 	}
 
