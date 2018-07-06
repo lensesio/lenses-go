@@ -19,9 +19,9 @@ import (
 // User represents the user of the client.
 type User struct {
 	Token                string   `json:"token"`
-	Name                 string   `json:"user"`
-	SchemaRegistryDelete bool     `json:"schemaRegistryDelete"`
-	Roles                []string `json:"roles"`
+	Name                 string   `json:"user" header:"Name"`
+	SchemaRegistryDelete bool     `json:"schemaRegistryDelete" header:"Schema Registry Delete"`
+	Roles                []string `json:"roles" header:"Roles"`
 }
 
 // Client is the lenses http client.
@@ -357,11 +357,11 @@ func (c *Client) Logout() error {
 
 // LicenseInfo describes the data received from the `GetLicenseInfo`.
 type LicenseInfo struct {
-	ClientID    string `json:"clientId"`
-	IsRespected bool   `json:"isRespected"`
-	MaxBrokers  int    `json:"maxBrokers"`
-	MaxMessages int    `json:"maxMessages,omitempty"`
-	Expiry      int64  `json:"expiry"`
+	ClientID    string `json:"clientId" header:"ID"`
+	IsRespected bool   `json:"isRespected" header:"Respected"`
+	MaxBrokers  int    `json:"maxBrokers" header:"Max Brokers"`
+	MaxMessages int    `json:"maxMessages,omitempty" header:"/ Messages"`
+	Expiry      int64  `json:"expiry" header:"Expires"`
 
 	// no-payload data.
 
@@ -557,11 +557,11 @@ func (c *Client) GetExecutionMode() (ExecutionMode, error) {
 
 // ConnectCluster contains the connect cluster information that is returned by the `GetConnectClusters` call.
 type ConnectCluster struct {
-	Name     string `json:"name"`
-	URL      string `json:"url"`
-	Statuses string `json:"statuses"`
-	Config   string `json:"config"`
-	Offsets  string `json:"offsets"`
+	Name     string `json:"name" header:"Name"`
+	URL      string `json:"url" header:"URL"`
+	Statuses string `json:"statuses" header:"Status"`
+	Config   string `json:"config" header:"Config"`
+	Offsets  string `json:"offsets" header:"Offsets"`
 }
 
 const connectClustersKey = "lenses.connect.clusters"
@@ -626,32 +626,32 @@ type (
 	// LSQLStop the form of the stop record data that LSQL call returns once.
 	LSQLStop struct {
 		// If false `max.time` was reached.
-		IsTimeRemaining bool `json:"isTimeRemaining"`
+		IsTimeRemaining bool `json:"isTimeRemaining" header:"Time Remaining"`
 		// If true there was no more data on the topic and `max.zero.polls` was reached.
-		IsTopicEnd bool `json:"isTopicEnd"`
+		IsTopicEnd bool `json:"isTopicEnd" header:"End"`
 		// If true the query has been stopped by admin  (Cancel query equivalence).
-		IsStopped bool `json:"isStopped"`
+		IsStopped bool `json:"isStopped" header:"Stopped"`
 		// Number of records read from Kafka.
-		TotalRecords int `json:"totalRecords"`
+		TotalRecords int `json:"totalRecords" header:"Total /"`
 		// Number of records not matching the filter.
-		SkippedRecords int `json:"skippedRecords"`
+		SkippedRecords int `json:"skippedRecords" header:"Skipped Records"`
 		// Max number of records to pull (driven by LIMIT X,
 		// if LIMIT is not present it gets the default config in LENSES).
-		RecordsLimit int `json:"recordsLimit"`
+		RecordsLimit int `json:"recordsLimit" header:"Records Limit"`
 		// Total size in bytes read from Kafka.
-		TotalSizeRead int64 `json:"totalSizeRead"`
+		TotalSizeRead int64 `json:"totalSizeRead" header:"Total Size Read"`
 		// Total size in bytes (Kafka size) for the records.
-		Size int64 `json:"size"`
+		Size int64 `json:"size" header:"Size"`
 		// The topic offsets.
 		// If query parameter `&offsets=true` is not present it won't pull the details.
-		Offsets []LSQLOffset `json:"offsets"`
+		Offsets []LSQLOffset `json:"offsets" header:"Offsets,count"`
 	}
 
 	// LSQLOffset the form of the offset record data that LSQL call returns once.
 	LSQLOffset struct {
-		Partition int   `json:"partition"`
-		Min       int64 `json:"min"`
-		Max       int64 `json:"max"`
+		Partition int   `json:"partition" header:"Partition"`
+		Min       int64 `json:"min" header:"Min"`
+		Max       int64 `json:"max" header:"Max"`
 	}
 
 	// LSQLError the form of the error record data that LSQL call returns once.
@@ -875,10 +875,10 @@ const queriesPath = "api/sql/queries"
 
 // LSQLRunningQuery is the form of the data that the `GetRunningQueries` returns.
 type LSQLRunningQuery struct {
-	ID        int64  `json:"id"`
-	SQL       string `json:"sql"`
-	User      string `json:"user"`
-	Timestamp int64  `json:"ts"`
+	ID        int64  `json:"id" header:"ID"`
+	SQL       string `json:"sql" header:"SQL"`
+	User      string `json:"user" header:"User"`
+	Timestamp int64  `json:"ts" header:"Timestamp"`
 }
 
 // GetRunningQueries returns a list of the current sql running queries.
@@ -1365,23 +1365,23 @@ type (
 	// ProcessorStream describes the processor stream,
 	// see `ProcessorResult`.
 	ProcessorStream struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		ClusterName string `json:"clusterName"`
-		User        string `json:"user"`
-		Namespace   string `json:"namespace"`
-		Uptime      int64  `json:"uptime"`
+		ID          string `json:"id" header:"ID"`
+		Name        string `json:"name" header:"Name"`
+		ClusterName string `json:"clusterName" header:"Cluster"`
+		User        string `json:"user" header:"User"`
+		Namespace   string `json:"namespace" header:"Namespace"`
+		Uptime      int64  `json:"uptime" header:"Up time"`
 
-		SQL                    string `json:"sql"`
-		Runners                int    `json:"runners"`
-		DeploymentState        string `json:"deploymentState"`
-		TopicValueDecoder      string `json:"topicValueDecoder"`
-		Pipeline               string `json:"pipeline"`
-		StartTimestamp         int64  `json:"startTs"`
-		StopTimestamp          int64  `json:"stopTs,omitempty"`
-		ToTopic                string `json:"toTopic"`
-		LastActionMessage      string `json:"lastActionMsg,omitempty"`
-		DeploymentErrorMessage string `json:"deploymentErrorMsg,omitempty"`
+		SQL                    string `json:"sql" header:"SQL"`
+		Runners                int    `json:"runners" header:"Runners"`
+		DeploymentState        string `json:"deploymentState" header:"Depl State"`
+		TopicValueDecoder      string `json:"topicValueDecoder" header:"Topic Decoder"`
+		Pipeline               string `json:"pipeline" header:"Pipeline"`
+		StartTimestamp         int64  `json:"startTs" header:"Start"`
+		StopTimestamp          int64  `json:"stopTs,omitempty" header:"Stop"`
+		ToTopic                string `json:"toTopic" header:"Topic"`
+		LastActionMessage      string `json:"lastActionMsg,omitempty" header:"Last Action"`
+		DeploymentErrorMessage string `json:"deploymentErrorMsg,omitempty" header:"Depl Error"`
 
 		RunnerState map[string]ProcessorRunnerState `json:"runnerState"`
 	}
@@ -1570,13 +1570,13 @@ type ConnectorTaskReadOnly struct {
 type Connector struct {
 	// https://docs.confluent.io/current/connect/restapi.html#get--connectors-(string-name)
 
-	ClusterName string `json:"clusterName,omitempty"` // internal use only, not set by response.
+	ClusterName string `json:"clusterName,omitempty" header:"Cluster"` // internal use only, not set by response.
 	// Name of the created (or received) connector.
-	Name string `json:"name"`
+	Name string `json:"name" header:"Name"`
 	// Config parameters for the connector
 	Config ConnectorConfig `json:"config,omitempty"`
 	// Tasks is the list of active tasks generated by the connector.
-	Tasks []ConnectorTaskReadOnly `json:"tasks,omitempty"`
+	Tasks []ConnectorTaskReadOnly `json:"tasks,omitempty" header:"Tasks,count"`
 }
 
 const connectorsPath = "/api/proxy-connect/%s/connectors"
@@ -1796,25 +1796,25 @@ type (
 	// ConnectorStatus describes the data that are being received from the `GetConnectorStatus`.
 	ConnectorStatus struct {
 		// Name is the name of the connector.
-		Name      string                        `json:"name"`
-		Connector ConnectorStatusConnectorField `json:"connector"`
-		Tasks     []ConnectorStatusTask         `json:"tasks,omitempty"`
+		Name      string                        `json:"name" header:"Name"`
+		Connector ConnectorStatusConnectorField `json:"connector" header:"inline"`
+		Tasks     []ConnectorStatusTask         `json:"tasks,omitempty" header:"Tasks,count"`
 	}
 
 	// ConnectorStatusConnectorField describes a connector's status,
 	// see `ConnectorStatus`.
 	ConnectorStatusConnectorField struct {
-		State    string `json:"state"`     // i.e RUNNING
-		WorkerID string `json:"worker_id"` // i.e fakehost:8083
+		State    string `json:"state" header:"State"`      // i.e RUNNING
+		WorkerID string `json:"worker_id" header:"Worker"` // i.e fakehost:8083
 	}
 
 	// ConnectorStatusTask describes a connector task's status,
 	// see `ConnectorStatus`.
 	ConnectorStatusTask struct {
-		ID       int    `json:"id"`              // i.e 1
-		State    string `json:"state"`           // i.e FAILED
-		WorkerID string `json:"worker_id"`       // i.e fakehost:8083
-		Trace    string `json:"trace,omitempty"` // i.e org.apache.kafka.common.errors.RecordTooLargeException\n
+		ID       int    `json:"id" header:"ID"`                       // i.e 1
+		State    string `json:"state" header:"State"`                 // i.e FAILED
+		WorkerID string `json:"worker_id" header:"Worker"`            // i.e fakehost:8083
+		Trace    string `json:"trace,omitempty" header:"Trace,empty"` // i.e org.apache.kafka.common.errors.RecordTooLargeException\n
 	}
 )
 
@@ -2011,11 +2011,11 @@ func (c *Client) RestartConnectorTask(clusterName, name string, taskID int) erro
 // ConnectorPlugin describes the entry data of the list that are being received from the `GetConnectorPlugins`.
 type ConnectorPlugin struct {
 	// Class is the connector class name.
-	Class string `json:"class"`
+	Class string `json:"class" header:"Class"`
 
-	Type string `json:"type"`
+	Type string `json:"type" header:"Type"`
 
-	Version string `json:"version"`
+	Version string `json:"version" header:"Version"`
 }
 
 const pluginsPath = "/api/proxy-connect/%s/connector-plugins"
@@ -2976,26 +2976,26 @@ func (c *Client) DeleteQuotaForClient(clientID string, propertiesToRemove ...str
 type (
 	// AlertSetting describes the type of list entry of the `GetAlertSetting` and `CreateOrUpdateAlertSettingCondition`.
 	AlertSetting struct {
-		ID                int               `json:"id"`
-		Description       string            `json:"description"`
-		Category          string            `json:"category"`
-		Enabled           bool              `json:"enabled"`
-		Docs              string            `json:"docs,omitempty"`
-		ConditionTemplate string            `json:"conditionTemplate,omitempty"`
-		ConditionRegex    string            `json:"conditionRegex,omitempty"`
+		ID                int               `json:"id" header:"ID"`
+		Description       string            `json:"description" header:"Desc"`
+		Category          string            `json:"category" header:"Cat"`
+		Enabled           bool              `json:"enabled" header:"Enabled"`
+		Docs              string            `json:"docs,omitempty" header:"Docs,empty"`
+		ConditionTemplate string            `json:"conditionTemplate,omitempty" header:"Cond Tmpl"`
+		ConditionRegex    string            `json:"conditionRegex,omitempty" header:"/ Regex"`
 		Conditions        map[string]string `json:"conditions,omitempty"`
-		IsAvailable       bool              `json:"isAvailable"`
+		IsAvailable       bool              `json:"isAvailable" header:"Available"`
 	}
 
 	// AlertSettings describes the type of list entry of the `GetAlertSettings`.
 	AlertSettings struct {
-		Categories AlertSettingsCategoryMap `json:"categories"`
+		Categories AlertSettingsCategoryMap `json:"categories" header:"inline"`
 	}
 
 	// AlertSettingsCategoryMap describes the type of `AlertSetting`'s Categories.
 	AlertSettingsCategoryMap struct {
-		Infrastructure []AlertSetting `json:"Infrastructure"`
-		Consumers      []AlertSetting `json:"Consumers"`
+		Infrastructure []AlertSetting `json:"Infrastructure" header:"Infrastructure"`
+		Consumers      []AlertSetting `json:"Consumers" header:"Consumers"`
 	}
 )
 
@@ -3071,32 +3071,33 @@ type (
 	// Alert is the request payload that is used to register an Alert via `RegisterAlert` and the response that client retrieves from the `GetAlerts`.
 	Alert struct {
 		// AlertID  is a unique identifier for the setting corresponding to this alert. See the available ids via `GetAlertSettings`.
-		AlertID int `json:"alertId" yaml:"AlertID"`
-		// EndsAt is the time as string the alert ended at.
-		EndsAt string `json:"endsAt" yaml:"EndsAt"`
+		AlertID int `json:"alertId" yaml:"AlertID" header:"ID,text"`
 		// StartsAt is the time as string, in ISO format, for when the alert starts
-		StartsAt string `json:"startsAt" yaml:"StartsAt"`
+		StartsAt string `json:"startsAt" yaml:"StartsAt" header:"Start"`
+		// EndsAt is the time as string the alert ended at.
+		EndsAt string `json:"endsAt" yaml:"EndsAt" header:"End"`
+
 		// Labels field is a list of key-value pairs. It must contain a non empty `Severity` value.
-		Labels AlertLabels `json:"labels" yaml:"Labels"`
+		Labels AlertLabels `json:"labels" yaml:"Labels" header:"inline"`
 		// Annotations is a list of key-value pairs. It contains the summary, source, and docs fields.
-		Annotations AlertAnnotations `json:"annotations" yaml:"Annotations"`
+		Annotations AlertAnnotations `json:"annotations" yaml:"Annotations"` // header:"inline"`
 		// GeneratorURL is a unique URL identifying the creator of this alert.
 		// It matches AlertManager requirements for providing this field.
-		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL"`
+		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL" header:"Gen URL"`
 	}
 
 	// AlertLabels labels for the `Alert`, at least Severity should be filled.
 	AlertLabels struct {
-		Category string `json:"category,omitempty" yaml:"Category,omitempty"`
-		Severity string `json:"severity" yaml:"Severity,omitempty"`
-		Instance string `json:"instance,omitempty" yaml:"Instance,omitempty"`
+		Category string `json:"category,omitempty" yaml:"Category,omitempty" header:"Category"`
+		Severity string `json:"severity" yaml:"Severity,omitempty" header:"Severity"`
+		Instance string `json:"instance,omitempty" yaml:"Instance,omitempty" header:"Instance"`
 	}
 
 	// AlertAnnotations annotations for the `Alert`, at least Summary should be filled.
 	AlertAnnotations struct {
-		Summary string `json:"summary" yaml:"Summary"`
-		Source  string `json:"source,omitempty" yaml:"Source,omitempty"`
-		Docs    string `json:"docs,omitempty" yaml:"Docs,omitempty"`
+		Summary string `json:"summary" yaml:"Summary" header:"Summary"`
+		Source  string `json:"source,omitempty" yaml:"Source,omitempty" header:"Source,empty"`
+		Docs    string `json:"docs,omitempty" yaml:"Docs,omitempty" header:"Docs,empty"`
 	}
 )
 

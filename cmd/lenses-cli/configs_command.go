@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +30,7 @@ func newGetConfigsCommand() *cobra.Command {
 
 				var value interface{}
 				if err := client.GetConfigEntry(&value, args[0]); err == nil {
-					return printJSON(cmd, value)
+					return bite.PrintJSON(cmd, value) // keep json?
 					// if error or no valid key then continue with printing the whole lenses configuration.
 				}
 
@@ -40,11 +41,12 @@ func newGetConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, config)
+			// return printJSON(cmd, config)
+			return bite.PrintObject(cmd, config)
 		},
 	}
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }

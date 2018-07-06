@@ -7,6 +7,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -67,7 +68,8 @@ func newGetProcessorsCommand() *cobra.Command {
 				processor.SQL = strings.Replace(processor.SQL, "   ", "", -1)
 			}
 
-			return printJSON(cmd, result.Streams)
+			// return printJSON(cmd, result.Streams)
+			return bite.PrintObject(cmd, result.Streams)
 		},
 	}
 
@@ -77,7 +79,7 @@ func newGetProcessorsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&namespace, "namespace", "", "--namespace=namespace select by namespace, available only in KUBERNETES mode")
 
 	// example: lenses-cli processors --query="[?ClusterName == 'IN_PROC'].Name | sort(@) | {Processor_Names_IN_PROC: join(', ', @)}"
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	cmd.AddCommand(newProcessorsLogsCommand())
 

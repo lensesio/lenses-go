@@ -93,7 +93,7 @@ func newConnectorsCommand() *cobra.Command {
 				}
 			}
 
-			return printJSON(cmd, connectors)
+			return bite.PrintJSON(cmd, connectors) // keep json?
 		},
 	}
 
@@ -101,7 +101,7 @@ func newConnectorsCommand() *cobra.Command {
 	root.Flags().BoolVar(&namesOnly, "names", false, `--names`)
 	root.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap")
 
-	canPrintJSON(root)
+	bite.CanPrintJSON(root)
 
 	// plugins subcommand.
 	root.AddCommand(newGetConnectorsPluginsCommand())
@@ -151,13 +151,14 @@ func newGetConnectorsPluginsCommand() *cobra.Command {
 				}
 			}
 
-			return printJSON(cmd, plugins)
+			// return printJSON(cmd, plugins)
+			return bite.PrintObject(cmd, plugins)
 		},
 	}
 
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -199,13 +200,14 @@ func newGetConnectorsClustersCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, clusters)
+			// return printJSON(cmd, clusters)
+			return bite.PrintObject(cmd, clusters)
 		},
 	}
 
 	cmd.Flags().BoolVar(&namesOnly, "names", false, `--names`)
 	cmd.Flags().BoolVar(&noNewLine, "no-newline", false, "--remove line breakers between string output, if --names is passed")
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -229,11 +231,13 @@ func newConnectorGroupCommand() *cobra.Command {
 				errResourceNotFoundMessage = fmt.Sprintf("connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
-			return printJSON(cmd, connector)
+
+			// return printJSON(cmd, connector)
+			return bite.PrintObject(cmd, connector)
 		},
 	}
 
-	canPrintJSON(root)
+	bite.CanPrintJSON(root)
 
 	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	root.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
@@ -344,7 +348,8 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 
 			echo(cmd, "Connector %s updated\n\n", connector.Name)
 
-			return printJSON(cmd, updatedConnector) // why we print it back? Because of the connector.Tasks.
+			// return printJSON(cmd, updatedConnector) // why we print it back? Because of the connector.Tasks.
+			return bite.PrintObject(cmd, updatedConnector)
 		},
 	}
 
@@ -354,7 +359,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 
 	shouldTryLoadFile(cmd, &connector).Else(func() error { return tryReadFile(configRaw, &connector.Config) })
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -379,14 +384,15 @@ func newConnectorGetConfigCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, cfg)
+			// return printJSON(cmd, cfg)
+			return bite.PrintObject(cmd, cfg)
 		},
 	}
 
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -411,14 +417,15 @@ func newConnectorGetStatusCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, cs)
+			// return printJSON(cmd, cs)
+			return bite.PrintObject(cmd, cs)
 		},
 	}
 
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -533,14 +540,15 @@ func newConnectorGetTasksCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, tasksMap)
+			// return printJSON(cmd, tasksMap)
+			return bite.PrintObject(cmd, tasksMap)
 		},
 	}
 
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -583,7 +591,8 @@ func newConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, cst)
+			// return printJSON(cmd, cst)
+			return bite.PrintObject(cmd, cst)
 		},
 	}
 
@@ -593,7 +602,7 @@ func newConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/landoop/lenses-go"
 
 	"github.com/kataras/survey"
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -73,7 +74,7 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 	fmt.Fprintf(cmd.OutOrStdout(), "%s [%s]\n", name, info)
 
 	// show only filled but no authentication.
-	printJSON(cmd, cfg)
+	bite.PrintJSON(cmd, cfg) // keep json?
 
 	return isValid
 }
@@ -798,13 +799,14 @@ func newGetUserInfoCommand() *cobra.Command {
 			if user := client.User; user.Name != "" {
 				// if logged in using the user password, then we have those info,
 				// let's print it as well.
-				return printJSON(cmd, user)
+				// return printJSON(cmd, user)
+				return bite.PrintObject(cmd, user)
 			}
 			return nil
 		},
 	}
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -843,11 +845,12 @@ func newGetLicenseInfoCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, lc)
+			// return printJSON(cmd, lc)
+			return bite.PrintObject(cmd, lc)
 		},
 	}
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }

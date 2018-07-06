@@ -99,7 +99,9 @@ func newLSQLCommand() *cobra.Command {
 					return errR // fail on first error.
 				}
 
-				return printJSON(cmd, in) // if != nil then it will exit(1) and print the error.
+				// return printJSON(cmd, in)
+				return bite.PrintJSON(cmd, in) // if != nil then it will exit(1) and print the error. keep json?
+				// or tableprinter.PrintJSON(cmd.OutOrStdout(), b) ?
 			}
 
 			stopHandler := func(stopRecord lenses.LSQLStop) error {
@@ -135,7 +137,8 @@ func newLSQLCommand() *cobra.Command {
 				*/
 				// here we stop but it's not an error, so we can't return a non-nil error.
 				fmt.Fprintln(cmd.OutOrStdout(), "Stop")
-				printJSON(cmd, stopRecord)
+				// printJSON(cmd, stopRecord)
+				bite.PrintObject(cmd, stopRecord)
 				return nil
 			}
 
@@ -158,7 +161,8 @@ func newLSQLCommand() *cobra.Command {
 				}
 				*/
 				fmt.Fprintln(cmd.OutOrStdout(), "Stats")
-				return printJSON(cmd, stats)
+				// return printJSON(cmd, stats)
+				return bite.PrintObject(cmd, stats)
 			}
 
 			if statsEvery <= 0 {
@@ -174,7 +178,7 @@ func newLSQLCommand() *cobra.Command {
 	rootSub.Flags().BoolVar(&validate, "validate", false, "runs query validation only") // if --validate exists in the flags then it's true.
 	rootSub.Flags().BoolVar(&withOffsets, "offsets", false, "the stop output will contain the 'offsets' information as well")
 	rootSub.Flags().DurationVar(&statsEvery, "stats", 0, "--stats=2s if passed the client will accept stats records every 'stats' duration, therefore they will be visible to the output")
-	canPrintJSON(rootSub)
+	bite.CanPrintJSON(rootSub)
 
 	rootSub.AddCommand(
 		newGetRunningQueriesCommand(),
@@ -196,10 +200,12 @@ func newGetRunningQueriesCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, queries)
+			// return printJSON(cmd, queries)
+			return bite.PrintObject(cmd, queries)
 		},
 	}
 
+	bite.CanPrintJSON(cmd)
 	return cmd
 }
 

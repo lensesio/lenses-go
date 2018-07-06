@@ -43,7 +43,7 @@ func newSchemasGroupCommand() *cobra.Command {
 		},
 	}
 
-	canPrintJSON(root)
+	bite.CanPrintJSON(root)
 
 	root.Flags().BoolVar(&unwrap, "unwrap", false, "prints only the names as a list of strings")
 	root.AddCommand(newGlobalCompatibilityLevelGroupCommand())
@@ -133,7 +133,7 @@ func newSchemaGroupCommand() *cobra.Command {
 			// it's not empty, always, so it's called latest.
 			if versionStringOrInt != "" {
 				errResourceNotFoundMessage = fmt.Sprintf("schema with name: '%s' and version: '%s' does not exist", name, versionStringOrInt)
-				return getSchemaByVersion(cmd, name, versionStringOrInt, !noPretty)
+				return getSchemaByVersion(cmd, name, versionStringOrInt, !bite.GetJSONNoPrettyFlag(cmd))
 			}
 
 			return nil
@@ -147,7 +147,7 @@ func newSchemaGroupCommand() *cobra.Command {
 	// it's not required, the default is "latest", get a schema based on a specific version.
 	root.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "--version=latest or numeric value lookup schema based on a specific  version")
 	// if true then the schema will be NOT printed with indent.
-	canPrintJSON(root)
+	bite.CanPrintJSON(root)
 
 	// subcommands.
 	root.AddCommand(newRegisterSchemaCommand())
@@ -170,7 +170,8 @@ func getSchemaByID(cmd *cobra.Command, id int) error {
 		return err
 	}
 
-	return printJSON(cmd, schemaRawJSON)
+	// return printJSON(cmd, schemaRawJSON)
+	return bite.PrintJSON(cmd, schemaRawJSON)
 }
 
 // the only valid version string is the "latest"
@@ -213,7 +214,7 @@ func getSchemaByVersion(cmd *cobra.Command, name, versionStringOrInt string, pre
 		return err
 	}
 
-	return printJSON(cmd, struct {
+	return bite.PrintJSON(cmd, struct {
 		lenses.Schema
 		JSONSchema json.RawMessage `json:"schema"`
 	}{schema, rawJSONSchema})
@@ -257,7 +258,7 @@ func newGetSchemaVersionsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "versions",
 		Short:         "List all versions of a particular schema",
-		Example:       exampleString(`schema --name="name" versions`),
+		Example:       exampleString(`schema versions --name="name"`),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := checkRequiredFlags(cmd, flags{"name": name}); err != nil {
@@ -277,7 +278,7 @@ func newGetSchemaVersionsCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -311,7 +312,7 @@ func newDeleteSchemaCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }

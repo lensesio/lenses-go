@@ -64,7 +64,7 @@ func newTopicsGroupCommand() *cobra.Command {
 	root.Flags().BoolVar(&namesOnly, "names", false, "--names")
 	root.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap")
 
-	canPrintJSON(root)
+	bite.CanPrintJSON(root)
 
 	root.AddCommand(newTopicsMetadataSubgroupCommand())
 
@@ -133,7 +133,8 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 					return err
 				}
 
-				return printJSON(cmd, viewMeta)
+				// return printJSON(cmd, viewMeta)
+				return bite.PrintObject(cmd, viewMeta)
 			}
 
 			meta, err := client.GetTopicsMetadata()
@@ -158,7 +159,7 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 	rootSub.Flags().StringVar(&topicName, "name", "", "--name=topicName if filled then it returns a single topic metadata for that specific topic")
 
 	canBeSilent(rootSub)
-	canPrintJSON(rootSub)
+	bite.CanPrintJSON(rootSub)
 
 	rootSub.AddCommand(newTopicMetadataDeleteCommand())
 	rootSub.AddCommand(newTopicMetadataCreateCommand())
@@ -251,13 +252,13 @@ func newTopicGroupCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, topic)
-			// TODO: return printTable(cmd, topic)
+			// return printJSON(cmd, topic)
+			return bite.PrintObject(cmd, topic)
 		},
 	}
 
 	root.Flags().StringVar(&topicName, "name", "", "--name=topic1")
-	canPrintJSON(root)
+	bite.CanPrintJSON(root)
 
 	// subcommands
 	root.AddCommand(newTopicCreateCommand())

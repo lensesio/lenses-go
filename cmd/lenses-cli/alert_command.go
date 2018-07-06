@@ -6,6 +6,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,7 @@ func newGetAlertsCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if sse {
 				handler := func(alert lenses.Alert) error {
-					return printJSON(cmd, alert)
+					return bite.PrintJSON(cmd, alert) // keep json here?
 				}
 
 				return client.GetAlertsLive(handler)
@@ -37,13 +38,14 @@ func newGetAlertsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, alerts)
+			// return printJSON(cmd, alerts)
+			return bite.PrintObject(cmd, alerts)
 		},
 	}
 
 	cmd.Flags().BoolVar(&sse, "live", false, "--live Enables real-time push alert notifications")
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -123,11 +125,12 @@ func newGetAlertSettingsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, settings)
+			// return printJSON(cmd, settings)
+			return bite.PrintObject(cmd, settings)
 		},
 	}
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -160,7 +163,8 @@ func newAlertSettingGroupCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, settings)
+			// return printJSON(cmd, settings)
+			return bite.PrintObject(cmd, settings)
 		},
 	}
 
@@ -170,7 +174,7 @@ func newAlertSettingGroupCommand() *cobra.Command {
 	root.Flags().BoolVar(&mustEnable, "enable", false, "--enable")
 
 	canBeSilent(root)
-	canPrintJSON(root)
+	bite.CanPrintJSON(root)
 
 	root.AddCommand(newGetAlertSettingConditionsCommand())
 	root.AddCommand(newAlertSettingConditionGroupCommand())
@@ -184,7 +188,7 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "conditions",
 		Short:            "Print alert setting's conditions",
-		Example:          exampleString("alert setting conditions --id=1001"),
+		Example:          exampleString("alert setting conditions --alert=1001"),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -194,7 +198,8 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, conds)
+			// return printJSON(cmd, conds)
+			return bite.PrintObject(cmd, conds)
 		},
 	}
 
@@ -202,7 +207,7 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 	cmd.MarkFlagRequired("alert")
 
 	canBeSilent(cmd)
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
