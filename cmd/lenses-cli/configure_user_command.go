@@ -387,14 +387,8 @@ func newConfigureCommand() *cobra.Command {
 					var authMethodAns string
 
 					if err := survey.AskOne(&survey.Select{
-						// Message: fmt.Sprintf("Please select one of the following kerberos authentication methods"),
-						// Options: []string{kerberosWithPassAns, kerberosWithKeytabAns, kerberosFromCCacheAns},
-						// TODO:
-						// Other two options disabled, they're working on client-side
-						// but need more custom unmarshlal/marshaling to read and write those from and to files before adding them as user options,
-						// the rest is ready when done with it.
-						Message: fmt.Sprintf("Please continue by seting the kerberos authentication method"),
-						Options: []string{kerberosWithPassAns},
+						Message: fmt.Sprintf("Please select one of the following kerberos authentication methods"),
+						Options: []string{kerberosWithPassAns, kerberosWithKeytabAns, kerberosFromCCacheAns},
 					}, &authMethodAns, nil); err != nil {
 						return err
 					}

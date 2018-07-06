@@ -12,6 +12,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -73,7 +74,10 @@ var rootCmd = &cobra.Command{
 			}
 
 			fmt.Fprintln(cmd.OutOrStderr(), "cannot retrieve credentials, please configure below")
-			if err = newConfigureCommand().Execute(); err != nil {
+			configureCmd := newConfigureCommand()
+			// disable any flags passed on the parent command before execute.
+			configureCmd.DisableFlagParsing = true
+			if err = configureCmd.Execute(); err != nil {
 				return err
 			}
 
@@ -180,7 +184,7 @@ var configManager *configurationManager
 
 func main() {
 	rootCmd.SetVersionTemplate(buildVersionTmpl())
-	// bite.RegisterMachineFriendlyFlagTo(rootCmd.PersistentFlags(), nil)
+	bite.RegisterMachineFriendlyFlagTo(rootCmd.PersistentFlags(), nil)
 
 	configManager = newConfigurationManager(rootCmd)
 

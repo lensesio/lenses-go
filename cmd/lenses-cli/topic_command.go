@@ -7,6 +7,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -51,12 +52,12 @@ func newTopicsGroupCommand() *cobra.Command {
 				return topics[i].TopicName < topics[j].TopicName
 			})
 
-			return printJSON(cmd, topics)
+			// return printJSON(cmd, topics)
 			// lenses-cli topics --machine-friendly will print all information as JSON,
 			// lenses-cli topics [--machine-friend=false] will print the necessary(struct fields tagged as "header") information as Table.
-			// return bite.PrintObject(cmd, topics, func(t lenses.Topic) bool {
-			// 	return !t.IsControlTopic
-			// })
+			return bite.PrintObject(cmd, topics, func(t lenses.Topic) bool {
+				return !t.IsControlTopic
+			})
 		},
 	}
 
@@ -149,8 +150,8 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 				}
 			}
 
-			return printJSON(cmd, viewMeta)
-			// return bite.PrintObject(cmd, viewMeta)
+			// return printJSON(cmd, viewMeta)
+			return bite.PrintObject(cmd, viewMeta)
 		},
 	}
 
