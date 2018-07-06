@@ -13,6 +13,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +39,7 @@ func readAndQuoteQueries(args []string) ([]string, error) {
 	}
 
 	// read from input pipe, no argument given.
-	has, b, err := readInPipe()
+	has, b, err := bite.ReadInPipe()
 	if err != nil {
 		return nil, fmt.Errorf("io pipe: %v", err)
 	}

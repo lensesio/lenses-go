@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -11,59 +9,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
-
-/*
-	Below we have two identical functions, keep them separate there are limits on the final output otherwise.
-*/
-
-// outlineStrings will accept a key, i.e "name" and entries i.e ["schema1", "schema2", "schema3"]
-// and will convert it to a slice of [{"name":"schema1"},"name":"schema2", "name":"schema3"}] to be able to be printed via `printJSON`.
-func outlineStringResults(key string, entries []string) (items []interface{}) { // why not? (items []map[string]string) because jmespath can't work with it, only with []interface.
-	// key = strings.Title(key)
-	for _, entry := range entries {
-		items = append(items, map[string]string{key: entry})
-	}
-
-	return
-}
-
-// outlineStrings will accept a key, i.e "version" and entries i.e [1, 2, 3]
-// and will convert it to a slice of [{"version":3},"version":1, "version":2}] to be able to be printed via `printJSON`.
-func outlineIntResults(key string, entries []int) (items []interface{}) {
-	// key = strings.Title(key)
-	for _, entry := range entries {
-		items = append(items, map[string]int{key: entry})
-	}
-
-	return
-}
-
-// readInPipe used at sql commands (simple and --validate)
-// to read from the input pipe, but in the future may be used elsewhere.
-//
-// First argument returns true if in pipe has any data to read from,
-// if false then the caller can continue by requiring a flag.
-// Second argument returns the data of the io pipe,
-// and third one is the error cames from .Stat() or from the ReadAll() of the in pipe.
-func readInPipe() (bool, []byte, error) {
-	// check if has data, otherwise it stucks.
-	in := os.Stdin
-	f, err := in.Stat()
-	if err != nil {
-		return false, nil, err
-	}
-
-	// check if has data is required, otherwise it stucks.
-	if !(f.Mode()&os.ModeNamedPipe == 0) {
-		b, err := ioutil.ReadAll(in)
-		if err != nil {
-			return true, nil, err
-		}
-		return true, b, nil
-	}
-
-	return false, nil, nil
-}
 
 type flags map[string]interface{}
 

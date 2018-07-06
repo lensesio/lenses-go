@@ -8,6 +8,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +18,7 @@ func init() {
 }
 
 func newSchemasGroupCommand() *cobra.Command {
-	var noJSON bool
+	var unwrap bool
 
 	root := &cobra.Command{
 		Use:           "schemas",
@@ -30,20 +31,21 @@ func newSchemasGroupCommand() *cobra.Command {
 				return err
 			}
 
-			if noJSON {
+			if unwrap {
 				for _, name := range subjects {
 					fmt.Fprintln(cmd.OutOrStdout(), name)
 				}
 				return nil
 			}
 
-			return printJSON(cmd, outlineStringResults("name", subjects))
+			// return printJSON(cmd, outlineStringResults("name", subjects))
+			return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", subjects))
 		},
 	}
 
 	canPrintJSON(root)
 
-	root.Flags().BoolVar(&noJSON, "no-json", false, "disable json printing, prints only the names as a list of strings")
+	root.Flags().BoolVar(&unwrap, "unwrap", false, "prints only the names as a list of strings")
 	root.AddCommand(newGlobalCompatibilityLevelGroupCommand())
 
 	return root
@@ -268,7 +270,8 @@ func newGetSchemaVersionsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, outlineIntResults("version", versions))
+			// return printJSON(cmd, outlineIntResults("version", versions))
+			return bite.PrintObject(cmd, bite.OutlineIntResults(cmd, "version", versions))
 		},
 	}
 
@@ -299,7 +302,8 @@ func newDeleteSchemaCommand() *cobra.Command {
 			}
 
 			if !silent {
-				return printJSON(cmd, outlineIntResults("version", deletedVersions))
+				// return printJSON(cmd, outlineIntResults("version", deletedVersions))
+				return bite.PrintObject(cmd, bite.OutlineIntResults(cmd, "version", deletedVersions))
 			}
 
 			return nil

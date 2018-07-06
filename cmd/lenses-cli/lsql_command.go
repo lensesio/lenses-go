@@ -9,6 +9,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +49,7 @@ func newLSQLCommand() *cobra.Command {
 				}
 			} else if n == 0 {
 				// read from input pipe, no argument given.
-				has, b, err := readInPipe()
+				has, b, err := bite.ReadInPipe()
 				if err != nil {
 					return fmt.Errorf("io pipe: %v", err)
 				}

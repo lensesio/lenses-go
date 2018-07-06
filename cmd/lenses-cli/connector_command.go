@@ -7,6 +7,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +21,7 @@ func newConnectorsCommand() *cobra.Command {
 		clusterName string
 
 		namesOnly bool // if true then print only the connector names and not the details as json.
-		noJSON    bool // if true nad namesOnly is true then print just the connectors names as a list of strings.
+		unwrap    bool // if true and namesOnly is true then print just the connectors names as a list of strings.
 	)
 
 	root := &cobra.Command{
@@ -66,14 +67,15 @@ func newConnectorsCommand() *cobra.Command {
 
 				sort.Strings(names)
 
-				if noJSON {
+				if unwrap {
 					for _, name := range names {
 						fmt.Fprintln(cmd.OutOrStdout(), name)
 					}
 					return nil
 				}
 
-				return printJSON(cmd, outlineStringResults("name", names))
+				// return printJSON(cmd, outlineStringResults("name", names))
+				return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", names))
 			}
 
 			connectors := make(map[string][]lenses.Connector, len(connectorNames))
@@ -97,7 +99,7 @@ func newConnectorsCommand() *cobra.Command {
 
 	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
 	root.Flags().BoolVar(&namesOnly, "names", false, `--names`)
-	root.Flags().BoolVar(&noJSON, "no-json", false, "--no-json")
+	root.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap")
 
 	canPrintJSON(root)
 

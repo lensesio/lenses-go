@@ -39,8 +39,8 @@ func newTopicsGroupCommand() *cobra.Command {
 					return nil
 				}
 
-				return printJSON(cmd, outlineStringResults("name", topicNames))
-				// return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", topicNames))
+				// return printJSON(cmd, outlineStringResults("name", topicNames))
+				return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", topicNames))
 			}
 
 			topics, err := client.GetTopics()
