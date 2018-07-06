@@ -357,7 +357,7 @@ func (c *Client) Logout() error {
 
 // LicenseInfo describes the data received from the `GetLicenseInfo`.
 type LicenseInfo struct {
-	ClientID    string `json:"clientId" header:"ID"`
+	ClientID    string `json:"clientId" header:"ID,text"`
 	IsRespected bool   `json:"isRespected" header:"Respected"`
 	MaxBrokers  int    `json:"maxBrokers" header:"Max Brokers"`
 	MaxMessages int    `json:"maxMessages,omitempty" header:"/ Messages"`
@@ -875,10 +875,10 @@ const queriesPath = "api/sql/queries"
 
 // LSQLRunningQuery is the form of the data that the `GetRunningQueries` returns.
 type LSQLRunningQuery struct {
-	ID        int64  `json:"id" header:"ID"`
-	SQL       string `json:"sql" header:"SQL"`
-	User      string `json:"user" header:"User"`
-	Timestamp int64  `json:"ts" header:"Timestamp"`
+	ID        int64  `json:"id" header:"ID" header:"ID,text"`
+	SQL       string `json:"sql" header:"SQL" header:"SQL"`
+	User      string `json:"user" header:"User" header:"User"`
+	Timestamp int64  `json:"ts" header:"Timestamp" header:"Timestamp"`
 }
 
 // GetRunningQueries returns a list of the current sql running queries.
@@ -1365,7 +1365,7 @@ type (
 	// ProcessorStream describes the processor stream,
 	// see `ProcessorResult`.
 	ProcessorStream struct {
-		ID          string `json:"id" header:"ID"`
+		ID          string `json:"id" header:"ID,text"`
 		Name        string `json:"name" header:"Name"`
 		ClusterName string `json:"clusterName" header:"Cluster"`
 		User        string `json:"user" header:"User"`
@@ -1811,7 +1811,7 @@ type (
 	// ConnectorStatusTask describes a connector task's status,
 	// see `ConnectorStatus`.
 	ConnectorStatusTask struct {
-		ID       int    `json:"id" header:"ID"`                       // i.e 1
+		ID       int    `json:"id" header:"ID,text"`                  // i.e 1
 		State    string `json:"state" header:"State"`                 // i.e FAILED
 		WorkerID string `json:"worker_id" header:"Worker"`            // i.e fakehost:8083
 		Trace    string `json:"trace,omitempty" header:"Trace,empty"` // i.e org.apache.kafka.common.errors.RecordTooLargeException\n
@@ -2976,7 +2976,7 @@ func (c *Client) DeleteQuotaForClient(clientID string, propertiesToRemove ...str
 type (
 	// AlertSetting describes the type of list entry of the `GetAlertSetting` and `CreateOrUpdateAlertSettingCondition`.
 	AlertSetting struct {
-		ID                int               `json:"id" header:"ID"`
+		ID                int               `json:"id" header:"ID,text"`
 		Description       string            `json:"description" header:"Desc"`
 		Category          string            `json:"category" header:"Cat"`
 		Enabled           bool              `json:"enabled" header:"Enabled"`
