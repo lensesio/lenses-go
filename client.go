@@ -2693,19 +2693,21 @@ type (
 		// Child is optional and only present for entityType `QuotaEntityUserClient` and is the client id.
 		Child string `json:"child,omitempty" yaml:"Child" header:"Child"`
 		// Properties  is a map of the quota constraints, the `QuotaConfig`.
-		Properties QuotaConfig `json:"properties" yaml:"Properties"`
+		Properties QuotaConfig `json:"properties" yaml:"Properties" header:"inline"`
 		// URL is the url from this quota in Lenses.
-		URL string `json:"url" yaml:"URL" header:"URL"`
+		URL string `json:"url" yaml:"URL"`
 
-		IsAuthorized bool `json:"isAuthorized" yaml:"IsAuthorized" header:"Authorized"`
+		IsAuthorized bool `json:"isAuthorized" yaml:"IsAuthorized"`
 	}
 
 	// QuotaConfig is a typed struct which defines the
 	// map of the quota constraints, producer_byte_rate, consumer_byte_rate and request_percentage.
 	QuotaConfig struct {
-		ProducerByteRate  string `json:"producer_byte_rate" yaml:"ProducerByteRate"`
-		ConsumerByteRate  string `json:"consumer_byte_rate" yaml:"ConsumerByteRate"`
-		RequestPercentage string `json:"request_percentage" yaml:"RequestPercentage"`
+		// header note:
+		// if "number" and no default value, then it will add "0", we use the empty space between commas to tell that the default value is space.
+		ProducerByteRate  string `json:"producer_byte_rate" yaml:"ProducerByteRate" header:"Produce/sec, ,number"`
+		ConsumerByteRate  string `json:"consumer_byte_rate" yaml:"ConsumerByteRate" header:"Consume/sec, ,number"`
+		RequestPercentage string `json:"request_percentage" yaml:"RequestPercentage" header:"Request Percentage"`
 	}
 )
 
