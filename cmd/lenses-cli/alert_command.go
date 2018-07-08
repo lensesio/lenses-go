@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/landoop/lenses-go"
@@ -11,8 +10,8 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(newGetAlertsCommand())
-	rootCmd.AddCommand(newAlertGroupCommand())
+	app.AddCommand(newGetAlertsCommand())
+	app.AddCommand(newAlertGroupCommand())
 }
 
 func newGetAlertsCommand() *cobra.Command {
@@ -21,7 +20,7 @@ func newGetAlertsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "alerts",
 		Short:            "Print the registered alerts",
-		Example:          exampleString("alerts"),
+		Example:          "alerts",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -54,7 +53,7 @@ func newAlertGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "alert",
 		Short:            "Work with alerts",
-		Example:          exampleString("alert"),
+		Example:          "alert",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 	}
@@ -74,7 +73,7 @@ func newRegisterAlertCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "register",
 		Short:            "Register an alert",
-		Example:          exampleString(`alert register ./alert.yml or alert register --alert=1000 --startsAt="2018-03-27T21:23:23.634+02:00" --endsAt=... --source="" --summary="Broker on 1 is down" --docs="" --category="Infrastructure" --severity="HIGH" --instance="instance101" --generator="http://lenses"`),
+		Example:          `alert register ./alert.yml or alert register --alert=1000 --startsAt="2018-03-27T21:23:23.634+02:00" --endsAt=... --source="" --summary="Broker on 1 is down" --docs="" --category="Infrastructure" --severity="HIGH" --instance="instance101" --generator="http://lenses"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -82,7 +81,7 @@ func newRegisterAlertCommand() *cobra.Command {
 				alert.StartsAt = time.Now().Format(time.RFC3339)
 			}
 
-			if err := checkRequiredFlags(cmd, flags{"alert": alert.AlertID, "severity": alert.Labels.Severity, "summary": alert.Annotations.Summary, "generatorURL": alert.GeneratorURL}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": alert.AlertID, "severity": alert.Labels.Severity, "summary": alert.Annotations.Summary, "generatorURL": alert.GeneratorURL}); err != nil {
 				return err
 			}
 
@@ -91,7 +90,7 @@ func newRegisterAlertCommand() *cobra.Command {
 				return err
 			}
 
-			return echo(cmd, "Alert with ID %d registered", alert.AlertID)
+			return bite.PrintInfo(cmd, "Alert with ID %d registered", alert.AlertID)
 		},
 	}
 
@@ -106,8 +105,7 @@ func newRegisterAlertCommand() *cobra.Command {
 	cmd.Flags().StringVar(&alert.Annotations.Summary, "summary", "", `--summary="Broken on 1 is down"`)
 	cmd.Flags().StringVar(&alert.GeneratorURL, "generator", "", `--generator="http://lenses" is a unique URL identifying the creator of this alert. It matches AlertManager requirements for providing this field`)
 
-	shouldTryLoadFile(cmd, &alert)
-	canBeSilent(cmd)
+	bite.Prepend(cmd, bite.FileBind(&alert))
 
 	return cmd
 }
@@ -116,7 +114,7 @@ func newGetAlertSettingsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "settings",
 		Short:            "Print all alert settings",
-		Example:          exampleString("alert settings"),
+		Example:          "alert settings",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -144,18 +142,18 @@ func newAlertSettingGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "setting",
 		Short:            "Print or enable a specific alert setting based on ID",
-		Example:          exampleString("alert setting --id=1001 [--enable]"),
+		Example:          "alert setting --id=1001 [--enable]",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			errResourceNotFoundMessage = fmt.Sprintf("alert setting with id %d does not exist", id)
+			bite.FriendlyError(cmd, errResourceNotFoundMessage, "alert setting with id %d does not exist", id)
 
 			if mustEnable {
 				if err := client.EnableAlertSetting(id); err != nil {
 					return err
 				}
 
-				return echo(cmd, "Alert setting %d enabled", id)
+				return bite.PrintInfo(cmd, "Alert setting %d enabled", id)
 			}
 
 			settings, err := client.GetAlertSetting(id)
@@ -173,7 +171,6 @@ func newAlertSettingGroupCommand() *cobra.Command {
 
 	root.Flags().BoolVar(&mustEnable, "enable", false, "--enable")
 
-	canBeSilent(root)
 	bite.CanPrintJSON(root)
 
 	root.AddCommand(newGetAlertSettingConditionsCommand())
@@ -188,13 +185,13 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "conditions",
 		Short:            "Print alert setting's conditions",
-		Example:          exampleString("alert setting conditions --alert=1001"),
+		Example:          "alert setting conditions --alert=1001",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conds, err := client.GetAlertSettingConditions(alertID)
 			if err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve conditions, alert setting with id %d does not exist", alertID)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve conditions, alert setting with id %d does not exist", alertID)
 				return err
 			}
 
@@ -206,7 +203,7 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 	cmd.Flags().IntVar(&alertID, "alert", 0, "--alert=1001")
 	cmd.MarkFlagRequired("alert")
 
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
 
 	return cmd
@@ -216,7 +213,7 @@ func newAlertSettingConditionGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "condition",
 		Short:            "Work with an alert setting's condition",
-		Example:          exampleString(`alert setting condition delete --alert=1001 --condition="28bbad2b-69bb-4c01-8e37-28e2e7083aa9"`),
+		Example:          `alert setting condition delete --alert=1001 --condition="28bbad2b-69bb-4c01-8e37-28e2e7083aa9"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 	}
@@ -239,11 +236,11 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
 		Short:            "Create or Update an alert setting's condition",
-		Example:          exampleString(`alert setting condition set --alert=1001 --condition="lag >= 100000 on group group and topic topicA" or alert setting condition set ./alert_cond.yml`),
+		Example:          `alert setting condition set --alert=1001 --condition="lag >= 100000 on group group and topic topicA" or alert setting condition set ./alert_cond.yml`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
 				return err
 			}
 
@@ -252,15 +249,14 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 				return err
 			}
 
-			return echo(cmd, "Condition for alert setting %d updated", cond.AlertID)
+			return bite.PrintInfo(cmd, "Condition for alert setting %d updated", cond.AlertID)
 		},
 	}
 
 	cmd.Flags().IntVar(&cond.AlertID, "alert", 0, "--alert=1001")
 	cmd.Flags().StringVar(&cond.Condition, "condition", "", `--condition="lag >= 100000 on group group and topic topicA"`)
 
-	canBeSilent(cmd)
-	shouldTryLoadFile(cmd, &cond)
+	bite.Prepend(cmd, bite.FileBind(&cond))
 
 	return cmd
 }
@@ -274,17 +270,17 @@ func newDeleteAlertSettingConditionCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete an alert setting's condition",
-		Example:          exampleString(`alert setting condition delete --alert=1001 --condition="28bbad2b-69bb-4c01-8e37-28e2e7083aa9"`),
+		Example:          `alert setting condition delete --alert=1001 --condition="28bbad2b-69bb-4c01-8e37-28e2e7083aa9"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := client.DeleteAlertSettingCondition(alertID, conditionUUID)
 			if err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to delete condition, alert setting with id %d or condition with UUID '%s' does not exist", alertID, conditionUUID)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete condition, alert setting with id %d or condition with UUID '%s' does not exist", alertID, conditionUUID)
 				return err
 			}
 
-			return echo(cmd, "Condition '%s' for alert setting %d deleted", conditionUUID, alertID)
+			return bite.PrintInfo(cmd, "Condition '%s' for alert setting %d deleted", conditionUUID, alertID)
 		},
 	}
 
@@ -292,8 +288,7 @@ func newDeleteAlertSettingConditionCommand() *cobra.Command {
 	cmd.MarkFlagRequired("alert")
 	cmd.Flags().StringVar(&conditionUUID, "condition", "", `--condition="28bbad2b-69bb-4c01-8e37-28e2e7083aa9"`)
 	cmd.MarkFlagRequired("condition")
-
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }

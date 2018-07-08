@@ -18,15 +18,14 @@ import (
 )
 
 func init() {
-	// TODO: start by adding this.
-	rootCmd.AddCommand(newLiveLSQLCommand())
+	app.AddCommand(newLiveLSQLCommand())
 }
 
 func readAndQuoteQueries(args []string) ([]string, error) {
 	if n := len(args); n > 0 {
 		queries := make([]string, n, n)
 		for i, arg := range args {
-			query, err := tryReadFileContents(arg)
+			query, err := bite.TryReadFileContents(arg)
 			if err != nil {
 				return nil, err
 			}
@@ -57,7 +56,7 @@ func newLiveLSQLCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "live sql [query]",
 		Short:            "Live sql provides \"real-time\" sql queries with your lenses box",
-		Example:          exampleString(`live sql "SELECT * FROM cc_payments WHERE _vtype='AVRO' AND _ktype='STRING' AND _sample=2 AND _sampleWindow=200" "query2" "query3"`),
+		Example:          `live sql "SELECT * FROM cc_payments WHERE _vtype='AVRO' AND _ktype='STRING' AND _sample=2 AND _sampleWindow=200" "query2" "query3"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

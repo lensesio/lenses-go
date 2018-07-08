@@ -1,29 +1,32 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	rootCmd.AddCommand(newGetQuotasCommand())
-	rootCmd.AddCommand(newQuotaGroupCommand())
+	app.AddCommand(newGetQuotasCommand())
+	app.AddCommand(newQuotaGroupCommand())
 }
 
 func newGetQuotasCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "quotas",
 		Short:            "List of all available quotas",
-		Example:          exampleString("quotas"),
+		Example:          "quotas",
 		TraverseChildren: true,
-	}
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			quotas, err := client.GetQuotas()
+			if err != nil {
+				return err
+			}
 
-	shouldPrintJSON(cmd, func() (interface{}, error) {
-		return client.GetQuotas()
-	})
+			return bite.PrintObject(cmd, quotas)
+		},
+	}
 
 	return cmd
 }
@@ -32,7 +35,7 @@ func newQuotaGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "quota",
 		Short:            "Work with particular a quota, create a new quota or update and delete an existing one",
-		Example:          exampleString(`quota users set [--quota-user=""] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`),
+		Example:          `quota users set [--quota-user=""] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 	}
@@ -61,7 +64,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "users",
 		Short:            "Work with users quotas",
-		Example:          exampleString("users"),
+		Example:          "quota users",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 	}
@@ -70,15 +73,15 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
 		Short:            "Create or update the default user quota or a specific user quota (and/or client(s))",
-		Example:          exampleString(`quota users set [--quota-user="user"] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`),
+		Example:          `quota users set [--quota-user="user"] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"quota-config": configRaw}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"quota-config": configRaw}); err != nil {
 				return err
 			}
 
-			errResourceNotAccessibleMessage = "unable to access quota, user has no rights for this action"
+			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to access quota, user has no rights for this action")
 
 			if quota.User != "" {
 				if clientID := quota.ClientID; clientID != "" {
@@ -87,7 +90,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 							return err
 						}
 
-						return echo(cmd, "Quota for user %s and all clients set", quota.User)
+						return bite.PrintInfo(cmd, "Quota for user %s and all clients set", quota.User)
 
 					}
 
@@ -95,21 +98,21 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 						return err
 					}
 
-					return echo(cmd, "Quota for user %s and client %s set", quota.User, clientID)
+					return bite.PrintInfo(cmd, "Quota for user %s and client %s set", quota.User, clientID)
 				}
 
 				if err := client.CreateOrUpdateQuotaForUser(quota.User, quota.Config); err != nil {
 					return err
 				}
 
-				return echo(cmd, "Quota for user %s created/updated", quota.User)
+				return bite.PrintInfo(cmd, "Quota for user %s created/updated", quota.User)
 			}
 
 			if err := client.CreateOrUpdateQuotaForAllUsers(quota.Config); err != nil {
 				return err
 			}
 
-			return echo(cmd, "Default user quota created/updated")
+			return bite.PrintInfo(cmd, "Default user quota created/updated")
 		},
 	}
 
@@ -117,14 +120,15 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 	setCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
 	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
 
-	shouldTryLoadFile(setCommand, &quota).Else(func() error { return tryReadFile(configRaw, &quota.Config) })
+	bite.CanBeSilent(setCommand)
+	bite.Prepend(setCommand, bite.FileBind(&quota, bite.ElseBind(func() error { return bite.TryReadFile(configRaw, &quota.Config) })))
 
 	rootSub.AddCommand(setCommand)
 
 	deleteCommand := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete the default user quota or a specific quota for a user (and client)",
-		Example:          exampleString(`quota users delete [to delete for all users] or --quota-client=* [for all clients or to a specific one] or --quota-user="user" producer_byte_rate or/and consumer_byte_rate or/and request_percentage to remove quota's config properties, if arguments empty then all keys will be passed on`),
+		Example:          `quota users delete [to delete for all users] or --quota-client=* [for all clients or to a specific one] or --quota-user="user" producer_byte_rate or/and consumer_byte_rate or/and request_percentage to remove quota's config properties, if arguments empty then all keys will be passed on`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -135,7 +139,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				actionMsg = "update"
 			}
 
-			errResourceNotAccessibleMessage = "unable to " + actionMsg + " quota, user has no rights for this action"
+			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to %s quota, user has no rights for this action", actionMsg)
 
 			var user, clientID = quota.User, quota.ClientID
 
@@ -143,39 +147,40 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				if clientID != "" {
 					if clientID == "all" || clientID == "*" {
 						if err := client.DeleteQuotaForUserAllClients(user, args...); err != nil {
-							errResourceNotFoundMessage = fmt.Sprintf("unable to %s, quota for user: '%s' does not exist", actionMsg, user)
+							bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to %s, quota for user: '%s' does not exist", actionMsg, user)
 							return err
 						}
 
-						return echo(cmd, "Quota for user %s deleted for all clients", user)
+						return bite.PrintInfo(cmd, "Quota for user %s deleted for all clients", user)
 					}
 
 					if err := client.DeleteQuotaForUserClient(user, clientID, args...); err != nil {
-						errResourceNotFoundMessage = fmt.Sprintf("unable to %s, quota for user: '%s' and client: '%s' does not exist", actionMsg, user, clientID)
+						bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to %s, quota for user: '%s' and client: '%s' does not exist", actionMsg, user, clientID)
 						return err
 					}
 
-					return echo(cmd, "Quota for user %s deleted for client %s", user, clientID)
+					return bite.PrintInfo(cmd, "Quota for user %s deleted for client %s", user, clientID)
 				}
 
 				if err := client.DeleteQuotaForUser(user, args...); err != nil {
-					errResourceNotFoundMessage = fmt.Sprintf("unable to %s, quota for user: '%s' does not exist", actionMsg, user)
+					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to %s, quota for user: '%s' does not exist", actionMsg, user)
 					return err
 				}
 
-				return echo(cmd, "Quota for user %s %sd", user, actionMsg)
+				return bite.PrintInfo(cmd, "Quota for user %s %sd", user, actionMsg)
 			}
 
 			if err := client.DeleteQuotaForAllUsers(args...); err != nil {
 				return err
 			}
 
-			return echo(cmd, "Default user quota %sd", actionMsg)
+			return bite.PrintInfo(cmd, "Default user quota %sd", actionMsg)
 		},
 	}
 
 	deleteCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
 	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	bite.CanBeSilent(deleteCommand)
 
 	rootSub.AddCommand(deleteCommand)
 
@@ -191,7 +196,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "clients",
 		Short:            "Work with clients quotas",
-		Example:          exampleString("clients"),
+		Example:          "quota clients",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 	}
@@ -200,43 +205,43 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
 		Short:            "Create or update the default client quota or for a specific client",
-		Example:          exampleString(`quota clients set [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`),
+		Example:          `quota clients set [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"quota-config": configRaw}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"quota-config": configRaw}); err != nil {
 				return err
 			}
 
-			errResourceNotAccessibleMessage = "unable to access quota, user has no rights for this action"
+			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to access quota, user has no rights for this action")
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.CreateOrUpdateQuotaForClient(quota.ClientID, quota.Config); err != nil {
 					return err
 				}
 
-				return echo(cmd, "Quota for client %s created/updated", quota.ClientID)
+				return bite.PrintInfo(cmd, "Quota for client %s created/updated", quota.ClientID)
 			}
 
 			if err := client.CreateOrUpdateQuotaForAllClients(quota.Config); err != nil {
 				return err
 			}
 
-			return echo(cmd, "Default client quota created/updated")
+			return bite.PrintInfo(cmd, "Default client quota created/updated")
 		},
 	}
 
 	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
 	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
-
-	shouldTryLoadFile(setCommand, &quota).Else(func() error { return tryReadFile(configRaw, &quota.Config) })
+	bite.CanBeSilent(setCommand)
+	bite.Prepend(setCommand, bite.FileBind(&quota, bite.ElseBind(func() error { return bite.TryReadFile(configRaw, &quota.Config) })))
 
 	rootSub.AddCommand(setCommand)
 
 	deleteCommand := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete the default client quota or a specific one",
-		Example:          exampleString(`quota clients delete [--quota-client=""] producer_byte_rate or/and consumer_byte_rate or/and request_percentage to remove quota's config properties, if arguments empty then all keys will be passed on`),
+		Example:          `quota clients delete [--quota-client=""] producer_byte_rate or/and consumer_byte_rate or/and request_percentage to remove quota's config properties, if arguments empty then all keys will be passed on`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -247,26 +252,27 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 				actionMsg = "update"
 			}
 
-			errResourceNotAccessibleMessage = "unable to " + actionMsg + " quota, user has no rights for this action"
+			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to %s quota, user has no rights for this action", actionMsg)
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.DeleteQuotaForClient(id, args...); err != nil {
-					errResourceNotFoundMessage = fmt.Sprintf("unable to %s, quota for client: '%s' does not exist", actionMsg, id)
+					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to %s, quota for client: '%s' does not exist", actionMsg, id)
 					return err
 				}
 
-				return echo(cmd, "Quota for client %s %sd", id, actionMsg)
+				return bite.PrintInfo(cmd, "Quota for client %s %sd", id, actionMsg)
 			}
 
 			if err := client.DeleteQuotaForAllClients(args...); err != nil {
 				return err
 			}
 
-			return echo(cmd, "Default client quota %sd", actionMsg)
+			return bite.PrintInfo(cmd, "Default client quota %sd", actionMsg)
 		},
 	}
 
 	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	bite.CanBeSilent(deleteCommand)
 
 	rootSub.AddCommand(deleteCommand)
 

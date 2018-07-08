@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(newLSQLCommand())
+	app.AddCommand(newLSQLCommand())
 }
 
 func newLSQLCommand() *cobra.Command {
@@ -36,14 +36,14 @@ func newLSQLCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:           "sql [--validate?] [query]",
 		Short:         "Execute or Validate Only Lenses query (LSQL) on the fly",
-		Example:       exampleString(`sql --offsets --stats=2s "SELECT * FROM reddit_posts LIMIT 50"`),
+		Example:       `sql --offsets --stats=2s "SELECT * FROM reddit_posts LIMIT 50"`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var query []byte
 
 			// argument has a priority.
 			if n := len(args); n == 1 {
-				query, err = tryReadFileContents(args[0])
+				query, err = bite.TryReadFileContents(args[0])
 				if err != nil {
 					return err
 				}
@@ -192,7 +192,7 @@ func newGetRunningQueriesCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "running",
 		Short:         "Print the current running queries, if any",
-		Example:       exampleString("sql running"),
+		Example:       "sql running",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			queries, err := client.GetRunningQueries()
@@ -215,7 +215,7 @@ func newCancelQueryCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "cancel",
 		Short:         "Cancels a running query by its ID. It returns true whether it was cancelled otherwise false or error",
-		Example:       exampleString("sql cancel 42 or sql cancel --id=42"),
+		Example:       "sql cancel 42 or sql cancel --id=42",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if id == 0 {

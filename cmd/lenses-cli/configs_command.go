@@ -8,15 +8,15 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(newGetConfigsCommand())
-	rootCmd.AddCommand(newGetModeCommand())
+	app.AddCommand(newGetConfigsCommand())
+	app.AddCommand(newGetModeCommand())
 }
 
 func newGetConfigsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "configs",
 		Short:            "Print the whole lenses box configs",
-		Example:          exampleString("config"),
+		Example:          "configs",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
@@ -57,7 +57,7 @@ func newGetModeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:                   commandModeName,
 		Short:                 "Print the configuration's execution mode",
-		Example:               exampleString(commandModeName),
+		Example:               commandModeName,
 		DisableFlagParsing:    true,
 		DisableFlagsInUseLine: true,
 		DisableSuggestions:    true,

@@ -10,7 +10,7 @@ import (
 	"github.com/landoop/lenses-go"
 
 	"github.com/joho/godotenv"
-	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type configurationManager struct {
@@ -66,14 +66,12 @@ func makeAuthFromFlags(user, pass, kerberosConf, kerberosRealm, kerberosKeytab, 
   7.1 f "configure" command thne must show the create configuration survey. (PASS)
 */
 
-func newConfigurationManager(cmd *cobra.Command) *configurationManager {
+func newConfigurationManager(set *pflag.FlagSet) *configurationManager {
 	m := &configurationManager{
 		config: &lenses.Config{
 			Contexts: make(map[string]*lenses.ClientConfig),
 		},
 	}
-
-	set := cmd.PersistentFlags()
 
 	set.StringVar(&m.currentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
 

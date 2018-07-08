@@ -12,8 +12,8 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(newTopicsGroupCommand())
-	rootCmd.AddCommand(newTopicGroupCommand())
+	app.AddCommand(newTopicsGroupCommand())
+	app.AddCommand(newTopicGroupCommand())
 }
 
 func newTopicsGroupCommand() *cobra.Command {
@@ -22,7 +22,7 @@ func newTopicsGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "topics",
 		Short:         "List all available topics",
-		Example:       exampleString("topics"),
+		Example:       "topics",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if namesOnly {
@@ -116,13 +116,13 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:           "metadata",
 		Short:         "List all available topics metadata",
-		Example:       exampleString("topics metadata"),
+		Example:       "topics metadata",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if topicName != "" {
 				// view single.
 
-				errResourceNotFoundMessage = fmt.Sprintf("unable to retrieve topic's metadata for '%s', it does not exist", topicName)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve topic's metadata for '%s', it does not exist", topicName)
 				meta, err := client.GetTopicMetadata(topicName)
 				if err != nil {
 					return err
@@ -158,7 +158,6 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 
 	rootSub.Flags().StringVar(&topicName, "name", "", "--name=topicName if filled then it returns a single topic metadata for that specific topic")
 
-	canBeSilent(rootSub)
 	bite.CanPrintJSON(rootSub)
 
 	rootSub.AddCommand(newTopicMetadataDeleteCommand())
@@ -173,26 +172,26 @@ func newTopicMetadataDeleteCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete a topic's metadata",
-		Example:          exampleString(`topics metadata delete --name="topicName"`),
+		Example:          `topics metadata delete --name="topicName"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"name": topicName}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": topicName}); err != nil {
 				return err
 			}
 
 			if err := client.DeleteTopicMetadata(topicName); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, metadata for topic '%s' does not exist", topicName)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, metadata for topic '%s' does not exist", topicName)
 				return err
 			}
 
-			return echo(cmd, "Metadata for topic '%s' deleted", topicName)
+			return bite.PrintInfo(cmd, "Metadata for topic '%s' deleted", topicName)
 		},
 	}
 
 	cmd.Flags().StringVar(&topicName, "name", "", "--name=topicName")
 
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
@@ -204,11 +203,11 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
 		Short:            "Create or update an existing topic metadata",
-		Example:          exampleString(`topics metadata set ./topic_metadata.yml`),
+		Example:          `topics metadata set ./topic_metadata.yml`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"name": meta.TopicName}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": meta.TopicName}); err != nil {
 				return err
 			}
 
@@ -216,17 +215,16 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 				return err
 			}
 
-			return echo(cmd, "Metadata for topic '%s' created", meta.TopicName)
+			return bite.PrintInfo(cmd, "Metadata for topic '%s' created", meta.TopicName)
 		},
 	}
 
 	cmd.Flags().StringVar(&meta.TopicName, "name", "", "--name=topicName")
 	cmd.Flags().StringVar(&meta.KeyType, "key-type", "", "--key-type=keyType")
 	cmd.Flags().StringVar(&meta.ValueType, "value-type", "", "--value-type=valueType")
+	bite.CanBeSilent(cmd)
 
-	canBeSilent(cmd)
-
-	shouldTryLoadFile(cmd, &meta)
+	bite.Prepend(cmd, bite.FileBind(&meta))
 
 	return cmd
 }
@@ -237,18 +235,18 @@ func newTopicGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "topic",
 		Short:            "Work with a particular topic based on the topic name, retrieve it or create a new one",
-		Example:          exampleString(`topic --name="existing_topic_name" or topic create --name="topic1" --replication=1 --partitions=1 --configs="{\"key\": \"value\"}"`),
+		Example:          `topic --name="existing_topic_name" or topic create --name="topic1" --replication=1 --partitions=1 --configs="{\"key\": \"value\"}"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"name": topicName}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": topicName}); err != nil {
 				return err
 			}
 
 			// default is the retrieval of the particular topic info.
 			topic, err := client.GetTopic(topicName)
 			if err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("topic with name: '%s' does not exist", topicName)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "topic with name: '%s' does not exist", topicName)
 				return err
 			}
 
@@ -281,31 +279,30 @@ func newTopicCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Create a new topic",
-		Example:          exampleString(`topic create --name="topic1" --replication=1 --partitions=1 --configs="{\"max.message.bytes\": \"1000010\"}"`),
+		Example:          `topic create --name="topic1" --replication=1 --partitions=1 --configs="{\"max.message.bytes\": \"1000010\"}"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"name": topic.TopicName}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": topic.TopicName}); err != nil {
 				return err
 			}
 
 			if err := client.CreateTopic(topic.TopicName, topic.Replication, topic.Partitions, topic.Configs); err != nil {
-				errResourceNotGoodMessage = fmt.Sprintf("unable to create topic with name '%s', already exists", topic.TopicName)
+				bite.FriendlyError(cmd, errResourceNotGoodMessage, "unable to create topic with name '%s', already exists", topic.TopicName)
 				return err
 			}
 
-			return echo(cmd, "Topic '%s' created", topic.TopicName)
+			return bite.PrintInfo(cmd, "Topic '%s' created", topic.TopicName)
 		},
 	}
 
 	cmd.Flags().StringVar(&topic.TopicName, "name", "", "--name=topic1")
 	cmd.Flags().IntVar(&topic.Replication, "replication", topic.Replication, "--relication=1")
 	cmd.Flags().IntVar(&topic.Partitions, "partitions", topic.Partitions, "--partitions=1")
-
 	cmd.Flags().StringVar(&configsRaw, "configs", "", `--configs="{\"max.message.bytes\": \"1000010\"}"`)
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
-	shouldTryLoadFile(cmd, &topic).Else(func() error { return allowEmptyFlag(tryReadFile(configsRaw, &topic.Configs)) })
+	bite.Prepend(cmd, bite.FileBind(&topic, bite.ElseBind(func() error { return bite.AllowEmptyFlag(bite.TryReadFile(configsRaw, &topic.Configs)) })))
 
 	return cmd
 }
@@ -321,32 +318,32 @@ func newTopicDeleteCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete a topic",
-		Example:          exampleString(`topic delete --name="topic1" [--partition=0 --offset=1260]`),
+		Example:          `topic delete --name="topic1" [--partition=0 --offset=1260]`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"name": topicName}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": topicName}); err != nil {
 				return err
 			}
 
 			if fromPartition >= 0 && toOffset >= 0 {
 				// delete records.
 				if err := client.DeleteTopicRecords(topicName, fromPartition, toOffset); err != nil {
-					errResourceNotFoundMessage = fmt.Sprintf("unable to delete records, topic '%s' does not exist", topicName)
-					errResourceNotAccessibleMessage = fmt.Sprintf("unable to delete records from topic '%s', not proper access", topicName)
-					errResourceNotGoodMessage = fmt.Sprintf("unable to delete records from topic '%s', invalid offset '%d' or partition '%d' passed", topicName, toOffset, fromPartition)
+					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete records, topic '%s' does not exist", topicName)
+					bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete records from topic '%s', not proper access", topicName)
+					bite.FriendlyError(cmd, errResourceNotGoodMessage, "unable to delete records from topic '%s', invalid offset '%d' or partition '%d' passed", topicName, toOffset, fromPartition)
 					return err
 				}
 
-				return echo(cmd, "Records from topic '%s' and partition '%d' up to offset '%d', are marked for deletion. This may take a few moments to have effect", topicName, fromPartition, toOffset)
+				return bite.PrintInfo(cmd, "Records from topic '%s' and partition '%d' up to offset '%d', are marked for deletion. This may take a few moments to have effect", topicName, fromPartition, toOffset)
 			}
 
 			if err := client.DeleteTopic(topicName); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, topic '%s' does not exist", topicName)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, topic '%s' does not exist", topicName)
 				return err
 			}
 
-			return echo(cmd, "Topic %s marked for deletion. This may take a few moments to have effect", topicName)
+			return bite.PrintInfo(cmd, "Topic %s marked for deletion. This may take a few moments to have effect", topicName)
 		},
 	}
 
@@ -355,8 +352,7 @@ func newTopicDeleteCommand() *cobra.Command {
 	// negative default values because 0 is valid value.
 	cmd.Flags().IntVar(&fromPartition, "partition", -1, "--partition=0 Deletes records from a specific partition (offset must set)")
 	cmd.Flags().Int64Var(&toOffset, "offset", -1, "--offset=1260 Deletes records from a specific offset (partition must set)")
-
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
@@ -372,28 +368,28 @@ func newTopicUpdateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "update",
 		Short:            "Update a topic's configs (as an array of config key-value map)",
-		Example:          exampleString(`topic update --name="topic1" --configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]" or topic update ./topic.yml`),
+		Example:          `topic update --name="topic1" --configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]" or topic update ./topic.yml`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"name": topic.Name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": topic.Name}); err != nil {
 				return err
 			}
 
 			if err := client.UpdateTopic(topic.Name, topic.Configs); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to update configs, topic '%s' does not exist", topic.Name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to update configs, topic '%s' does not exist", topic.Name)
 				return err
 			}
 
-			return echo(cmd, "Config updated for topic %s", topic.Name)
+			return bite.PrintInfo(cmd, "Config updated for topic %s", topic.Name)
 		},
 	}
 
 	cmd.Flags().StringVar(&topic.Name, "name", "", "--name=topic1")
 	cmd.Flags().StringVar(&configsArrayRaw, "configs", "", `--configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]"`)
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
-	shouldTryLoadFile(cmd, &topic).Else(func() error { return tryReadFile(configsArrayRaw, &topic.Configs) })
+	bite.Prepend(cmd, bite.FileBind(&topic, bite.ElseBind(func() error { return bite.TryReadFile(configsArrayRaw, &topic.Configs) })))
 
 	return cmd
 }

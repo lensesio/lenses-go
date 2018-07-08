@@ -21,13 +21,13 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(newGetConfigurationContextsCommand())
-	rootCmd.AddCommand(newConfigurationContextCommand())
-	rootCmd.AddCommand(newConfigureCommand())
-	rootCmd.AddCommand(newLoginCommand())
-	rootCmd.AddCommand(newGetUserInfoCommand())
+	app.AddCommand(newGetConfigurationContextsCommand())
+	app.AddCommand(newConfigurationContextCommand())
+	app.AddCommand(newConfigureCommand())
+	app.AddCommand(newLoginCommand())
+	app.AddCommand(newGetUserInfoCommand())
 	// remove `logout` command (at least for the moment) rootCmd.AddCommand(newLogoutCommand())
-	rootCmd.AddCommand(newGetLicenseInfoCommand())
+	app.AddCommand(newGetLicenseInfoCommand())
 }
 
 func isValidConfigurationContext(name string) bool {
@@ -120,12 +120,12 @@ func newGetConfigurationContextsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "contexts",
 		Short:         "Print and validate (through calls to the servers) all the available contexts from the configuration file",
-		Example:       exampleString(`contexts`),
+		Example:       "contexts",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			for name := range configManager.config.Contexts {
 				if !printConfigurationContext(cmd, name) {
-					if !silent {
+					if !bite.GetSilentFlag(cmd) {
 						showOptionsForConfigurationContext(cmd, name)
 					}
 				}
@@ -134,7 +134,7 @@ func newGetConfigurationContextsCommand() *cobra.Command {
 		},
 	}
 
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
@@ -143,7 +143,7 @@ func newConfigurationContextCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "context",
 		Short:         "Print the current context or modify or delete a configuration context using the update and delete subcommands",
-		Example:       exampleString(`context`),
+		Example:       `context`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// normally the cli would throw "client: credentials missing or invalid" if the current context's configuration
@@ -153,7 +153,7 @@ func newConfigurationContextCommand() *cobra.Command {
 			}
 			name := configManager.config.CurrentContext
 			if !printConfigurationContext(cmd, name) {
-				if !silent {
+				if !bite.GetSilentFlag(cmd) {
 					showOptionsForConfigurationContext(cmd, name)
 				}
 			}
@@ -161,7 +161,7 @@ func newConfigurationContextCommand() *cobra.Command {
 		},
 	}
 
-	canBeSilent(root)
+	bite.CanBeSilent(root)
 
 	root.AddCommand(newUpdateConfigurationContextCommand())
 	root.AddCommand(newDeleteConfigurationContextCommand())
@@ -173,7 +173,7 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "delete",
 		Short:         "Delete a configuration context",
-		Example:       exampleString(`context delete context_name`),
+		Example:       `context delete context_name`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -186,11 +186,11 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 
 			if !deleted {
 				// failed when no found this context or if we can't upgrade to another one.
-				return echo(cmd, "unable to delete context '%s', at least one more valid context should be present", name)
+				return fmt.Errorf("unable to delete context '%s', at least one more valid context should be present", name)
 			}
 
 			if err := configManager.save(); err != nil {
-				return echo(cmd, "error while saving the configuration after deletion of the '%s' context: %v", name, err)
+				return fmt.Errorf("error while saving the configuration after deletion of the '%s' context: %v", name, err)
 			}
 
 			succMsg := fmt.Sprintf("'%s' context deleted", name)
@@ -200,12 +200,10 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 				succMsg = fmt.Sprintf("%s, current context set to '%s'", succMsg, newCurrentContext)
 			}
 
-			return echo(cmd, succMsg)
+			return bite.PrintInfo(cmd, succMsg)
 
 		},
 	}
-
-	canBeSilent(cmd)
 
 	return cmd
 }
@@ -215,7 +213,7 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 		Use:           "set",
 		Aliases:       []string{"edit", "update", "create", "add"},
 		Short:         "Edit an existing or add a configuration context, similar to 'configure --context=context_name --reset' but without banner and this one saves the configuration to the default location",
-		Example:       exampleString(`context edit context_name`),
+		Example:       `context edit context_name`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -225,7 +223,8 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 			name := args[0]
 
 			configureCmd := newConfigureCommand()
-			rootCmd.Flag("context").Value.Set(name)
+			// rootCmd.Flag("context").Value.Set(name)
+			configureCmd.Flag("context").Value.Set(name)
 			configureCmd.Flag("reset").Value.Set("true")
 			// these wil disable banner and location save, note that if --file is there then it will take that, otherwise the default $HOME/.lenses/lenses-cli.yml.
 			configureCmd.Flag("no-banner").Value.Set("true")
@@ -235,7 +234,7 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 			}
 
 			if isValidConfigurationContext(name) {
-				return echo(cmd, "%s was successfully validated and saved, it is the current context now", name)
+				return bite.PrintInfo(cmd, "%s was successfully validated and saved, it is the current context now", name)
 			}
 
 			retry := true
@@ -256,8 +255,6 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 		},
 	}
 
-	canBeSilent(cmd)
-
 	return cmd
 }
 
@@ -273,7 +270,7 @@ func newConfigureCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "configure",
 		Short:         "Setup your environment for extensive CLI use. Create and save the required CLI configuration and client credentials",
-		Example:       exampleString(`configure`),
+		Example:       `configure`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !configManager.config.IsValid() || reset {
@@ -681,7 +678,7 @@ func newLoginCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "login",
 		Short:            "Login, generate the access token using the generated configuration via the 'configure' command. ",
-		Example:          exampleString(`login`),
+		Example:          `login`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		Hidden:           true,
@@ -725,9 +722,10 @@ func newLoginCommand() *cobra.Command {
 				*/
 
 				// parse the line (as slice of strings) in order to take the command and the flags from it.
-				cP, flags, err := rootCmd.Find(cms)
-				if err != nil {
-					fmt.Fprintln(out, err)
+
+				cP, flags := app.FindCommand(cms)
+				if cP == nil {
+					fmt.Fprintln(out, fmt.Sprintf("command form of '%s' not found", line))
 					continue
 				}
 
@@ -793,7 +791,7 @@ func newGetUserInfoCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "user",
 		Short:            "Print some information about the authenticated logged user such as the given roles given by the lenses administrator",
-		Example:          exampleString("user"),
+		Example:          "user",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if user := client.User; user.Name != "" {
@@ -817,7 +815,7 @@ const logoutCmdName = "logout"
 // 	cmd := &cobra.Command{
 // 		Use:              logoutCmdName,
 // 		Short:            "Revoke the access token",
-// 		Example:          exampleString(logoutCmdName),
+// 		Example:          logoutCmdName,
 // 		TraverseChildren: true,
 // 		RunE: func(cmd *cobra.Command, args []string) error {
 // 			if err := client.Logout(); err != nil {
@@ -837,7 +835,7 @@ func newGetLicenseInfoCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "license",
 		Short:            "Print the license information for the connected lenses box",
-		Example:          exampleString("license"),
+		Example:          "license",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			lc, err := client.GetLicenseInfo()
