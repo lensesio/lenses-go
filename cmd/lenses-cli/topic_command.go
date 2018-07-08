@@ -16,6 +16,46 @@ func init() {
 	app.AddCommand(newTopicGroupCommand())
 }
 
+type topicView struct {
+	lenses.Topic `yaml:",inline" header:"inline"`
+	// for machine view-only.
+	ValueSchema json.RawMessage `json:"valueSchema" yaml:"-"`
+	KeySchema   json.RawMessage `json:"keySchema" yaml:"-"`
+}
+
+func newTopicView(cmd *cobra.Command, topic lenses.Topic) (t topicView) {
+	t.Topic = topic
+
+	// don't spend time here if we are not in the machine-friendly mode, table mode does not show so much details and couldn't be, schemas are big.
+	if !bite.GetMachineFriendlyFlag(cmd) {
+		return
+	}
+
+	if topic.KeySchema != "" {
+		rawJSON, err := lenses.JSONAvroSchema(topic.KeySchema)
+		if err != nil {
+			return
+		}
+
+		if err = json.Unmarshal(rawJSON, &t.KeySchema); err != nil {
+			return
+		}
+	}
+
+	if topic.ValueSchema != "" {
+		rawJSON, err := lenses.JSONAvroSchema(topic.ValueSchema)
+		if err != nil {
+			return
+		}
+
+		if err = json.Unmarshal(rawJSON, &t.ValueSchema); err != nil {
+			return
+		}
+	}
+
+	return
+}
+
 func newTopicsGroupCommand() *cobra.Command {
 	var namesOnly, unwrap bool
 
@@ -52,11 +92,16 @@ func newTopicsGroupCommand() *cobra.Command {
 				return topics[i].TopicName < topics[j].TopicName
 			})
 
+			topicsView := make([]topicView, len(topics))
+			for i, topic := range topics {
+				topicsView[i] = newTopicView(cmd, topic)
+			}
+
 			// return printJSON(cmd, topics)
 			// lenses-cli topics --machine-friendly will print all information as JSON,
 			// lenses-cli topics [--machine-friend=false] will print the necessary(struct fields tagged as "header") information as Table.
-			return bite.PrintObject(cmd, topics, func(t lenses.Topic) bool {
-				return !t.IsControlTopic
+			return bite.PrintObject(cmd, topicsView, func(t lenses.Topic) bool {
+				return !bite.GetMachineFriendlyFlag(cmd) && !t.IsControlTopic // on JSON we print everything.
 			})
 		},
 	}
@@ -250,8 +295,7 @@ func newTopicGroupCommand() *cobra.Command {
 				return err
 			}
 
-			// return printJSON(cmd, topic)
-			return bite.PrintObject(cmd, topic)
+			return bite.PrintObject(cmd, newTopicView(cmd, topic))
 		},
 	}
 
