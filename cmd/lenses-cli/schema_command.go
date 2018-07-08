@@ -43,10 +43,11 @@ func newSchemasGroupCommand() *cobra.Command {
 			}
 
 			type schemaFull struct {
-				ID            int    `json:"id" header:"ID,text"`
-				Name          string `json:"name" header:"Name"`
-				LatestVersion int    `json:"latest_version" header:"Latest /"`
-				Versions      []int  `json:"versions" header:"All Versions"`
+				ID            int             `json:"id" header:"ID,text"`
+				Name          string          `json:"name" header:"Name"`
+				LatestVersion int             `json:"latest_version" header:"Latest /"`
+				Versions      []int           `json:"versions" header:"All Versions"`
+				Avro          json.RawMessage `json:"schema"` // only for json output.
 			}
 
 			var (
@@ -65,20 +66,28 @@ func newSchemasGroupCommand() *cobra.Command {
 					return err
 				}
 
-				c := idx + 1
-				// move two columns forward,
-				// try to avoid first-pos blinking,
-				// blinking only when the number changes, the text shows 1 col after the bar,
-				// and when finish
-				// reposition of the cursor to the beginning and clean the view, so table can be rendered
-				// without any join headers.
-				fmt.Fprintf(os.Stdout, "\033[2C%d/%d\r\033[23C", c, total)
-				if c == total {
-					// last, remove the prev line so we can show a clean table.
-					fmt.Fprintf(os.Stdout, "\n\033[1A\033[K")
+				schema := schemaFull{ID: sc.ID, Name: sc.Name, LatestVersion: sc.Version, Versions: versions}
+				if bite.ExpectsFeedback(cmd) {
+					c := idx + 1
+					// move two columns forward,
+					// try to avoid first-pos blinking,
+					// blinking only when the number changes, the text shows 1 col after the bar,
+					// and when finish
+					// reposition of the cursor to the beginning and clean the view, so table can be rendered
+					// without any join headers.
+					fmt.Fprintf(os.Stdout, "\033[2C%d/%d\r\033[23C", c, total)
+					if c == total {
+						// last, remove the prev line so we can show a clean table.
+						fmt.Fprintf(os.Stdout, "\n\033[1A\033[K")
+					}
+				} else {
+					schema.Avro, err = lenses.JSONAvroSchema(sc.AvroSchema)
+					if err != nil {
+						return err
+					}
 				}
 
-				schemasFull[idx] = schemaFull{sc.ID, sc.Name, sc.Version, versions}
+				schemasFull[idx] = schema
 			}
 
 			// return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", subjects))
