@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -31,6 +33,8 @@ func newSchemasGroupCommand() *cobra.Command {
 				return err
 			}
 
+			sort.Strings(subjects)
+
 			if unwrap {
 				for _, name := range subjects {
 					fmt.Fprintln(cmd.OutOrStdout(), name)
@@ -38,14 +42,53 @@ func newSchemasGroupCommand() *cobra.Command {
 				return nil
 			}
 
-			// return printJSON(cmd, outlineStringResults("name", subjects))
-			return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", subjects))
+			type schemaFull struct {
+				ID            int    `json:"id" header:"ID,text"`
+				Name          string `json:"name" header:"Name"`
+				LatestVersion int    `json:"latest_version" header:"Latest /"`
+				Versions      []int  `json:"versions" header:"All Versions"`
+			}
+
+			var (
+				total       = len(subjects)
+				schemasFull = make([]schemaFull, total)
+			)
+
+			for idx, name := range subjects {
+				sc, err := client.GetLatestSchema(name)
+				if err != nil {
+					return err
+				}
+
+				versions, err := client.GetSubjectVersions(name)
+				if err != nil {
+					return err
+				}
+
+				c := idx + 1
+				// move two columns forward,
+				// try to avoid first-pos blinking,
+				// blinking only when the number changes, the text shows 1 col after the bar,
+				// and when finish
+				// reposition of the cursor to the beginning and clean the view, so table can be rendered
+				// without any join headers.
+				fmt.Fprintf(os.Stdout, "\033[2C%d/%d\r\033[23C", c, total)
+				if c == total {
+					// last, remove the prev line so we can show a clean table.
+					fmt.Fprintf(os.Stdout, "\n\033[1A\033[K")
+				}
+
+				schemasFull[idx] = schemaFull{sc.ID, sc.Name, sc.Version, versions}
+			}
+
+			// return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", subjects))
+			// <- it works fine but better to show more info here:
+			return bite.PrintObject(cmd, schemasFull)
 		},
 	}
 
+	root.Flags().BoolVar(&unwrap, "unwrap", false, "prints only the names as a list of strings separated by line endings")
 	bite.CanPrintJSON(root)
-
-	root.Flags().BoolVar(&unwrap, "unwrap", false, "prints only the names as a list of strings")
 	root.AddCommand(newGlobalCompatibilityLevelGroupCommand())
 
 	return root
