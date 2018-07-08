@@ -2563,12 +2563,12 @@ const (
 
 // ACL is the type which defines a single Apache Access Control List.
 type ACL struct {
-	ResourceType   ACLResourceType   `json:"resourceType" yaml:"ResourceType"`     // required.
-	ResourceName   string            `json:"resourceName" yaml:"ResourceName"`     // required.
-	Principal      string            `json:"principal" yaml:"Principal"`           // required.
-	PermissionType ACLPermissionType `json:"permissionType" yaml:"PermissionType"` // required.
-	Host           string            `json:"host" yaml:"Host"`                     // required.
-	Operation      ACLOperation      `json:"operation" yaml:"Operation"`           // required.
+	ResourceName   string            `json:"resourceName" yaml:"ResourceName" header:"Name"`           // required.
+	ResourceType   ACLResourceType   `json:"resourceType" yaml:"ResourceType" header:"Type"`           // required.
+	Principal      string            `json:"principal" yaml:"Principal" header:"Principal"`            // required.
+	PermissionType ACLPermissionType `json:"permissionType" yaml:"PermissionType" header:"Permission"` // required.
+	Host           string            `json:"host" yaml:"Host" header:"Host"`                           // required.
+	Operation      ACLOperation      `json:"operation" yaml:"Operation" header:"Operation"`            // required.
 }
 
 // Validate force validates the acl's resource type, permission type and operation.
@@ -2683,21 +2683,21 @@ const (
 type (
 	// Quota is the type which defines a single Quota.
 	Quota struct {
+		// Entityname is the Kafka client id for "CLIENT"
+		// and "CLIENTS" and user name for "USER", "USER" and "USERCLIENT", the `QuotaEntityXXX`.
+		EntityName string `json:"entityName" yaml:"EntityName" header:"Name"`
 		// EntityType can be either `QuotaEntityClient`, `QuotaEntityClients`,
 		// `QuotaEntityClientsDefault`, `QuotaEntityUser`, `QuotaEntityUsers`, `QuotaEntityUserClient`
 		// or `QuotaEntityUsersDefault`.
-		EnityType QuotaEntityType `json:"entityType" yaml:"EntityType"`
-		// Entityname is the Kafka client id for "CLIENT"
-		// and "CLIENTS" and user name for "USER", "USER" and "USERCLIENT", the `QuotaEntityXXX`.
-		EntityName string `json:"entityName" yaml:"EntityName"`
+		EnityType QuotaEntityType `json:"entityType" yaml:"EntityType" header:"Type"`
 		// Child is optional and only present for entityType `QuotaEntityUserClient` and is the client id.
-		Child string `json:"child,omitempty" yaml:"Child"`
+		Child string `json:"child,omitempty" yaml:"Child" header:"Child"`
 		// Properties  is a map of the quota constraints, the `QuotaConfig`.
 		Properties QuotaConfig `json:"properties" yaml:"Properties"`
 		// URL is the url from this quota in Lenses.
-		URL string `json:"url" yaml:"URL"`
+		URL string `json:"url" yaml:"URL" header:"URL"`
 
-		IsAuthorized bool `json:"isAuthorized" yaml:"IsAuthorized"`
+		IsAuthorized bool `json:"isAuthorized" yaml:"IsAuthorized" header:"Authorized"`
 	}
 
 	// QuotaConfig is a typed struct which defines the
