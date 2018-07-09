@@ -19,6 +19,32 @@ func init() {
 	app.AddCommand(newSchemaGroupCommand())
 }
 
+type schemaView struct {
+	ID            int             `json:"id" header:"ID,text"`
+	Name          string          `json:"name" header:"Name"`
+	LatestVersion int             `json:"latest_version" header:"Latest /"`
+	Versions      []int           `json:"versions" header:"All Versions"`
+	Avro          json.RawMessage `json:"schema"` // only for json output.
+}
+
+func newSchemaView(sc lenses.Schema, withAvro bool) (schemaView, error) {
+	versions, err := client.GetSubjectVersions(sc.Name)
+	if err != nil {
+		return schemaView{}, err
+	}
+
+	schema := schemaView{ID: sc.ID, Name: sc.Name, LatestVersion: sc.Version, Versions: versions}
+
+	if withAvro {
+		schema.Avro, err = lenses.JSONAvroSchema(sc.AvroSchema)
+		if err != nil {
+			return schema, err
+		}
+	}
+
+	return schema, nil
+}
+
 func newSchemasGroupCommand() *cobra.Command {
 	var unwrap bool
 
@@ -42,32 +68,25 @@ func newSchemasGroupCommand() *cobra.Command {
 				return nil
 			}
 
-			type schemaFull struct {
-				ID            int             `json:"id" header:"ID,text"`
-				Name          string          `json:"name" header:"Name"`
-				LatestVersion int             `json:"latest_version" header:"Latest /"`
-				Versions      []int           `json:"versions" header:"All Versions"`
-				Avro          json.RawMessage `json:"schema"` // only for json output.
-			}
-
 			var (
-				total       = len(subjects)
-				schemasFull = make([]schemaFull, total)
+				total   = len(subjects)
+				schemas = make([]schemaView, total)
 			)
 
 			for idx, name := range subjects {
+				tablemode := bite.ExpectsFeedback(cmd)
+
 				sc, err := client.GetLatestSchema(name)
 				if err != nil {
 					return err
 				}
 
-				versions, err := client.GetSubjectVersions(name)
+				schema, err := newSchemaView(sc, !tablemode)
 				if err != nil {
 					return err
 				}
 
-				schema := schemaFull{ID: sc.ID, Name: sc.Name, LatestVersion: sc.Version, Versions: versions}
-				if bite.ExpectsFeedback(cmd) {
+				if tablemode {
 					c := idx + 1
 					// move two columns forward,
 					// try to avoid first-pos blinking,
@@ -75,24 +94,19 @@ func newSchemasGroupCommand() *cobra.Command {
 					// and when finish
 					// reposition of the cursor to the beginning and clean the view, so table can be rendered
 					// without any join headers.
-					fmt.Fprintf(os.Stdout, "\033[2C%d/%d\r\033[23C", c, total)
+					fmt.Fprintf(os.Stdout, "\033[2C%d/%d\r", c, total) /* \033[23C */
 					if c == total {
 						// last, remove the prev line so we can show a clean table.
 						fmt.Fprintf(os.Stdout, "\n\033[1A\033[K")
 					}
-				} else {
-					schema.Avro, err = lenses.JSONAvroSchema(sc.AvroSchema)
-					if err != nil {
-						return err
-					}
 				}
 
-				schemasFull[idx] = schema
+				schemas[idx] = schema
 			}
 
 			// return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", subjects))
 			// <- it works fine but better to show more info here:
-			return bite.PrintObject(cmd, schemasFull)
+			return bite.PrintObject(cmd, schemas)
 		},
 	}
 
@@ -185,7 +199,7 @@ func newSchemaGroupCommand() *cobra.Command {
 			// it's not empty, always, so it's called latest.
 			if versionStringOrInt != "" {
 				bite.FriendlyError(cmd, errResourceNotFoundMessage, "schema with name: '%s' and version: '%s' does not exist", name, versionStringOrInt)
-				return getSchemaByVersion(cmd, name, versionStringOrInt, !bite.GetJSONNoPrettyFlag(cmd))
+				return getSchemaByVersion(cmd, name, versionStringOrInt)
 			}
 
 			return nil
@@ -242,7 +256,7 @@ func latestOrInt(name, versionStringOrInt string, str func(versionString string)
 	return str(lenses.SchemaLatestVersion)
 }
 
-func getSchemaByVersion(cmd *cobra.Command, name, versionStringOrInt string, pretty bool) error {
+func getSchemaByVersion(cmd *cobra.Command, name, versionStringOrInt string) error {
 
 	readSchema := func(versionStringOrInt string) (schema lenses.Schema, err error) {
 		err = latestOrInt(name, versionStringOrInt, func(_ string) error {
@@ -256,20 +270,17 @@ func getSchemaByVersion(cmd *cobra.Command, name, versionStringOrInt string, pre
 		return
 	}
 
-	schema, err := readSchema(versionStringOrInt)
+	sc, err := readSchema(versionStringOrInt)
 	if err != nil {
 		return err
 	}
 
-	rawJSONSchema, err := lenses.JSONAvroSchema(schema.AvroSchema)
+	schema, err := newSchemaView(sc, !bite.ExpectsFeedback(cmd))
 	if err != nil {
 		return err
 	}
 
-	return bite.PrintJSON(cmd, struct {
-		lenses.Schema
-		JSONSchema json.RawMessage `json:"schema"`
-	}{schema, rawJSONSchema})
+	return bite.PrintObject(cmd, schema)
 }
 
 func newRegisterSchemaCommand() *cobra.Command {

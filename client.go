@@ -1368,20 +1368,23 @@ type (
 		ID          string `json:"id" header:"ID,text"`
 		Name        string `json:"name" header:"Name"`
 		ClusterName string `json:"clusterName" header:"Cluster"`
-		User        string `json:"user" header:"User"`
 		Namespace   string `json:"namespace" header:"Namespace"`
-		Uptime      int64  `json:"uptime" header:"Up time"`
+		User        string `json:"user" header:"User"`
 
-		SQL                    string `json:"sql" header:"SQL"`
-		Runners                int    `json:"runners" header:"Runners"`
-		DeploymentState        string `json:"deploymentState" header:"Depl State"`
-		TopicValueDecoder      string `json:"topicValueDecoder" header:"Topic Decoder"`
-		Pipeline               string `json:"pipeline" header:"Pipeline"`
-		StartTimestamp         int64  `json:"startTs" header:"Start"`
-		StopTimestamp          int64  `json:"stopTs,omitempty" header:"Stop"`
-		ToTopic                string `json:"toTopic" header:"Topic"`
-		LastActionMessage      string `json:"lastActionMsg,omitempty" header:"Last Action"`
-		DeploymentErrorMessage string `json:"deploymentErrorMsg,omitempty" header:"Depl Error"`
+		SQL string `json:"sql"` // header:"SQL"`
+
+		DeploymentState   string `json:"deploymentState" header:"Depl State"`
+		TopicValueDecoder string `json:"topicValueDecoder" header:"Topic Decoder"`
+		Pipeline          string `json:"pipeline" header:"Pipeline"`
+
+		ToTopic                string `json:"toTopic,omitempty"`            // header:"Topic"`
+		LastActionMessage      string `json:"lastActionMsg,omitempty"`      // header:"Last Action"`
+		DeploymentErrorMessage string `json:"deploymentErrorMsg,omitempty"` // header:"Depl Error"`
+
+		Runners        int   `json:"runners" header:"Runners"`
+		Uptime         int64 `json:"uptime" header:"Up time,unixduration"`
+		StartTimestamp int64 `json:"startTs" header:"Started,unixtime_human"`
+		StopTimestamp  int64 `json:"stopTs,omitempty" header:"Stopped,unixtime_human,No"`
 
 		RunnerState map[string]ProcessorRunnerState `json:"runnerState"`
 	}
@@ -2691,7 +2694,7 @@ type (
 		// or `QuotaEntityUsersDefault`.
 		EnityType QuotaEntityType `json:"entityType" yaml:"EntityType" header:"Type"`
 		// Child is optional and only present for entityType `QuotaEntityUserClient` and is the client id.
-		Child string `json:"child,omitempty" yaml:"Child" header:"Child"`
+		Child string `json:"child,omitempty" yaml:"Child"` // header:"Child"`
 		// Properties  is a map of the quota constraints, the `QuotaConfig`.
 		Properties QuotaConfig `json:"properties" yaml:"Properties" header:"inline"`
 		// URL is the url from this quota in Lenses.
@@ -2707,7 +2710,7 @@ type (
 		// if "number" and no default value, then it will add "0", we use the empty space between commas to tell that the default value is space.
 		ProducerByteRate  string `json:"producer_byte_rate" yaml:"ProducerByteRate" header:"Produce/sec, ,number"`
 		ConsumerByteRate  string `json:"consumer_byte_rate" yaml:"ConsumerByteRate" header:"Consume/sec, ,number"`
-		RequestPercentage string `json:"request_percentage" yaml:"RequestPercentage" header:"Request Percentage"`
+		RequestPercentage string `json:"request_percentage" yaml:"RequestPercentage" header:"Request Percentage, ,number"`
 	}
 )
 

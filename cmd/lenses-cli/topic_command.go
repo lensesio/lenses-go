@@ -122,7 +122,7 @@ type topicMetadataView struct {
 	KeySchema            json.RawMessage `json:"keySchema" yaml:"-"`   // for view-only.
 }
 
-func newtopicMetadataView(m lenses.TopicMetadata) (topicMetadataView, error) {
+func newTopicMetadataView(m lenses.TopicMetadata) (topicMetadataView, error) {
 	viewM := topicMetadataView{m, nil, nil}
 
 	if len(m.ValueSchemaRaw) > 0 {
@@ -173,7 +173,7 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 					return err
 				}
 
-				viewMeta, err := newtopicMetadataView(meta)
+				viewMeta, err := newTopicMetadataView(meta)
 				if err != nil {
 					return err
 				}
@@ -187,10 +187,14 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 				return err
 			}
 
+			sort.Slice(meta, func(i, j int) bool {
+				return meta[i].TopicName < meta[j].TopicName
+			})
+
 			viewMeta := make([]topicMetadataView, len(meta), len(meta))
 
 			for i, m := range meta {
-				viewMeta[i], err = newtopicMetadataView(m)
+				viewMeta[i], err = newTopicMetadataView(m)
 				if err != nil {
 					return err
 				}

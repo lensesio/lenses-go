@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/landoop/lenses-go"
+	"sort"
 
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
@@ -24,6 +25,12 @@ func newGetACLsCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			sort.Slice(acls, func(i, j int) bool {
+				//	return acls[i].Operation < acls[j].Operation
+				return acls[i].ResourceName < acls[j].ResourceName
+			})
+
 			return bite.PrintObject(cmd, acls)
 		},
 	}
