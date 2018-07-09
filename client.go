@@ -1377,9 +1377,9 @@ type (
 		TopicValueDecoder string `json:"topicValueDecoder" header:"Topic Decoder"`
 		Pipeline          string `json:"pipeline" header:"Pipeline"`
 
-		ToTopic                string `json:"toTopic,omitempty"`            // header:"Topic"`
-		LastActionMessage      string `json:"lastActionMsg,omitempty"`      // header:"Last Action"`
-		DeploymentErrorMessage string `json:"deploymentErrorMsg,omitempty"` // header:"Depl Error"`
+		ToTopic                []string `json:"toTopics,omitempty"`           // header:"To Topics"`
+		LastActionMessage      string   `json:"lastActionMsg,omitempty"`      // header:"Last Action"`
+		DeploymentErrorMessage string   `json:"deploymentErrorMsg,omitempty"` // header:"Depl Error"`
 
 		Runners        int   `json:"runners" header:"Runners"`
 		Uptime         int64 `json:"uptime" header:"Up time,unixduration"`

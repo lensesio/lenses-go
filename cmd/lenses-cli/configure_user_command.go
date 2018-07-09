@@ -223,8 +223,8 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 			name := args[0]
 
 			configureCmd := newConfigureCommand()
-			// rootCmd.Flag("context").Value.Set(name)
-			configureCmd.Flag("context").Value.Set(name)
+
+			app.CobraCommand.Flag("context").Value.Set(name)
 			configureCmd.Flag("reset").Value.Set("true")
 			// these wil disable banner and location save, note that if --file is there then it will take that, otherwise the default $HOME/.lenses/lenses-cli.yml.
 			configureCmd.Flag("no-banner").Value.Set("true")
