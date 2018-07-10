@@ -466,7 +466,6 @@ func TryReadConfigFromCurrentWorkingDir(outPtr *Config) bool {
 // ReadConfigFromJSON reads and decodes Config from a json file, i.e `configuration.json`.
 //
 // Accepts the absolute or the relative path of the configuration file.
-// Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
 func ReadConfigFromJSON(filename string, outPtr *Config) error {
 	return ReadConfigFromFile(filename, ConfigurationUnmarshalJSON, outPtr)
@@ -475,7 +474,6 @@ func ReadConfigFromJSON(filename string, outPtr *Config) error {
 // ReadConfigFromYAML reads and decodes Config from a yaml file, i.e `configuration.yml`.
 //
 // Accepts the absolute or the relative path of the configuration file.
-// Parsing error will result to a panic.
 // Error may occur when the file doesn't exists or is not formatted correctly.
 func ReadConfigFromYAML(filename string, outPtr *Config) error {
 	return ReadConfigFromFile(filename, ConfigurationUnmarshalYAML, outPtr)
