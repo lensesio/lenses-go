@@ -350,7 +350,9 @@ func newTopicCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&configsRaw, "configs", "", `--configs="{\"max.message.bytes\": \"1000010\"}"`)
 	bite.CanBeSilent(cmd)
 
-	bite.Prepend(cmd, bite.FileBind(&topic, bite.ElseBind(func() error { return bite.AllowEmptyFlag(bite.TryReadFile(configsRaw, &topic.Configs)) })))
+	bite.ShouldTryLoadFile(cmd, &topic).Else(func() error { return bite.AllowEmptyFlag(bite.TryReadFile(configsRaw, &topic.Configs)) })
+	// same
+	// bite.Prepend(cmd, bite.FileBind(&topic, bite.ElseBind(func() error { return bite.AllowEmptyFlag(bite.TryReadFile(configsRaw, &topic.Configs)) })))
 
 	return cmd
 }
@@ -391,7 +393,7 @@ func newTopicDeleteCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Topic %s marked for deletion. This may take a few moments to have effect", topicName)
+			return bite.PrintInfo(cmd, "Topic '%s' marked for deletion. This may take a few moments to have effect", topicName)
 		},
 	}
 
@@ -429,7 +431,7 @@ func newTopicUpdateCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Config updated for topic %s", topic.Name)
+			return bite.PrintInfo(cmd, "Config updated for topic '%s'", topic.Name)
 		},
 	}
 
