@@ -191,7 +191,7 @@ func (m *configurationManager) save() error {
 	}
 
 	// m.removeTokens()
-	out, err := lenses.ConfigurationMarshalYAML(c)
+	out, err := lenses.ConfigMarshalYAML(c)
 	if err != nil { // should never happen.
 		return fmt.Errorf("unable to marshal the configuration, error: %v", err)
 	}

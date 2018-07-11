@@ -9,8 +9,8 @@ import (
 
 var newLineB = []byte("\n")
 
-// ConfigurationMarshalYAML returns the YAML encoding of "c" `Config`.
-func ConfigurationMarshalYAML(c Config) ([]byte, error) {
+// ConfigMarshalYAML returns the YAML encoding of "c" `Config`.
+func ConfigMarshalYAML(c Config) ([]byte, error) {
 	if len(c.Contexts) == 0 {
 		return nil, fmt.Errorf("yaml write: contexts can not be empty")
 	}
@@ -29,7 +29,7 @@ func ConfigurationMarshalYAML(c Config) ([]byte, error) {
 	n := 0
 	for contextKey, clientConfig := range c.Contexts {
 		n++
-		b, err := clientConfigurationMarshalYAML(*clientConfig)
+		b, err := ClientConfigMarshalYAML(*clientConfig)
 		if err != nil {
 			return nil, fmt.Errorf("yaml write: error writing the context '%s': %v", contextKey, err)
 		}
@@ -45,8 +45,8 @@ func ConfigurationMarshalYAML(c Config) ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// clientConfigurationMarshalYAML retruns the yaml string as bytes of the given `ClientConfig` structure.
-func clientConfigurationMarshalYAML(c ClientConfig) ([]byte, error) {
+// ClientConfigMarshalYAML retruns the yaml string as bytes of the given `ClientConfig` structure.
+func ClientConfigMarshalYAML(c ClientConfig) ([]byte, error) {
 	if c.Authentication == nil {
 		return nil, nil
 	}
@@ -121,9 +121,9 @@ func kerberosAuthenticationMarshalYAML(auth KerberosAuthentication) ([]byte, err
 	return b, nil
 }
 
-// ConfigurationUnmarshalYAML parses the YAML-encoded `Config` and stores the result
+// ConfigUnmarshalYAML parses the YAML-encoded `Config` and stores the result
 // in the `Config` pointed to by "c".
-func ConfigurationUnmarshalYAML(b []byte, c *Config) error {
+func ConfigUnmarshalYAML(b []byte, c *Config) error {
 	var tree yaml.MapSlice
 	err := yaml.Unmarshal(b, &tree)
 	if err != nil {

@@ -2,11 +2,13 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -49,22 +51,50 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 		return false // this should never happen.
 	}
 
-	if c.Authentication == nil {
-		return true // temp auto-generated on config manager, let's no print it, return true to skip any edit/delete question.
-	}
-
 	c.FormatHost()
 	cfg := *c
 
-	isValid := isValidConfigurationContext(name)
+	if cfg.Token != "" {
+		cfg.Token = "****"
+	}
 
+	// remove any password-based literals from the printable client config.
+	if auth, ok := cfg.IsBasicAuth(); ok {
+		auth.Password = "****"
+		cfg.Authentication = auth
+	} else if authKerb, ok := cfg.IsKerberosAuth(); ok {
+		if authMethod, ok := authKerb.WithPassword(); ok {
+			authMethod.Password = "****"
+			authKerb.Method = authMethod
+			cfg.Authentication = authKerb
+		}
+	}
+
+	isValid := isValidConfigurationContext(name)
 	info := "valid"
 	if !isValid {
 		info = "invalid"
 	}
 
-	if cfg.Token != "" {
-		cfg.Token = "****"
+	b, err := lenses.ClientConfigMarshalJSON(cfg)
+	if err != nil {
+		isValid = false
+		// these type of error reporting is not for end-user specific language
+		// but they may help us on debugging if user edited manualy the configs and was wrong.
+		info += ", error: " + err.Error()
+	}
+
+	buf := new(bytes.Buffer)
+	if err = json.Indent(buf, b, "", "  "); err != nil {
+		if isValid {
+			info += " but"
+		} else {
+			info += " and"
+		}
+
+		info += " unable to indent"
+
+		isValid = false
 	}
 
 	if name == currentContextName {
@@ -73,8 +103,10 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 
 	fmt.Fprintf(cmd.OutOrStdout(), "%s [%s]\n", name, info)
 
+	// buf.WriteTo(cmd.OutOrStdout())
+	fmt.Fprintln(cmd.OutOrStdout(), buf.String())
 	// show only filled but no authentication.
-	bite.PrintJSON(cmd, cfg) // keep json?
+	// bite.PrintJSON(cmd, cfg) // keep json?
 
 	return isValid
 }

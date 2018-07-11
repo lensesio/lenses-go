@@ -133,17 +133,18 @@ func TestReadConfigFromJSONBackwardsCompatibility(t *testing.T) {
 }
 
 func TestWriteConfigToJSON(t *testing.T) {
-	expectedContents := fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","%s":{"username":"%s","password":"%s"},"timeout":"%s","debug":%v}}}`,
+	expectedContents := fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","timeout":"%s","debug":%v,"%s":{"username":"%s","password":"%s"}}}}`,
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
+		testTimeoutField,
+		testDebugField,
 		basicAuthenticationKeyJSON,
 		testUsernameField,
 		testPasswordField,
-		testTimeoutField,
-		testDebugField)
+	)
 
-	b, err := ConfigurationMarshalJSON(expectedConfigurationBasicAuthentication)
+	b, err := ConfigMarshalJSON(expectedConfigurationBasicAuthentication)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +218,7 @@ Contexts:
 		testPasswordField,
 	)
 
-	b, err := ConfigurationMarshalYAML(expectedConfigurationBasicAuthentication)
+	b, err := ConfigMarshalYAML(expectedConfigurationBasicAuthentication)
 	if err != nil {
 		t.Fatal(err)
 	}

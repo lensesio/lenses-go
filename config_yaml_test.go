@@ -31,7 +31,7 @@ Contexts:
 		testPasswordField,
 	)
 
-	gotConfig, err := ConfigurationMarshalYAML(Config{
+	gotConfig, err := ConfigMarshalYAML(Config{
 		CurrentContext: testCurrentContextField,
 		Contexts: map[string]*ClientConfig{
 			testCurrentContextField: &ClientConfig{
@@ -91,7 +91,7 @@ Contexts:
 		},
 	}
 
-	gotConfig, err := ConfigurationMarshalYAML(expectedConfig)
+	gotConfig, err := ConfigMarshalYAML(expectedConfig)
 
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ Contexts:
 	}
 
 	var gotUnmarshaledConfig Config
-	if err := ConfigurationUnmarshalYAML([]byte(expectedConfigStr), &gotUnmarshaledConfig); err != nil {
+	if err := ConfigUnmarshalYAML([]byte(expectedConfigStr), &gotUnmarshaledConfig); err != nil {
 		t.Fatal(err)
 	}
 

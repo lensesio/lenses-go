@@ -9,19 +9,19 @@ import (
 
 func TestBasicAuthenticationMarshalJSON(t *testing.T) {
 	// order of struct fields matter here.
-	expectedConfig := fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","%s":{"username":"%s","password":"%s"},"timeout":"%s","insecure":%v,"debug":%v}}}`,
+	expectedConfig := fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","timeout":"%s","insecure":%v,"debug":%v,"%s":{"username":"%s","password":"%s"}}}}`,
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
-		basicAuthenticationKeyJSON,
-		testUsernameField,
-		testPasswordField,
 		testTimeoutField,
 		testInsecureField,
 		testDebugField,
+		basicAuthenticationKeyJSON,
+		testUsernameField,
+		testPasswordField,
 	)
 
-	gotConfig, err := ConfigurationMarshalJSON(Config{
+	gotConfig, err := ConfigMarshalJSON(Config{
 		CurrentContext: testCurrentContextField,
 		Contexts: map[string]*ClientConfig{
 			testCurrentContextField: &ClientConfig{
@@ -44,17 +44,17 @@ func TestBasicAuthenticationMarshalJSON(t *testing.T) {
 }
 
 func testKerberosAuthenticationJSON(t *testing.T, expectedAuthStr string, expectedMethod KerberosAuthenticationMethod) {
-	expectedConfigStr := strings.TrimSpace(fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","%s":{"%s":"%s",%s},"timeout":"%s","insecure":%v,"debug":%v}}}`,
+	expectedConfigStr := strings.TrimSpace(fmt.Sprintf(`{"currentContext":"%s","contexts":{"%s":{"host":"%s","timeout":"%s","insecure":%v,"debug":%v,"%s":{"%s":"%s",%s}}}}`,
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
+		testTimeoutField,
+		testInsecureField,
+		testDebugField,
 		kerberosAuthenticationKeyJSON,
 		kerberosConfFileKeyJSON,
 		testKerberosConfFileField,
 		expectedAuthStr,
-		testTimeoutField,
-		testInsecureField,
-		testDebugField,
 	))
 
 	expectedConfig := Config{
@@ -70,7 +70,7 @@ func testKerberosAuthenticationJSON(t *testing.T, expectedAuthStr string, expect
 		},
 	}
 
-	gotConfig, err := ConfigurationMarshalJSON(expectedConfig)
+	gotConfig, err := ConfigMarshalJSON(expectedConfig)
 
 	if err != nil {
 		t.Fatal(err)
@@ -81,7 +81,7 @@ func testKerberosAuthenticationJSON(t *testing.T, expectedAuthStr string, expect
 	}
 
 	var gotUnmarshaledConfig Config
-	if err := ConfigurationUnmarshalJSON([]byte(expectedConfigStr), &gotUnmarshaledConfig); err != nil {
+	if err := ConfigUnmarshalJSON([]byte(expectedConfigStr), &gotUnmarshaledConfig); err != nil {
 		t.Fatal(err)
 	}
 

@@ -363,8 +363,8 @@ func ReadConfigFromFile(filename string, unmarshaler UnmarshalFunc, outPtr *Conf
 // 2. YAML
 func TryReadConfigFromFile(filename string, outPtr *Config) (err error) {
 	tries := []UnmarshalFunc{
-		ConfigurationUnmarshalJSON,
-		ConfigurationUnmarshalYAML,
+		ConfigUnmarshalJSON,
+		ConfigUnmarshalYAML,
 	}
 
 	for _, unmarshaler := range tries {
@@ -468,7 +468,7 @@ func TryReadConfigFromCurrentWorkingDir(outPtr *Config) bool {
 // Accepts the absolute or the relative path of the configuration file.
 // Error may occur when the file doesn't exists or is not formatted correctly.
 func ReadConfigFromJSON(filename string, outPtr *Config) error {
-	return ReadConfigFromFile(filename, ConfigurationUnmarshalJSON, outPtr)
+	return ReadConfigFromFile(filename, ConfigUnmarshalJSON, outPtr)
 }
 
 // ReadConfigFromYAML reads and decodes Config from a yaml file, i.e `configuration.yml`.
@@ -476,5 +476,5 @@ func ReadConfigFromJSON(filename string, outPtr *Config) error {
 // Accepts the absolute or the relative path of the configuration file.
 // Error may occur when the file doesn't exists or is not formatted correctly.
 func ReadConfigFromYAML(filename string, outPtr *Config) error {
-	return ReadConfigFromFile(filename, ConfigurationUnmarshalYAML, outPtr)
+	return ReadConfigFromFile(filename, ConfigUnmarshalYAML, outPtr)
 }

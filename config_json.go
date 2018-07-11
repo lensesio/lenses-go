@@ -8,8 +8,8 @@ import (
 
 var commaSep = []byte(",")
 
-// ConfigurationMarshalJSON returns the JSON encoding of "c" `Config`.
-func ConfigurationMarshalJSON(c Config) ([]byte, error) {
+// ConfigMarshalJSON returns the JSON encoding of "c" `Config`.
+func ConfigMarshalJSON(c Config) ([]byte, error) {
 	if len(c.Contexts) == 0 {
 		return nil, fmt.Errorf("json write: contexts can not be empty")
 	}
@@ -30,7 +30,7 @@ func ConfigurationMarshalJSON(c Config) ([]byte, error) {
 	n := 0
 	for contextKey, v := range c.Contexts {
 		n++
-		b, err := clientConfigurationMarshalJSON(*v)
+		b, err := ClientConfigMarshalJSON(*v)
 		if err != nil {
 			return nil, fmt.Errorf("json write: error writing the context '%s': %v", contextKey, err)
 		}
@@ -49,9 +49,9 @@ func ConfigurationMarshalJSON(c Config) ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-// ConfigurationUnmarshalJSON parses the JSON-encoded `Config` and stores the result
+// ConfigUnmarshalJSON parses the JSON-encoded `Config` and stores the result
 // in the `Config` pointed to by "c".
-func ConfigurationUnmarshalJSON(b []byte, c *Config) error {
+func ConfigUnmarshalJSON(b []byte, c *Config) error {
 	var keys map[string]json.RawMessage
 	err := json.Unmarshal(b, &keys)
 	if err != nil {
@@ -89,7 +89,7 @@ func ConfigurationUnmarshalJSON(b []byte, c *Config) error {
 
 			for k, v := range contextsJSON {
 				var clientConfig ClientConfig
-				if err := clientConfigurationUnmarshalJSON(v, &clientConfig); err != nil {
+				if err := ClientConfigUnmarshalJSON(v, &clientConfig); err != nil {
 					return err // exit on first failure.
 				}
 
@@ -101,8 +101,10 @@ func ConfigurationUnmarshalJSON(b []byte, c *Config) error {
 	return nil
 }
 
-// clientConfigurationMarshalJSON retruns the json string as bytes of the given `ClientConfig` structure.
-func clientConfigurationMarshalJSON(c ClientConfig) ([]byte, error) {
+var bracketRightB = []byte("}")
+
+// ClientConfigMarshalJSON retruns the json string as bytes of the given `ClientConfig` structure.
+func ClientConfigMarshalJSON(c ClientConfig) ([]byte, error) {
 	b, err := json.Marshal(c)
 	if err != nil {
 		return nil, err
@@ -133,8 +135,8 @@ func clientConfigurationMarshalJSON(c ClientConfig) ([]byte, error) {
 	}
 
 	content = append(append(commaSep, []byte(fmt.Sprintf(`"%s":`, authenticationKey))...), content...)
-	b = bytes.Replace(b, commaSep, append(content, commaSep...), 1)
-
+	// b = bytes.Replace(b, bracketRightB, append(content, commaSep...), 1)
+	b = bytes.Replace(b, bracketRightB, append(content, bracketRightB...), 1)
 	return b, nil
 }
 
@@ -176,7 +178,9 @@ func kerberosAuthenticationMarshalJSON(auth KerberosAuthentication) ([]byte, err
 	return b, nil
 }
 
-func clientConfigurationUnmarshalJSON(b []byte, c *ClientConfig) error {
+// ClientConfigUnmarshalJSON parses the JSON-encoded `ClientConfig` and stores the result
+// in the `ClientConfig` pointed to by "c".
+func ClientConfigUnmarshalJSON(b []byte, c *ClientConfig) error {
 	// first unmarshal the known types.
 	if err := json.Unmarshal(b, c); err != nil {
 		return err
