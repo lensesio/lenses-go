@@ -28,6 +28,8 @@ func newGetQuotasCommand() *cobra.Command {
 		},
 	}
 
+	bite.CanPrintJSON(cmd)
+
 	return cmd
 }
 

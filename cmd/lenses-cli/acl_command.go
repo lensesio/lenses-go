@@ -35,6 +35,8 @@ func newGetACLsCommand() *cobra.Command {
 		},
 	}
 
+	bite.CanPrintJSON(cmd)
+
 	return cmd
 }
 
