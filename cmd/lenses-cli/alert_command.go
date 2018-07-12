@@ -26,7 +26,7 @@ func newGetAlertsCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if sse {
 				handler := func(alert lenses.Alert) error {
-					return bite.PrintJSON(cmd, alert) // keep json here?
+					return bite.PrintObject(cmd, alert) // keep json here?
 				}
 
 				return client.GetAlertsLive(handler)
@@ -123,8 +123,8 @@ func newGetAlertSettingsCommand() *cobra.Command {
 				return err
 			}
 
-			// return printJSON(cmd, settings)
-			return bite.PrintObject(cmd, settings)
+			// force json, may contains conditions that are easier to be seen in json format.
+			return bite.PrintJSON(cmd, settings)
 		},
 	}
 
@@ -161,8 +161,8 @@ func newAlertSettingGroupCommand() *cobra.Command {
 				return err
 			}
 
-			// return printJSON(cmd, settings)
-			return bite.PrintObject(cmd, settings)
+			// force json, may contains conditions that are easier to be seen in json format.
+			return bite.PrintJSON(cmd, settings)
 		},
 	}
 
@@ -195,8 +195,8 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 				return err
 			}
 
-			// return printJSON(cmd, conds)
-			return bite.PrintObject(cmd, conds)
+			// force-json
+			return bite.PrintJSON(cmd, conds)
 		},
 	}
 

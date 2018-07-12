@@ -115,7 +115,8 @@ func setup(cmd *cobra.Command, args []string) error {
 const (
 	errResourceNotFoundMessage      = 404 // 404
 	errResourceNotAccessibleMessage = 403 // 403
-	errResourceNotGoodMessage       = 404 // 404
+	errResourceNotGoodMessage       = 400 // 400
+	errResourceInternal             = 500 // 500
 )
 
 func main() {

@@ -80,7 +80,7 @@ const (
 
 // ErrCredentialsMissing fires on login, when credentials are missing or
 // are invalid or the specific user has no access to a specific action.
-var ErrCredentialsMissing = fmt.Errorf("client: credentials missing or invalid")
+var ErrCredentialsMissing = fmt.Errorf("credentials missing or invalid")
 
 // RequestOption is just a func which receives the current HTTP request and alters it,
 // if the return value of the error is not nil then `Client#Do` fails with that error.
@@ -379,7 +379,7 @@ type LicenseInfo struct {
 	DaysToExpire int `json:"daysToExpire,omitempty"`
 }
 
-const licensePath = "/api/license"
+const licensePath = "api/license"
 
 // GetLicenseInfo returns the license information for the connected lenses box.
 func (c *Client) GetLicenseInfo() (LicenseInfo, error) {
@@ -447,7 +447,7 @@ func MatchExecutionMode(modeStr string) (ExecutionMode, bool) {
 }
 
 const (
-	configPath = "/api/config"
+	configPath = "api/config"
 )
 
 // GetConfig returns the whole configuration of the lenses box,
@@ -951,6 +951,23 @@ func (c *Client) GetTopicsNames() ([]string, error) {
 	return topicNames, nil
 }
 
+const topicsAvailableConfigKeysPath = topicsPath + "/availableConfigKeys"
+
+// GetAvailableTopicConfigKeys retrieves a list of available configs for topics.
+func (c *Client) GetAvailableTopicConfigKeys() ([]string, error) {
+	resp, err := c.Do(http.MethodGet, topicsAvailableConfigKeysPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var keys []string
+	if err = c.ReadJSON(resp, &keys); err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
 type (
 	// TopicMetadata describes the data received from the `GetTopicsMetadata`
 	// and the payload to send on the `CreateTopicMetadata`.
@@ -992,7 +1009,7 @@ type (
 )
 
 const (
-	topicsMetadataPath = "/api/metadata/topics"
+	topicsMetadataPath = "api/metadata/topics"
 	topicMetadataPath  = topicsMetadataPath + "/%s"
 )
 
@@ -1582,7 +1599,7 @@ type Connector struct {
 	Tasks []ConnectorTaskReadOnly `json:"tasks,omitempty" header:"Tasks,count"`
 }
 
-const connectorsPath = "/api/proxy-connect/%s/connectors"
+const connectorsPath = "api/proxy-connect/%s/connectors"
 
 // GetConnectors returns a list of active connectors names as list of strings.
 //
@@ -2021,7 +2038,7 @@ type ConnectorPlugin struct {
 	Version string `json:"version" header:"Version"`
 }
 
-const pluginsPath = "/api/proxy-connect/%s/connector-plugins"
+const pluginsPath = "api/proxy-connect/%s/connector-plugins"
 
 // GetConnectorPlugins returns a list of connector plugins installed in the Kafka Connect cluster.
 // Note that the API only checks for connectors on the worker that handles the request,
@@ -2382,7 +2399,7 @@ type (
 	}
 )
 
-const compatibilityLevelPath = "/api/proxy-sr/config"
+const compatibilityLevelPath = "api/proxy-sr/config"
 
 // UpdateGlobalCompatibilityLevel sets a new global compatibility level.
 // When there are multiple instances of schema registry running in the same cluster,
@@ -2602,7 +2619,7 @@ func (acl *ACL) Validate() error {
 	return nil
 }
 
-const aclPath = "/api/acl"
+const aclPath = "api/acl"
 
 // CreateOrUpdateACL sets an Apache Kafka Access Control List.
 // Use the defined types when needed, example:
@@ -2714,7 +2731,7 @@ type (
 	}
 )
 
-const quotasPath = "/api/quotas"
+const quotasPath = "api/quotas"
 
 // GetQuotas returns a list of all available quotas.
 func (c *Client) GetQuotas() ([]Quota, error) {
@@ -2983,13 +3000,13 @@ type (
 	AlertSetting struct {
 		ID                int               `json:"id" header:"ID,text"`
 		Description       string            `json:"description" header:"Desc"`
-		Category          string            `json:"category" header:"Cat"`
+		Category          string            `json:"category" header:"Category"`
 		Enabled           bool              `json:"enabled" header:"Enabled"`
-		Docs              string            `json:"docs,omitempty" header:"Docs,empty"`
-		ConditionTemplate string            `json:"conditionTemplate,omitempty" header:"Cond Tmpl"`
-		ConditionRegex    string            `json:"conditionRegex,omitempty" header:"/ Regex"`
-		Conditions        map[string]string `json:"conditions,omitempty"`
 		IsAvailable       bool              `json:"isAvailable" header:"Available"`
+		Docs              string            `json:"docs,omitempty" header:"Docs"`
+		ConditionTemplate string            `json:"conditionTemplate,omitempty" header:"Cond Tmpl"`
+		ConditionRegex    string            `json:"conditionRegex,omitempty" header:"Cond Regex"`
+		Conditions        map[string]string `json:"conditions,omitempty" header:"Conds"`
 	}
 
 	// AlertSettings describes the type of list entry of the `GetAlertSettings`.
@@ -3005,7 +3022,7 @@ type (
 )
 
 const (
-	alertsPath                 = "/api/alerts"
+	alertsPath                 = "api/alerts"
 	alertSettingsPath          = alertsPath + "/settings"
 	alertSettingPath           = alertSettingsPath + "/%d"
 	alertSettingConditionsPath = alertSettingPath + "/condition"
@@ -3078,9 +3095,9 @@ type (
 		// AlertID  is a unique identifier for the setting corresponding to this alert. See the available ids via `GetAlertSettings`.
 		AlertID int `json:"alertId" yaml:"AlertID" header:"ID,text"`
 		// StartsAt is the time as string, in ISO format, for when the alert starts
-		StartsAt string `json:"startsAt" yaml:"StartsAt" header:"Start"`
+		StartsAt string `json:"startsAt" yaml:"StartsAt" header:"Start,date"`
 		// EndsAt is the time as string the alert ended at.
-		EndsAt string `json:"endsAt" yaml:"EndsAt" header:"End"`
+		EndsAt string `json:"endsAt" yaml:"EndsAt" header:"End,date"`
 
 		// Labels field is a list of key-value pairs. It must contain a non empty `Severity` value.
 		Labels AlertLabels `json:"labels" yaml:"Labels" header:"inline"`
@@ -3088,7 +3105,7 @@ type (
 		Annotations AlertAnnotations `json:"annotations" yaml:"Annotations"` // header:"inline"`
 		// GeneratorURL is a unique URL identifying the creator of this alert.
 		// It matches AlertManager requirements for providing this field.
-		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL" header:"Gen URL"`
+		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL"` // header:"Gen URL"`
 	}
 
 	// AlertLabels labels for the `Alert`, at least Severity should be filled.
@@ -3162,7 +3179,7 @@ func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID s
 }
 
 const (
-	alertsPathSSE       = "/api/sse/alerts"
+	alertsPathSSE       = "api/sse/alerts"
 	alertsSSEDataPrefix = "data:"
 )
 
@@ -3221,7 +3238,7 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 	}
 }
 
-const processorsLogsPathSSE = "/api/k8/logs/sse/%s/%s/%s"
+const processorsLogsPathSSE = "api/k8/logs/sse/%s/%s/%s"
 
 // GetProcessorsLogs retrieves the LSQL processor logs if in kubernetes mode.
 func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool, handler func(string) error) error {
@@ -3270,4 +3287,62 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 			return err // stop on first error by the caller.
 		}
 	}
+}
+
+//
+// Dynamic Broker Configurations API
+//
+
+// BrokerConfig describes the kafka broker's configurations.
+type BrokerConfig struct {
+	LogCleanerThreads int    `json:"log.cleaner.threads" header:"Log Cleaner Threads"`
+	CompressionType   string `json:"compression.type" header:"Compression Type"`
+}
+
+const (
+	brokersConfigsPath = "api/configs/brokers"
+	brokerConfigsPath  = brokersConfigsPath + "/%d"
+)
+
+// GetDynamicClusterConfigs returns the dynamic updated configurations for a kafka cluster.
+// Retrieves only the ones added/updated dynamically.
+func (c *Client) GetDynamicClusterConfigs() (configs BrokerConfig, err error) {
+	resp, respErr := c.Do(http.MethodGet, brokersConfigsPath, "", nil)
+	if respErr != nil {
+		err = respErr
+		return
+	}
+
+	err = c.ReadJSON(resp, &configs)
+	return
+}
+
+// GetDynamicBrokerConfigs returns the dynamic updated configurations for a kafka broker.
+// Retrieves only the ones added/updated dynamically.
+func (c *Client) GetDynamicBrokerConfigs(brokerID int) (config BrokerConfig, err error) {
+	path := fmt.Sprintf(brokerConfigsPath, brokerID)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
+	if respErr != nil {
+		err = respErr
+		return
+	}
+
+	err = c.ReadJSON(resp, &config)
+	return
+}
+
+// UpdateDynamicBrokerConfigs adds or updates broker configuration dynamically.
+func (c *Client) UpdateDynamicBrokerConfigs(brokerID int, toAddOrUpdate BrokerConfig) error {
+	send, err := json.Marshal(toAddOrUpdate)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(brokerConfigsPath, brokerID)
+	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
 }

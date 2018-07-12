@@ -111,9 +111,30 @@ func newTopicsGroupCommand() *cobra.Command {
 
 	bite.CanPrintJSON(root)
 
+	root.AddCommand(newGetAvailableTopicConfigKeysCommand())
 	root.AddCommand(newTopicsMetadataSubgroupCommand())
 
 	return root
+}
+
+func newGetAvailableTopicConfigKeysCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:           "keys",
+		Short:         "List all available config keys for topics",
+		Example:       "topics keys",
+		Hidden:        true, // TODO: doesn't work atm, backend has that route though.
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			keys, err := client.GetAvailableTopicConfigKeys()
+			if err != nil {
+				return err
+			}
+
+			return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "key", keys))
+		},
+	}
+
+	return cmd
 }
 
 type topicMetadataView struct {
