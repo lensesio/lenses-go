@@ -12,8 +12,9 @@ import (
 )
 
 func init() {
-	app.AddCommand(newDynamicClusterConfigsGroupCommand())
-	app.AddCommand(newDynamicBrokerConfigsGroupCommand())
+	// Hidden: true
+	// app.AddCommand(newDynamicClusterConfigsGroupCommand())
+	// app.AddCommand(newDynamicBrokerConfigsGroupCommand())
 }
 
 func newDynamicClusterConfigsGroupCommand() *cobra.Command {
@@ -131,6 +132,7 @@ func newDynamicBrokerConfigsGroupCommand() *cobra.Command {
 		Use:              "broker",
 		Short:            "Work with broker configurations",
 		Example:          `broker configs --broker=brokerID`,
+		Hidden:           true,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 	}
