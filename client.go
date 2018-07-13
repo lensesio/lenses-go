@@ -3223,7 +3223,7 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
 		}
 
-		message := line[shiftN+1:] // we need everything after the 'data:'.
+		message := line[shiftN:] // we need everything after the 'data:'.
 
 		// it can return data:[empty here] when it stops, let's stop it
 		if len(message) < 2 {
