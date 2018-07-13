@@ -3297,6 +3297,7 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 type BrokerConfig struct {
 	LogCleanerThreads int    `json:"log.cleaner.threads" header:"Log Cleaner Threads"`
 	CompressionType   string `json:"compression.type" header:"Compression Type"`
+	AdvertisedPort    int    `json:"advertised.port" header:"Advertised Port"`
 }
 
 const (
@@ -3331,6 +3332,21 @@ func (c *Client) GetDynamicBrokerConfigs(brokerID int) (config BrokerConfig, err
 	return
 }
 
+// UpdateDynamicClusterConfigs adds or updates cluster configuration dynamically.
+func (c *Client) UpdateDynamicClusterConfigs(toAddOrUpdate BrokerConfig) error {
+	send, err := json.Marshal(toAddOrUpdate)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.Do(http.MethodPut, brokersConfigsPath, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
 // UpdateDynamicBrokerConfigs adds or updates broker configuration dynamically.
 func (c *Client) UpdateDynamicBrokerConfigs(brokerID int, toAddOrUpdate BrokerConfig) error {
 	send, err := json.Marshal(toAddOrUpdate)
@@ -3339,7 +3355,40 @@ func (c *Client) UpdateDynamicBrokerConfigs(brokerID int, toAddOrUpdate BrokerCo
 	}
 
 	path := fmt.Sprintf(brokerConfigsPath, brokerID)
-	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteDynamicClusterConfigs deletes cluster configuration(s) dynamically.
+// It reverts the configuration to its default value.
+func (c *Client) DeleteDynamicClusterConfigs(configKeysToBeReseted ...string) error {
+	send, err := json.Marshal(configKeysToBeReseted)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.Do(http.MethodDelete, brokersConfigsPath, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteDynamicBrokerConfigs deletes a configuration for a broker.
+// Deleting a configuration dynamically reverts it to its default value.
+func (c *Client) DeleteDynamicBrokerConfigs(brokerID int, configKeysToBeReseted ...string) error {
+	send, err := json.Marshal(configKeysToBeReseted)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(brokerConfigsPath, brokerID)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
