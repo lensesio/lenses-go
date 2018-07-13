@@ -3179,8 +3179,7 @@ func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID s
 }
 
 const (
-	alertsPathSSE       = "api/sse/alerts"
-	alertsSSEDataPrefix = "data:"
+	alertsPathSSE = "api/sse/alerts"
 )
 
 // AlertHandler is the type of func that can be registered to receive alerts via the `GetAlertsLive`.
@@ -3213,12 +3212,18 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 			return err // exit on first failure.
 		}
 
-		// ignore all except data: ..., heartbeats.
-		if len(line) < len(alertsSSEDataPrefix)+1 {
+		if len(line) < shiftN+1 { // even more +1 for the actual event.
+			// almost empty or totally invalid line,
+			// empty message maybe,
+			// we don't care, we ignore them at any way.
 			continue
 		}
 
-		message := line[len(alertsSSEDataPrefix):] // we need everything after the 'data:'.
+		if !bytes.HasPrefix(line, dataPrefix) {
+			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
+		}
+
+		message := line[shiftN+1:] // we need everything after the 'data:'.
 
 		// it can return data:[empty here] when it stops, let's stop it
 		if len(message) < 2 {
@@ -3295,9 +3300,9 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 
 // BrokerConfig describes the kafka broker's configurations.
 type BrokerConfig struct {
-	LogCleanerThreads int    `json:"log.cleaner.threads" header:"Log Cleaner Threads"`
-	CompressionType   string `json:"compression.type" header:"Compression Type"`
-	AdvertisedPort    int    `json:"advertised.port" header:"Advertised Port"`
+	LogCleanerThreads int    `json:"log.cleaner.threads" yaml:"LogCleanerThreads" header:"Log Cleaner Threads"`
+	CompressionType   string `json:"compression.type" yaml:"CompressionType" header:"Compression Type"`
+	AdvertisedPort    int    `json:"advertised.port" yaml:"AdvertisedPort" header:"Advertised Port"`
 }
 
 const (
@@ -3394,4 +3399,126 @@ func (c *Client) DeleteDynamicBrokerConfigs(brokerID int, configKeysToBeReseted 
 	}
 
 	return resp.Body.Close()
+}
+
+// AuditEntryType the go type for audit entry types, see the `AuditEntry` structure for more.
+type AuditEntryType string
+
+// The available audit entry types.
+// Available types: AuditEntryTopic, AuditEntryTopicData, AuditEntryQuotas, AuditEntryBrokerConfig,
+// AuditEntryACL, AuditEntrySchema, AuditEntryProcessor, AuditEntryConnector.
+const (
+	AuditEntryTopic        AuditEntryType = "TOPIC"
+	AuditEntryTopicData    AuditEntryType = "TOPIC_DATA"
+	AuditEntryQuotas       AuditEntryType = "QUOTAS"
+	AuditEntryBrokerConfig AuditEntryType = "BROKER_CONFIG"
+	AuditEntryACL          AuditEntryType = "ACL"
+	AuditEntrySchema       AuditEntryType = "SCHEMA"
+	AuditEntryProcessor    AuditEntryType = "PROCESSOR"
+	AuditEntryConnector    AuditEntryType = "CONNECTOR"
+)
+
+// AuditEntryChange the go type describer for the audit entry changes, see the `AuditEntry` structure for more.
+type AuditEntryChange string
+
+// The available audit entry changes.
+// Available types: AuditEntryAdd, AuditEntryRemove, AuditEntryUpdate, AuditEntryInsert.
+const (
+	AuditEntryAdd    AuditEntryChange = "ADD"
+	AuditEntryRemove AuditEntryChange = "REMOVE"
+	AuditEntryUpdate AuditEntryChange = "UPDATE"
+	AuditEntryInsert AuditEntryChange = "INSERT"
+)
+
+// AuditEntry describes a lenses Audit Entry, used for audit logs API.
+type AuditEntry struct {
+	Type      AuditEntryType    `json:"type" yaml:"Type" header:"Type"`
+	Change    AuditEntryChange  `json:"change" yaml:"Change" header:"Change"`
+	UserID    string            `json:"userId" yaml:"User" header:"User"`
+	Timestamp int64             `json:"timestamp" yaml:"Timestamp" header:"Timestamp,unixtime"` // <.s
+	Content   map[string]string `json:"content" yaml:"Content" header:"Content (JSON)"`
+}
+
+const auditPath = "api/audit"
+
+// GetAuditEntries returns the last buffered audit entries.
+//
+// Retrives the last N audit entries created.
+// See `GetAuditEntriesLive` for real-time notifications.
+func (c *Client) GetAuditEntries() (entries []AuditEntry, err error) {
+	resp, err := c.Do(http.MethodGet, auditPath, "", nil)
+	if err != nil {
+		return nil, nil
+	}
+
+	err = c.ReadJSON(resp, &entries)
+	return
+}
+
+// AuditEntryHandler is the type of the function, the listener which is
+// the input parameter of the `GetAuditEntriesLive` API call.
+type AuditEntryHandler func(AuditEntry) error
+
+const auditPathSSE = "api/sse/audit"
+
+// GetAuditEntriesLive returns the live audit notifications, see `GetAuditEntries` too.
+func (c *Client) GetAuditEntriesLive(handler AuditEntryHandler) error {
+	if handler == nil {
+		return errRequired("handler")
+	}
+
+	resp, err := c.Do(http.MethodGet, auditPathSSE, contentTypeJSON, nil, func(r *http.Request) error {
+		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	reader, err := c.acquireResponseBodyStream(resp)
+	if err != nil {
+		return err
+	}
+
+	streamReader := bufio.NewReader(reader)
+
+	for {
+		line, err := streamReader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil // we read until the the end, exit with no error here.
+			}
+			return err // exit on first failure.
+		}
+
+		if len(line) < shiftN+1 { // even more +1 for the actual event.
+			// almost empty or totally invalid line,
+			// empty message maybe,
+			// we don't care, we ignore them at any way.
+			continue
+		}
+
+		if !bytes.HasPrefix(line, dataPrefix) {
+			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
+		}
+
+		message := line[shiftN+1:] // we need everything after the 'data:'.
+
+		// it can return data:[empty here] when it stops, let's stop it
+		if len(message) < 2 {
+			return nil // stop here for now.
+		}
+
+		entry := AuditEntry{}
+
+		if err = json.Unmarshal(message, &entry); err != nil {
+			// exit on first error here as well.
+			return err
+		}
+
+		if err = handler(entry); err != nil {
+			return err // stop on first error by the caller.
+		}
+	}
 }
