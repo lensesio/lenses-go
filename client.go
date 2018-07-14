@@ -3227,9 +3227,8 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 
 		message := line[shiftN:] // we need everything after the 'data:'.
 
-		// it can return data:[empty here] when it stops, let's stop it
 		if len(message) < 2 {
-			return nil // stop here for now.
+			continue // do NOT stop here, let the connection active.
 		}
 
 		alert := Alert{}
@@ -3436,7 +3435,7 @@ const (
 type AuditEntry struct {
 	Type      AuditEntryType    `json:"type" yaml:"Type" header:"Type"`
 	Change    AuditEntryChange  `json:"change" yaml:"Change" header:"Change"`
-	UserID    string            `json:"userId" yaml:"User" header:"User         "` /* make it a little bigger than expected, it looks slighty better for this field*/
+	UserID    string            `json:"userId" yaml:"User" header:"User         "` /* make it a little bigger than expected, it looks slightly better for this field*/
 	Timestamp int64             `json:"timestamp" yaml:"Timestamp" header:"Date,timestamp(ms|utc|02 Jan 2006 15:04)"`
 	Content   map[string]string `json:"content" yaml:"Content" header:"Content (JSON)"`
 }
@@ -3507,9 +3506,8 @@ func (c *Client) GetAuditEntriesLive(handler AuditEntryHandler) error {
 
 		message := line[shiftN+1:] // we need everything after the 'data:'.
 
-		// it can return data:[empty here] when it stops, let's stop it
 		if len(message) < 2 {
-			return nil // stop here for now.
+			continue // do NOT stop here, let the connection active.
 		}
 
 		entry := AuditEntry{}

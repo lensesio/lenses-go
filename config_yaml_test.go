@@ -34,7 +34,7 @@ Contexts:
 	gotConfig, err := ConfigMarshalYAML(Config{
 		CurrentContext: testCurrentContextField,
 		Contexts: map[string]*ClientConfig{
-			testCurrentContextField: &ClientConfig{
+			testCurrentContextField: {
 				Host:           testHostField,
 				Authentication: testBasicAuthenticationField,
 				Timeout:        testTimeoutField,
@@ -81,7 +81,7 @@ Contexts:
 	expectedConfig := Config{
 		CurrentContext: testCurrentContextField,
 		Contexts: map[string]*ClientConfig{
-			testCurrentContextField: &ClientConfig{
+			testCurrentContextField: {
 				Host:           testHostField,
 				Authentication: KerberosAuthentication{ConfFile: testKerberosConfFileField, Method: expectedMethod},
 				Timeout:        testTimeoutField,

@@ -24,7 +24,7 @@ func TestBasicAuthenticationMarshalJSON(t *testing.T) {
 	gotConfig, err := ConfigMarshalJSON(Config{
 		CurrentContext: testCurrentContextField,
 		Contexts: map[string]*ClientConfig{
-			testCurrentContextField: &ClientConfig{
+			testCurrentContextField: {
 				Host:           testHostField,
 				Authentication: testBasicAuthenticationField,
 				Timeout:        testTimeoutField,
@@ -60,7 +60,7 @@ func testKerberosAuthenticationJSON(t *testing.T, expectedAuthStr string, expect
 	expectedConfig := Config{
 		CurrentContext: testCurrentContextField,
 		Contexts: map[string]*ClientConfig{
-			testCurrentContextField: &ClientConfig{
+			testCurrentContextField: {
 				Host:           testHostField,
 				Authentication: KerberosAuthentication{ConfFile: testKerberosConfFileField, Method: expectedMethod},
 				Timeout:        testTimeoutField,

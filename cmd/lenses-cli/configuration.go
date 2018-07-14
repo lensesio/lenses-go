@@ -63,7 +63,7 @@ func makeAuthFromFlags(user, pass, kerberosConf, kerberosRealm, kerberosKeytab, 
 6. config home file found, the --config flag passed and found, override the home's and run based on the --config, don't save. (PASS)
 
 7. config home file not found, neither auth flags passed but command was one of "context" or "contexts" then show empty screen. (PASS)
-  7.1 f "configure" command thne must show the create configuration survey. (PASS)
+  7.1 f "configure" command then must show the create configuration survey. (PASS)
 */
 
 func newConfigurationManager(set *pflag.FlagSet) *configurationManager {

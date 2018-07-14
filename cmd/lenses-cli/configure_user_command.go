@@ -80,7 +80,7 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 	if err != nil {
 		isValid = false
 		// these type of error reporting is not for end-user specific language
-		// but they may help us on debugging if user edited manualy the configs and was wrong.
+		// but they may help us on debugging if user edited manually the configs and was wrong.
 		info += ", error: " + err.Error()
 	}
 
