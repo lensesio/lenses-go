@@ -1382,26 +1382,27 @@ type (
 	// ProcessorStream describes the processor stream,
 	// see `ProcessorResult`.
 	ProcessorStream struct {
-		ID          string `json:"id" header:"ID,text"`
-		Name        string `json:"name" header:"Name"`
-		ClusterName string `json:"clusterName" header:"Cluster"`
-		Namespace   string `json:"namespace" header:"Namespace"`
-		User        string `json:"user" header:"User"`
+		ID              string `json:"id"` // header:"ID,text"`
+		Name            string `json:"name" header:"Name"`
+		DeploymentState string `json:"deploymentState" header:"State"`
+		Runners         int    `json:"runners" header:"Runners"`
+		User            string `json:"user" header:"Created By"`
+		StartTimestamp  int64  `json:"startTs" header:"Started at,timestamp(ms|02 Jan 2006 15:04)"`
+		StopTimestamp   int64  `json:"stopTs,omitempty"` // header:"Stopped,timestamp(ms|02 Jan 2006 15:04),No"`
+		Uptime          int64  `json:"uptime" header:"Up time,unixduration"`
+
+		ClusterName string `json:"clusterName"` // header:"Cluster"`
+		Namespace   string `json:"namespace"`   // header:"Namespace"`
 
 		SQL string `json:"sql"` // header:"SQL"`
 
-		DeploymentState   string `json:"deploymentState" header:"Depl State"`
-		TopicValueDecoder string `json:"topicValueDecoder" header:"Topic Decoder"`
-		Pipeline          string `json:"pipeline" header:"Pipeline"`
+		TopicValueDecoder string `json:"topicValueDecoder"` // header:"Topic Decoder"`
+		Pipeline          string `json:"pipeline"`          // header:"Pipeline"`
 
-		ToTopic                []string `json:"toTopics,omitempty"`           // header:"To Topics"`
+		ToTopics               []string `json:"toTopics,omitempty"` // header:"To Topics"`
+		FromTopics             []string `json:"fromTopics,omitempty"`
 		LastActionMessage      string   `json:"lastActionMsg,omitempty"`      // header:"Last Action"`
 		DeploymentErrorMessage string   `json:"deploymentErrorMsg,omitempty"` // header:"Depl Error"`
-
-		Runners        int   `json:"runners" header:"Runners"`
-		Uptime         int64 `json:"uptime" header:"Up time,unixduration"`
-		StartTimestamp int64 `json:"startTs" header:"Started,unixtime_human"`
-		StopTimestamp  int64 `json:"stopTs,omitempty" header:"Stopped,unixtime_human,No"`
 
 		RunnerState map[string]ProcessorRunnerState `json:"runnerState"`
 	}
@@ -3094,10 +3095,6 @@ type (
 	Alert struct {
 		// AlertID  is a unique identifier for the setting corresponding to this alert. See the available ids via `GetAlertSettings`.
 		AlertID int `json:"alertId" yaml:"AlertID" header:"ID,text"`
-		// StartsAt is the time as string, in ISO format, for when the alert starts
-		StartsAt string `json:"startsAt" yaml:"StartsAt" header:"Start,date"`
-		// EndsAt is the time as string the alert ended at.
-		EndsAt string `json:"endsAt" yaml:"EndsAt" header:"End,date"`
 
 		// Labels field is a list of key-value pairs. It must contain a non empty `Severity` value.
 		Labels AlertLabels `json:"labels" yaml:"Labels" header:"inline"`
@@ -3106,6 +3103,11 @@ type (
 		// GeneratorURL is a unique URL identifying the creator of this alert.
 		// It matches AlertManager requirements for providing this field.
 		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL"` // header:"Gen URL"`
+
+		// StartsAt is the time as string, in ISO format, for when the alert starts
+		StartsAt string `json:"startsAt" yaml:"StartsAt" header:"Start,date"`
+		// EndsAt is the time as string the alert ended at.
+		EndsAt string `json:"endsAt" yaml:"EndsAt" header:"End,date"`
 	}
 
 	// AlertLabels labels for the `Alert`, at least Severity should be filled.
@@ -3434,8 +3436,8 @@ const (
 type AuditEntry struct {
 	Type      AuditEntryType    `json:"type" yaml:"Type" header:"Type"`
 	Change    AuditEntryChange  `json:"change" yaml:"Change" header:"Change"`
-	UserID    string            `json:"userId" yaml:"User" header:"User"`
-	Timestamp int64             `json:"timestamp" yaml:"Timestamp" header:"Timestamp,unixtime"` // <.s
+	UserID    string            `json:"userId" yaml:"User" header:"User         "` /* make it a little bigger than expected, it looks slighty better for this field*/
+	Timestamp int64             `json:"timestamp" yaml:"Timestamp" header:"Date,timestamp(ms|utc|02 Jan 2006 15:04)"`
 	Content   map[string]string `json:"content" yaml:"Content" header:"Content (JSON)"`
 }
 
