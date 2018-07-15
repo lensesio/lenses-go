@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -115,6 +116,13 @@ func newLiveLSQLCommand() *cobra.Command {
 				// a query may be errored but another, most important may running for a long time.
 				select {
 				case err := <-conn.Err():
+					// ignore error and don't print that caused by ctrl/cmd+c while trying to read.
+					if errNet, isNetworkClosed := err.(*net.OpError); isNetworkClosed && errNet.Op == "read" {
+						if strings.Contains(errNet.Error(), "use of closed") {
+							return
+						}
+					}
+
 					fmt.Fprintf(cmd.OutOrStderr(), "%s\n", err)
 				}
 			}()

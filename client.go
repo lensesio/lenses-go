@@ -558,10 +558,10 @@ func (c *Client) GetExecutionMode() (ExecutionMode, error) {
 // ConnectCluster contains the connect cluster information that is returned by the `GetConnectClusters` call.
 type ConnectCluster struct {
 	Name     string `json:"name" header:"Name"`
-	URL      string `json:"url" header:"URL"`
+	URL      string `json:"url"` //header:"URL"`
 	Statuses string `json:"statuses" header:"Status"`
 	Config   string `json:"config" header:"Config"`
-	Offsets  string `json:"offsets" header:"Offsets"`
+	Offsets  string `json:"offsets" header:"Offsets,count"`
 }
 
 const connectClustersKey = "lenses.connect.clusters"

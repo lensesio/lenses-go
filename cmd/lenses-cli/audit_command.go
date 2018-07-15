@@ -68,5 +68,8 @@ func newGetAuditEntriesCommand() *cobra.Command {
 
 	cmd.Flags().BoolVar(&sse, "live", false, "--live")
 	cmd.Flags().BoolVar(&tableOnlyWithContent, "with-content", false, "--with-content add a table column to display the raw json content of the event action")
+
+	bite.CanPrintJSON(cmd)
+
 	return cmd
 }

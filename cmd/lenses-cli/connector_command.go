@@ -167,13 +167,12 @@ func newGetConnectorsPluginsCommand() *cobra.Command {
 				}
 			}
 
-			for _, p := range plugins {
+			for i, p := range plugins {
 				if p.Version == "null" || p.Version == "" {
-					p.Version = "X.X.X"
+					plugins[i].Version = "X.X.X"
 				}
 			}
 
-			// return printJSON(cmd, plugins)
 			return bite.PrintObject(cmd, plugins)
 		},
 	}

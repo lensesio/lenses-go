@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -298,6 +299,12 @@ func (c *LiveConnection) readLoop() {
 		default:
 			resp := LiveResponse{}
 			if err := c.conn.ReadJSON(&resp); err != nil {
+				if _, is := err.(*net.OpError); is {
+					// send it as it's and do not exit, caller may want to check if should work with that error or just ignore it.
+					// caused by manual interruption(ctrl/cmd+c) or real network issue(this is why we continue after the error here).
+					c.sendErr(err)
+					continue
+				}
 				c.sendErr(fmt.Errorf("live: read json: %v", err))
 				continue
 			}

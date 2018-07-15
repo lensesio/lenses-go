@@ -41,8 +41,8 @@ func newGetConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			// return printJSON(cmd, config)
-			return bite.PrintObject(cmd, config)
+			// print all as json, it's not so much a visual-required command.
+			return bite.PrintJSON(cmd, config)
 		},
 	}
 
