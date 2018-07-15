@@ -78,10 +78,32 @@ func newConnectorsCommand() *cobra.Command {
 				return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", names))
 			}
 
-			connectors := make(map[string][]lenses.Connector, len(connectorNames))
+			// if json output requested, create a json object which is the group of cluster:[]connectors and print as json.
+			if bite.GetMachineFriendlyFlag(cmd) {
+				connectors := make(map[string][]lenses.Connector, len(connectorNames))
 
-			// else print the entire info.
+				for cluster, names := range connectorNames {
+					sort.Strings(names)
+
+					for _, name := range names {
+						connector, err := client.GetConnector(cluster, name)
+						if err != nil {
+							fmt.Fprintf(cmd.OutOrStderr(), "get connector error: %v\n", err)
+							continue
+						}
+
+						connectors[cluster] = append(connectors[cluster], connector)
+
+					}
+				}
+				return bite.PrintJSON(cmd, connectors)
+			}
+
+			// if table mode view, select all connectors as a list,
+			// do not make the group "visual" based on cluster name here (still they are grouped).
+			var connectors []lenses.Connector
 			for cluster, names := range connectorNames {
+				sort.Strings(names)
 				for _, name := range names {
 					connector, err := client.GetConnector(cluster, name)
 					if err != nil {
@@ -89,11 +111,11 @@ func newConnectorsCommand() *cobra.Command {
 						continue
 					}
 
-					connectors[cluster] = append(connectors[cluster], connector)
+					connectors = append(connectors, connector)
 				}
 			}
 
-			return bite.PrintJSON(cmd, connectors) // keep json?
+			return bite.PrintObject(cmd, connectors)
 		},
 	}
 
