@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/landoop/lenses-go"
-	"github.com/landoop/tableprinter"
 
 	"github.com/landoop/bite"
+	"github.com/landoop/tableprinter"
 	"github.com/spf13/cobra"
 )
 
@@ -47,6 +49,10 @@ func newGetAuditEntriesCommand() *cobra.Command {
 				return err
 			}
 
+			if len(entries) == 0 {
+				return nil
+			}
+
 			if withoutContentColumn {
 				// print each one without content,
 				// bite is smart enough to see that it's the same type and it will append a row instead of a creating a new table,
@@ -54,6 +60,9 @@ func newGetAuditEntriesCommand() *cobra.Command {
 				for i := range entries {
 					// entries[i].Content = nil
 					newEntry := tableprinter.RemoveStructHeader(entries[i], "Content")
+					// show the length of types by overriding the type header struct(cached or not), printer don't really know how much they are in this time.
+					// LINK:lenses.Entry.Type
+					newEntry = tableprinter.SetStructHeader(newEntry, "Type", fmt.Sprintf("TYPE (%d)", len(entries)))
 					if err = bite.PrintObject(cmd, newEntry); err != nil {
 						return err
 					}
