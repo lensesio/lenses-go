@@ -68,7 +68,6 @@ func newGetProcessorsCommand() *cobra.Command {
 				processor.SQL = strings.Replace(processor.SQL, "   ", "", -1)
 			}
 
-			// return printJSON(cmd, result.Streams)
 			return bite.PrintObject(cmd, result.Streams)
 		},
 	}

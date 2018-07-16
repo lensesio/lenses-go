@@ -1391,8 +1391,8 @@ type (
 		StopTimestamp   int64  `json:"stopTs,omitempty"` // header:"Stopped,timestamp(ms|02 Jan 2006 15:04),No"`
 		Uptime          int64  `json:"uptime" header:"Up time,unixduration"`
 
-		ClusterName string `json:"clusterName"` // header:"Cluster"`
-		Namespace   string `json:"namespace"`   // header:"Namespace"`
+		Namespace   string `json:"namespace" header:"Namespace"`
+		ClusterName string `json:"clusterName" header:"Cluster"`
 
 		SQL string `json:"sql"` // header:"SQL"`
 

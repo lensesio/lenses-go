@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/landoop/lenses-go"
@@ -737,18 +739,30 @@ func newLoginCommand() *cobra.Command {
 				line = strings.TrimRight(line, "\r\n")
 
 				// if "exit" then exit now.
-				if line == "exit" {
+				switch line {
+				case "exit":
 					os.Exit(0)
+				case "clear", "cls":
+					if runtime.GOOS == "windows" {
+						// TODO: not tested yet.
+						cmd := exec.Command("cmd", "/c", "cls")
+						cmd.Stdout = out
+						cmd.Run()
+					} else {
+						cmd.Print("\033[H\033[2J")
+					}
+
+					continue
 				}
 
 				cms := strings.Split(line, " ")
 
 				/* Remember: why we do this "cP"?:
 				   if not then:
-				    processors --no-pretty
+				    processors --machine-friendly --no-pretty
 				    and after
 				    processors
-				    will keep the --no-pretty flag to true without be able to change it via --no-pretty=false.
+				    will keep the --machine-friendly --no-pretty flag to true without be able to change it via --no-pretty=false.
 
 				    With the clone solution we still remember the flags(very important) but they can be changed if needed.
 				*/
