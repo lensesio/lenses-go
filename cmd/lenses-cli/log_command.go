@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/landoop/lenses-go"
@@ -57,7 +57,8 @@ func printLogLines(logs []lenses.LogLine) error {
 	golog.SetTimeFormat("")
 
 	for _, logLine := range logs {
-		line := fmt.Sprintf("%s %s", logLine.Time, logLine.Message)
+		logLine.Message, _ = url.QueryUnescape(logLine.Message) // for LSQL lines.
+		line := logLine.Time + " " + logLine.Message
 		richLog(logLine.Level, line)
 	}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/url"
 	"sort"
 	"strings"
 
@@ -105,6 +106,7 @@ func newProcessorsLogsCommand() *cobra.Command {
 
 			golog.SetTimeFormat("")
 			handler := func(level, log string) error {
+				log, _ = url.QueryUnescape(log) // for LSQL lines.
 				richLog(level, log)
 				return nil
 			}
