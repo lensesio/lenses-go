@@ -3244,25 +3244,30 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 	}
 }
 
-const processorsLogsPathSSE = "api/k8/logs/sse/%s/%s/%s"
+const processorsLogsPathSSE = "api/sse/k8/logs/%s/%s/%s?"
+
+type processorLog struct {
+	Timestamp string `json:"@timestamp" Header:"Timestamp,date"`
+	Version   int    `json:"@version" Header:"Version"`
+	Message   string `json:"message" Header:"Message"`
+	// logger_name
+	// thread_name
+	Level string `json:"level"`
+	// level_value
+}
 
 // GetProcessorsLogs retrieves the LSQL processor logs if in kubernetes mode.
-func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool, handler func(string) error) error {
+func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool, handler func(level string, log string) error) error {
 	if mode, _ := c.GetExecutionMode(); mode != ExecutionModeKubernetes {
 		return fmt.Errorf("unable to retrieve logs, execution mode is not KUBERNETES")
 	}
 
-	path := fmt.Sprintf(processorsLogsPathSSE, clusterName, ns, podName)
-
-	// TODO: need more details.
-	// if follow {
-	// 	path+="?follow=true&lines="
-	// }
+	path := fmt.Sprintf(processorsLogsPathSSE, clusterName, ns, podName) // follow=%v&lines=%d
 
 	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) error {
 		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
 		return nil
-	}, schemaAPIOption)
+	})
 	if err != nil {
 		return err
 	}
@@ -3274,9 +3279,8 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 	}
 
 	streamReader := bufio.NewReader(reader)
-
 	for {
-		line, err := streamReader.ReadString('\n')
+		line, err := streamReader.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
 				return nil // we read until the the end, exit with no error here.
@@ -3284,14 +3288,42 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 			return err // exit on first failure.
 		}
 
-		// ignore all except data: ..., heartbeats.
-		if len(line) < 2 {
+		if len(line) < shiftN+1 { // even more +1 for the actual event.
+			// almost empty or totally invalid line,
+			// empty message maybe,
+			// we don't care, we ignore them at any way.
 			continue
 		}
 
-		if err = handler(line); err != nil {
-			return err // stop on first error by the caller.
+		if !bytes.HasPrefix(line, dataPrefix) {
+			continue
 		}
+
+		message := line[shiftN:]
+
+		if len(message) < 2 {
+			continue
+		}
+
+		// it can be a json object or a pure string log.
+		logEntry := processorLog{}
+		if message[0] == '{' {
+			if err = json.Unmarshal(message, &logEntry); err == nil {
+				// logLine := fmt.Sprintf("[%s] %s", logEntry.Level, logEntry.Message)
+				// colorized by the caller.
+				if err = handler(logEntry.Level, logEntry.Message); err != nil {
+					return err
+				}
+			} else {
+				// for any case.
+				handler("info", string(message))
+			}
+
+			continue
+		}
+
+		// it contains the log level itself.
+		handler("", string(message))
 	}
 }
 
@@ -3504,7 +3536,7 @@ func (c *Client) GetAuditEntriesLive(handler AuditEntryHandler) error {
 			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
 		}
 
-		message := line[shiftN+1:] // we need everything after the 'data:'.
+		message := line[shiftN:] // we need everything after the 'data:'.
 
 		if len(message) < 2 {
 			continue // do NOT stop here, let the connection active.

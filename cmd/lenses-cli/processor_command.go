@@ -7,6 +7,7 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
@@ -102,8 +103,17 @@ func newProcessorsLogsCommand() *cobra.Command {
 				return err
 			}
 
-			handler := func(log string) error {
-				fmt.Fprintln(cmd.OutOrStdout(), log)
+			handler := func(level, log string) error {
+				switch strings.ToLower(level) {
+				case "info":
+					golog.Infof(log)
+				case "warn":
+					golog.Warnf(log)
+				case "error":
+					golog.Errorf(log)
+				default:
+					fmt.Println(log)
+				}
 				return nil
 			}
 
