@@ -3244,7 +3244,7 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 	}
 }
 
-const processorsLogsPathSSE = "api/sse/k8/logs/%s/%s/%s?"
+const processorsLogsPathSSE = "api/sse/k8/logs/%s/%s/%s"
 
 type processorLog struct {
 	Timestamp string `json:"@timestamp" Header:"Timestamp,date"`
@@ -3256,13 +3256,22 @@ type processorLog struct {
 	// level_value
 }
 
+const defaultProcessorsLogsFollowLines = 100
+
 // GetProcessorsLogs retrieves the LSQL processor logs if in kubernetes mode.
-func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool, handler func(level string, log string) error) error {
+func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool, lines int, handler func(level string, log string) error) error {
 	if mode, _ := c.GetExecutionMode(); mode != ExecutionModeKubernetes {
 		return fmt.Errorf("unable to retrieve logs, execution mode is not KUBERNETES")
 	}
 
-	path := fmt.Sprintf(processorsLogsPathSSE, clusterName, ns, podName) // follow=%v&lines=%d
+	path := fmt.Sprintf(processorsLogsPathSSE, clusterName, ns, podName)
+	if follow {
+		if lines <= 0 {
+			lines = defaultProcessorsLogsFollowLines
+		}
+
+		path += "?follow=true&lines=" + fmt.Sprintf("%d", lines)
+	}
 
 	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) error {
 		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
@@ -3305,7 +3314,7 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 			continue
 		}
 
-		// it can be a json object or a pure string log.
+		// it can be a json object or a pure string log (but always after data:, i.e data:======> Log level set to INFO).
 		logEntry := processorLog{}
 		if message[0] == '{' {
 			if err = json.Unmarshal(message, &logEntry); err == nil {

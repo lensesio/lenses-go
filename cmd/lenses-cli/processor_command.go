@@ -90,12 +90,13 @@ func newProcessorsLogsCommand() *cobra.Command {
 	var (
 		clusterName, podName, namespace string
 		follow                          bool
+		lines                           int
 	)
 
 	cmd := &cobra.Command{
 		Use:              "logs",
 		Short:            "Retrieve LSQL Processor logs. Available only in KUBERNETES execution mode",
-		Example:          `processors logs --clusterName="clusterName" --namespace="ns" --podName="podName"`,
+		Example:          `processors logs --clusterName=clusterName --namespace=nameSpace --podName=runnerStateID [--follow --lines=50]`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -117,7 +118,7 @@ func newProcessorsLogsCommand() *cobra.Command {
 				return nil
 			}
 
-			return client.GetProcessorsLogs(clusterName, namespace, podName, follow, handler)
+			return client.GetProcessorsLogs(clusterName, namespace, podName, follow, lines, handler)
 		},
 	}
 
@@ -125,7 +126,7 @@ func newProcessorsLogsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&namespace, "namespace", "", "--namespace=namespace")
 	cmd.Flags().StringVar(&podName, "podName", "", "--podName=podName")
 	cmd.Flags().BoolVar(&follow, "follow", false, "--follow")
-
+	cmd.Flags().IntVar(&lines, "lines", 100, "--lines=100")
 	return cmd
 }
 
