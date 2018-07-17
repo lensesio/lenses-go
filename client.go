@@ -3568,3 +3568,42 @@ func (c *Client) GetAuditEntriesLive(handler AuditEntryHandler) error {
 		}
 	}
 }
+
+// LogLine represents the return value(s) of the `GetLogs` call.
+type LogLine struct {
+	Level      string `json:"level" header:"Level"`
+	Thread     string `json:"thread"`
+	Logger     string `json:"logger"`
+	Message    string `json:"message" header:"Message"`
+	Stacktrace string `json:"Stacktrace"`
+	Timestmap  int64  `json:"Timestamp"`
+	Time       string `json:"time" header:"Time"`
+}
+
+const (
+	logsPath        = "api/logs"
+	logsInfoPath    = logsPath + "/INFO"
+	logsMetricsPath = logsPath + "/METRICS"
+)
+
+// GetLogsInfo returns the latest (512) INFO log lines.
+func (c *Client) GetLogsInfo() ([]LogLine, error) {
+	resp, err := c.Do(http.MethodGet, logsInfoPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	var logs []LogLine
+	err = c.ReadJSON(resp, &logs)
+	return logs, err
+}
+
+// GetLogsMetrics returns the latest (512) METRICS log lines.
+func (c *Client) GetLogsMetrics() ([]LogLine, error) {
+	resp, err := c.Do(http.MethodGet, logsMetricsPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	var logs []LogLine
+	err = c.ReadJSON(resp, &logs)
+	return logs, err
+}

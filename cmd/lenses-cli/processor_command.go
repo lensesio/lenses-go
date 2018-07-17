@@ -105,16 +105,7 @@ func newProcessorsLogsCommand() *cobra.Command {
 
 			golog.SetTimeFormat("")
 			handler := func(level, log string) error {
-				switch strings.ToLower(level) {
-				case "info":
-					golog.Infof(log)
-				case "warn":
-					golog.Warnf(log)
-				case "error":
-					golog.Errorf(log)
-				default:
-					app.Print(log)
-				}
+				richLog(level, log)
 				return nil
 			}
 
