@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -104,6 +103,7 @@ func newProcessorsLogsCommand() *cobra.Command {
 				return err
 			}
 
+			golog.SetTimeFormat("")
 			handler := func(level, log string) error {
 				switch strings.ToLower(level) {
 				case "info":
@@ -113,7 +113,7 @@ func newProcessorsLogsCommand() *cobra.Command {
 				case "error":
 					golog.Errorf(log)
 				default:
-					fmt.Println(log)
+					app.Print(log)
 				}
 				return nil
 			}

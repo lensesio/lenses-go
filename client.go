@@ -3318,11 +3318,16 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 		logEntry := processorLog{}
 		if message[0] == '{' {
 			if err = json.Unmarshal(message, &logEntry); err == nil {
-				// logLine := fmt.Sprintf("[%s] %s", logEntry.Level, logEntry.Message)
+				t, err := time.Parse(time.RFC3339, logEntry.Timestamp)
+				if err == nil {
+					logEntry.Timestamp = t.Format("2006-01-02 15:04:05")
+				}
+
 				// colorized by the caller.
-				if err = handler(logEntry.Level, logEntry.Message); err != nil {
+				if err = handler(logEntry.Level, fmt.Sprintf("%s %s", logEntry.Timestamp, logEntry.Message)); err != nil {
 					return err
 				}
+
 			} else {
 				// for any case.
 				handler("info", string(message))
