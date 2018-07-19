@@ -187,8 +187,13 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if topicName != "" {
 				// view single.
-
 				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve topic's metadata for '%s', it does not exist", topicName)
+				// it does not return error if topic does not exists, it returns status code 200, so we have to manually fetch for the topic first.
+				_, err := client.GetTopic(topicName)
+				if err != nil {
+					return err
+				}
+
 				meta, err := client.GetTopicMetadata(topicName)
 				if err != nil {
 					return err
@@ -199,30 +204,28 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 					return err
 				}
 
-				// return printJSON(cmd, viewMeta)
 				return bite.PrintObject(cmd, viewMeta)
 			}
 
-			meta, err := client.GetTopicsMetadata()
+			metas, err := client.GetTopicsMetadata()
 			if err != nil {
 				return err
 			}
 
-			sort.Slice(meta, func(i, j int) bool {
-				return meta[i].TopicName < meta[j].TopicName
+			sort.Slice(metas, func(i, j int) bool {
+				return metas[i].TopicName < metas[j].TopicName
 			})
 
-			viewMeta := make([]topicMetadataView, len(meta), len(meta))
+			viewMetas := make([]topicMetadataView, len(metas), len(metas))
 
-			for i, m := range meta {
-				viewMeta[i], err = newTopicMetadataView(m)
+			for i, m := range metas {
+				viewMetas[i], err = newTopicMetadataView(m)
 				if err != nil {
 					return err
 				}
 			}
 
-			// return printJSON(cmd, viewMeta)
-			return bite.PrintObject(cmd, viewMeta)
+			return bite.PrintObject(cmd, viewMetas)
 		},
 	}
 

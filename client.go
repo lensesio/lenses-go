@@ -255,6 +255,8 @@ func (c *Client) acquireResponseBodyStream(resp *http.Response) (io.ReadCloser, 
 
 const bufN = 512
 
+// var errEmptyResponse = fmt.Errorf("")
+
 // ReadResponseBody is the lower-level method of client to read the result of a `Client#Do`, it closes the body stream.
 //
 // See `ReadJSON` too.
@@ -298,19 +300,23 @@ func (c *Client) ReadResponseBody(resp *http.Response) ([]byte, error) {
 		    }
 	*/
 
-	body, err := ioutil.ReadAll(reader)
+	b, err := ioutil.ReadAll(reader)
 	if err = reader.Close(); err != nil {
 		return nil, err
 	}
 
+	// if len(b) == 0 || (len(b) == 2 && (b[0] == '[' && b[1] == ']') || (b[0] == '{' && b[1] == '}')) {
+	// 	return nil, errEmptyResponse
+	// }
+
 	if c.Config.Debug {
-		rawBodyString := string(body)
+		rawBodyString := string(b)
 		// print both body and error, because both of them may be formated by the `readResponseBody`'s caller.
-		golog.Debugf("Client#Do.resp:\n\tbody: %s\n\terror: %v", rawBodyString, err)
+		golog.Debugf("Client#Do.resp:\n\tbody: %s\n\tstatus code: %d\n\terror: %v", rawBodyString, resp.StatusCode, err)
 	}
 
 	// return the body.
-	return body, err
+	return b, err
 }
 
 // ReadJSON is one of the lower-level methods of the client to read the result of a `Client#Do`, it closes the body stream.
