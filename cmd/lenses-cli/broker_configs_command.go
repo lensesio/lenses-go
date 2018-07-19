@@ -86,7 +86,7 @@ func newSetDynamicClusterConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Cluster configs updated.")
+			return bite.PrintInfo(cmd, "Cluster configs updated")
 		},
 	}
 
@@ -119,7 +119,7 @@ func newDeleteDynamicClusterConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Cluster configs %s reseted.", keysStr)
+			return bite.PrintInfo(cmd, "Cluster configs %s reseted", keysStr)
 		},
 	}
 
@@ -200,7 +200,7 @@ func newSetDynamicBrokerConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Configs updated for broker with id: %d.", brokerID)
+			return bite.PrintInfo(cmd, "Configs updated for broker with id: %d", brokerID)
 		},
 	}
 
@@ -238,7 +238,7 @@ func newDeleteDynamicBrokerConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Configs %s reseted for broker with id: %d.", keysStr, brokerID)
+			return bite.PrintInfo(cmd, "Configs %s reseted for broker with id: %d", keysStr, brokerID)
 		},
 	}
 

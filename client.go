@@ -3575,7 +3575,7 @@ func (c *Client) GetAuditEntriesLive(handler AuditEntryHandler) error {
 	}
 }
 
-// LogLine represents the return value(s) of the `GetLogs` call.
+// LogLine represents the return value(s) of the `GetLogsInfo` and `GetLogsMetrics` calls.
 type LogLine struct {
 	Level      string `json:"level" header:"Level"`
 	Thread     string `json:"thread"`
@@ -3612,4 +3612,51 @@ func (c *Client) GetLogsMetrics() ([]LogLine, error) {
 	var logs []LogLine
 	err = c.ReadJSON(resp, &logs)
 	return logs, err
+}
+
+// UserProfile contains all the user-specific favourites, only kafka related info.
+type UserProfile struct {
+	Topics       []string `json:"topics" header:"Topics"`
+	Schemas      []string `json:"schemas" header:"Schemas"`
+	Transformers []string `json:"transformers" header:"Transformers"`
+}
+
+const (
+	userProfilePath         = "api/user/profile"
+	userProfilePropertyPath = userProfilePath + "/%s/%s"
+)
+
+// GetUserProfile returns the user-specific favourites.
+func (c *Client) GetUserProfile() (UserProfile, error) {
+	var profile UserProfile
+
+	resp, err := c.Do(http.MethodGet, userProfilePath, "", nil)
+	if err != nil {
+		return profile, err
+	}
+
+	err = c.ReadJSON(resp, &profile)
+	return profile, err
+}
+
+// CreateUserProfilePropertyValue adds a "value" to the user profile "property" entries.
+func (c *Client) CreateUserProfilePropertyValue(property, value string) error {
+	path := fmt.Sprintf(userProfilePropertyPath, property, value)
+	resp, err := c.Do(http.MethodPut, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteUserProfilePropertyValue removes the "value" from the user profile "property" entries.
+func (c *Client) DeleteUserProfilePropertyValue(property, value string) error {
+	path := fmt.Sprintf(userProfilePropertyPath, property, value)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
 }

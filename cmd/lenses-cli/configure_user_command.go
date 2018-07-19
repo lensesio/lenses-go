@@ -29,7 +29,7 @@ func init() {
 	app.AddCommand(newConfigurationContextCommand())
 	app.AddCommand(newConfigureCommand())
 	app.AddCommand(newLoginCommand())
-	app.AddCommand(newGetUserInfoCommand())
+
 	// remove `logout` command (at least for the moment) rootCmd.AddCommand(newLogoutCommand())
 	app.AddCommand(newGetLicenseInfoCommand())
 }
@@ -829,28 +829,6 @@ func newLoginCommand() *cobra.Command {
 			}
 
 		}}
-
-	return cmd
-}
-
-func newGetUserInfoCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:              "user",
-		Short:            "Print some information about the authenticated logged user such as the given roles given by the lenses administrator",
-		Example:          "user",
-		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if user := client.User; user.Name != "" {
-				// if logged in using the user password, then we have those info,
-				// let's print it as well.
-				// return printJSON(cmd, user)
-				return bite.PrintObject(cmd, user)
-			}
-			return nil
-		},
-	}
-
-	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
