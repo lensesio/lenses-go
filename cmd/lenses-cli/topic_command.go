@@ -356,6 +356,15 @@ func newTopicCreateCommand() *cobra.Command {
 				return err
 			}
 
+			if configsRaw != "" {
+				if err := bite.TryReadFile(configsRaw, &topic.Configs); err != nil {
+					// from flag as json.
+					if err = json.Unmarshal([]byte(configsRaw), &topic.Configs); err != nil {
+						return fmt.Errorf("unable to unmarshal the configs: %v", err)
+					}
+				}
+			}
+
 			if err := client.CreateTopic(topic.TopicName, topic.Replication, topic.Partitions, topic.Configs); err != nil {
 				bite.FriendlyError(cmd, errResourceNotGoodMessage, "unable to create topic with name '%s', already exists", topic.TopicName)
 				return err
@@ -371,7 +380,7 @@ func newTopicCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&configsRaw, "configs", "", `--configs="{\"max.message.bytes\": \"1000010\"}"`)
 	bite.CanBeSilent(cmd)
 
-	bite.ShouldTryLoadFile(cmd, &topic).Else(func() error { return bite.AllowEmptyFlag(bite.TryReadFile(configsRaw, &topic.Configs)) })
+	// bite.ShouldTryLoadFile(cmd, &topic).Else(func() error { return bite.AllowEmptyFlag(bite.TryReadFile(configsRaw, &topic.Configs)) })
 	// same
 	// bite.Prepend(cmd, bite.FileBind(&topic, bite.ElseBind(func() error { return bite.AllowEmptyFlag(bite.TryReadFile(configsRaw, &topic.Configs)) })))
 
@@ -430,7 +439,7 @@ func newTopicDeleteCommand() *cobra.Command {
 
 func newTopicUpdateCommand() *cobra.Command {
 	var (
-		configsArrayRaw string
+		configsArrayRaw []string
 		topic           = lenses.UpdateTopicPayload{
 			Configs: make([]lenses.KV, 0),
 		}
@@ -439,12 +448,26 @@ func newTopicUpdateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "update",
 		Short:            "Update a topic's configs (as an array of config key-value map)",
-		Example:          `topic update --name="topic1" --configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]" or topic update ./topic.yml`,
+		Example:          `topic update --name="topic1" --configs="{\"key\": \"max.message.bytes\", \"value\": \"1000020\"} --configs=jsonOrInline" or topic update ./topic.yml`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": topic.Name}); err != nil {
 				return err
+			}
+
+			if len(configsArrayRaw) > 0 {
+				for _, configsRaw := range configsArrayRaw {
+					var cfg lenses.KV
+					if err := bite.TryReadFile(configsRaw, &topic.Configs); err != nil {
+						// from flag as json.
+						if err = json.Unmarshal([]byte(configsRaw), &cfg); err != nil {
+							return fmt.Errorf("unable to unmarshal the configs: %v", err)
+						}
+					}
+
+					topic.Configs = append(topic.Configs, cfg)
+				}
 			}
 
 			if err := client.UpdateTopic(topic.Name, topic.Configs); err != nil {
@@ -457,10 +480,11 @@ func newTopicUpdateCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&topic.Name, "name", "", "--name=topic1")
-	cmd.Flags().StringVar(&configsArrayRaw, "configs", "", `--configs="[{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}, ...]"`)
+	cmd.Flags().StringSliceVar(&configsArrayRaw, "configs", nil, `--configs="{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}" --configs="..."`)
 	bite.CanBeSilent(cmd)
 
-	bite.Prepend(cmd, bite.FileBind(&topic, bite.ElseBind(func() error { return bite.TryReadFile(configsArrayRaw, &topic.Configs) })))
+	bite.ShouldTryLoadFile(cmd, &topic)
+	// bite.Prepend(cmd, bite.FileBind(&topic, bite.ElseBind(func() error { return bite.TryReadFile(configsArrayRaw, &topic.Configs) })))
 
 	return cmd
 }

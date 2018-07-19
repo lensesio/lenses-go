@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -300,6 +301,15 @@ func newConnectorCreateCommand() *cobra.Command {
 				return err
 			}
 
+			if configRaw != "" {
+				if err := bite.TryReadFile(configRaw, &connector.Config); err != nil {
+					// from flag as json.
+					if err = json.Unmarshal([]byte(configRaw), &connector.Config); err != nil {
+						return fmt.Errorf("unable to unmarshal the config: %v", err)
+					}
+				}
+			}
+
 			_, err := client.CreateConnector(connector.ClusterName, connector.Name, connector.Config)
 			if err != nil {
 				// give the exactly "low-level" message here, because we can't know if it's from the configuration
@@ -320,9 +330,7 @@ func newConnectorCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
 	bite.CanBeSilent(cmd)
 
-	bite.Prepend(cmd, bite.FileBind(&connector, bite.ElseBind(func() error {
-		return bite.TryReadFile(configRaw, &connector.Config)
-	})))
+	bite.ShouldTryLoadFile(cmd, &connector)
 
 	return cmd
 }
@@ -346,6 +354,15 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": connector.ClusterName, "name": connector.Name}); err != nil {
 				return err
+			}
+
+			if configRaw != "" {
+				if err := bite.TryReadFile(configRaw, &connector.Config); err != nil {
+					// from flag as json.
+					if err = json.Unmarshal([]byte(configRaw), &connector.Config); err != nil {
+						return fmt.Errorf("unable to unmarshal the config: %v", err)
+					}
+				}
 			}
 
 			// for any case.
@@ -380,10 +397,10 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
 	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
 
-	bite.Prepend(cmd, bite.FileBind(&connector, bite.ElseBind(func() error { return bite.TryReadFile(configRaw, &connector.Config) })))
-
 	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
+
+	bite.ShouldTryLoadFile(cmd, &connector)
 
 	return cmd
 }
