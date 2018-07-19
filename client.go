@@ -1567,11 +1567,12 @@ func (c *Client) DeleteProcessor(processorNameOrID string) error {
 	return resp.Body.Close()
 }
 
-// Connector API
 //
+// Connector API
 // https://docs.confluent.io/current/connect/devguide.html
 // https://docs.confluent.io/current/connect/restapi.html
 // http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
+//
 
 // ConnectorConfig the configuration parameters
 // for the connector.
@@ -2069,8 +2070,10 @@ func (c *Client) GetConnectorPlugins(clusterName string) (cp []ConnectorPlugin, 
 	return
 }
 
+//
 // Schemas (and Subjects) API
 // https://docs.confluent.io/current/schema-registry/docs/api.html
+//
 
 const schemaAPIVersion = "v1"
 const contentTypeSchemaJSON = "application/vnd.schemaregistry." + schemaAPIVersion + "+json"
@@ -3454,6 +3457,10 @@ func (c *Client) DeleteDynamicBrokerConfigs(brokerID int, configKeysToBeReseted 
 	return resp.Body.Close()
 }
 
+//
+// Audit API
+//
+
 // AuditEntryType the go type for audit entry types, see the `AuditEntry` structure for more.
 type AuditEntryType string
 
@@ -3575,6 +3582,10 @@ func (c *Client) GetAuditEntriesLive(handler AuditEntryHandler) error {
 	}
 }
 
+//
+// Logs API
+//
+
 // LogLine represents the return value(s) of the `GetLogsInfo` and `GetLogsMetrics` calls.
 type LogLine struct {
 	Level      string `json:"level" header:"Level"`
@@ -3613,6 +3624,10 @@ func (c *Client) GetLogsMetrics() ([]LogLine, error) {
 	err = c.ReadJSON(resp, &logs)
 	return logs, err
 }
+
+//
+// User Profile API
+//
 
 // UserProfile contains all the user-specific favourites, only kafka related info.
 type UserProfile struct {
@@ -3659,4 +3674,37 @@ func (c *Client) DeleteUserProfilePropertyValue(property, value string) error {
 	}
 
 	return resp.Body.Close()
+}
+
+//
+// Static API
+//
+
+const (
+	staticPath                    = "api/static"
+	staticSupportedConnectorsPath = staticPath + "/supported-connectors"
+)
+
+// ConnectorInfoUI describes a supported Kafka Connector, result type of the `GetSupportedConnectors` call.
+type ConnectorInfoUI struct {
+	Class       string `json:"class"` // header:"Class"`
+	Name        string `json:"name" header:"Name"`
+	Type        string `json:"type" header:"Type"`
+	Version     string `json:"version" header:"Version"`
+	Author      string `json:"author,omitempty" header:"Author"`
+	Description string `json:"description,omitempty" header:"Desc"`
+	Docs        string `json:"docs,omitempty"` // header:"Docs"`
+	UIEnabled   bool   `json:"uiEnabled" header:"UI Enabled"`
+}
+
+// GetSupportedConnectors returns the list of the supported Kafka Connectors.
+func (c *Client) GetSupportedConnectors() ([]ConnectorInfoUI, error) {
+	resp, err := c.Do(http.MethodGet, staticSupportedConnectorsPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var connectorsInfo []ConnectorInfoUI
+	err = c.ReadJSON(resp, &connectorsInfo)
+	return connectorsInfo, err
 }

@@ -23,16 +23,48 @@ func newConnectorsCommand() *cobra.Command {
 
 		namesOnly bool // if true then print only the connector names and not the details as json.
 		unwrap    bool // if true and namesOnly is true then print just the connectors names as a list of strings.
+
+		showSupportedOnly bool // if true then show only the supported Kafka Connectors (static info).
 	)
 
 	root := &cobra.Command{
 		Use:              "connectors",
 		Short:            "List of active connectors' names",
 		Aliases:          []string{"connect"},
-		Example:          `connectors or connectors --clusterName="cluster_name" or --clusterName="*"`,
+		Example:          `connectors [--supported] or connectors --clusterName="cluster_name" or --clusterName="*"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if showSupportedOnly {
+				connectorsInfo, err := client.GetSupportedConnectors()
+				if err != nil {
+					return err
+				}
+
+				sort.Slice(connectorsInfo, func(i, j int) bool {
+					return connectorsInfo[i].Name < connectorsInfo[j].Name
+				})
+
+				if namesOnly {
+					var names []string
+					for _, c := range connectorsInfo {
+						names = append(names, c.Name)
+					}
+
+					if unwrap {
+						for _, name := range names {
+							fmt.Fprintln(cmd.OutOrStdout(), name)
+						}
+						return nil
+					}
+
+					return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", names))
+				}
+
+				return bite.PrintObject(cmd, connectorsInfo)
+			}
+
 			connectorNames := make(map[string][]string) // clusterName:[] connectors names.
 
 			if clusterName == "*" || clusterName == "" {
@@ -123,6 +155,7 @@ func newConnectorsCommand() *cobra.Command {
 	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
 	root.Flags().BoolVar(&namesOnly, "names", false, `--names`)
 	root.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap")
+	root.Flags().BoolVar(&showSupportedOnly, "supported", false, "--supported to list all the supported Kafka Connectors instead of the currently active ones")
 
 	bite.CanPrintJSON(root)
 
