@@ -15,12 +15,12 @@ import (
 var (
 	// buildRevision is the build revision (docker commit string) but it's
 	// available only on the build state, on the cli executable - via the "version" command.
-	buildRevision = ""
+	buildRevision string
 	// buildTime is the build unix time (in nanoseconds), like the `buildRevision`,
 	// this is available on after the build state, inside the cli executable - via the "version" command.
 	//
 	// Note that this BuildTime is not int64, it's type of string.
-	buildTime = ""
+	buildTime string
 )
 
 var (
