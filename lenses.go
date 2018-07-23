@@ -10,6 +10,9 @@ import (
 	"github.com/kataras/golog"
 )
 
+// Version is the current semantic version of the lenses client and cli.
+const Version = "2.1.0"
+
 // ConnectionOption describes an optional runtime configurator that can be passed on `OpenConnection`.
 // Custom `ConnectionOption` can be used as well, it's just a type of `func(*lenses.Client)`.
 //
@@ -26,7 +29,7 @@ func getTimeout(httpClient *http.Client, timeoutStr string) time.Duration {
 	return httpClient.Timeout
 }
 
-func getTransportLayer(httpClient *http.Client, timeout time.Duration) (t http.RoundTripper) {
+func getTransportLayer(httpClient *http.Client, timeout time.Duration, insecure bool) (t http.RoundTripper) {
 	if t := httpClient.Transport; t != nil {
 		return t
 	}
@@ -34,7 +37,10 @@ func getTransportLayer(httpClient *http.Client, timeout time.Duration) (t http.R
 	httpTransport := &http.Transport{
 		// Disable HTTP/2.
 		TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
-		// TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	if insecure {
+		httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	if timeout > 0 {
@@ -54,9 +60,9 @@ func UsingClient(httpClient *http.Client) ConnectionOption {
 		}
 
 		// config's timeout has priority if the httpClient passed has smaller or not-seted timeout.
-		timeout := getTimeout(httpClient, c.config.Timeout)
+		timeout := getTimeout(httpClient, c.Config.Timeout)
 
-		transport := getTransportLayer(httpClient, timeout)
+		transport := getTransportLayer(httpClient, timeout, c.Config.Insecure)
 		httpClient.Transport = transport
 
 		c.client = httpClient
@@ -71,31 +77,54 @@ func UsingToken(tok string) ConnectionOption {
 			return
 		}
 
-		c.config.Token = tok
+		c.Config.Token = tok
 	}
+}
 
+// WithContext sets the current context, the environment to load configuration from.
+//
+// See the `Config` structure and the `OpenConnection` function for more.
+func WithContext(contextName string) ConnectionOption {
+	return func(c *Client) {
+		if contextName == "" {
+			contextName = DefaultContextKey
+		}
+
+		c.configFull.SetCurrent(contextName)
+	}
 }
 
 // OpenConnection creates & returns a new Landoop's Lenses API bridge interface
-// based on the passed Configuration and the (optional) options.
+// based on the passed `ClientConfig` and the (optional) options.
 // OpenConnection authenticates the user and returns a valid ready-to-use `*lenses.Client`.
 // If failed to communicate with the server then it returns a nil client and a non-nil error.
 //
 // Usage:
-// config := lenses.Configuration{Host: "", User: "", Password: "", Timeout: "15s"}
-// client, err := lenses.OpenConnection(config) // or config, lenses.UsingClient/UsingToken
+// auth := lenses.BasicAuthentication{Username: "user", Password: "pass"}
+// config := lenses.ClientConfig{Host: "domain.com", Authentication: auth, Timeout: "15s"}
+// client, err := lenses.OpenConnection(config) // or (config, lenses.UsingClient/UsingToken)
 // if err != nil { panic(err) }
 // client.DeleteTopic("topicName")
 //
 // Read more by navigating to the `Client` type documentation.
-func OpenConnection(config Configuration, options ...ConnectionOption) (*Client, error) {
-	c := &Client{config: config} // we need the timeout.
+func OpenConnection(cfg ClientConfig, options ...ConnectionOption) (*Client, error) {
+	// We accept only `ClientConfig` and not the full `Config` for use ease.
+	clientConfig := &cfg
+
+	full := &Config{
+		CurrentContext: DefaultContextKey,
+		Contexts: map[string]*ClientConfig{
+			DefaultContextKey: clientConfig,
+		},
+	}
+
+	c := &Client{configFull: full, Config: clientConfig}
 	for _, opt := range options {
 		opt(c)
 	}
 
-	if !config.IsValid() {
-		return nil, fmt.Errorf("invalid configuration: Token or (User or Password) missing")
+	if !clientConfig.IsValid() {
+		return nil, fmt.Errorf("invalid configuration: Token or Authentication missing")
 	}
 
 	// if client is not set-ed by any option, set it to a new one,
@@ -106,54 +135,30 @@ func OpenConnection(config Configuration, options ...ConnectionOption) (*Client,
 		UsingClient(httpClient)(c)
 	}
 
-	if c.config.Token != "" {
-		golog.Debugf("Connecting using just the token: %s", config.Token)
+	// i.e `UsingToken`.
+	if clientConfig.Token != "" {
+		golog.Debugf("Connecting using just the token: %s", clientConfig.Token)
 		// User will be empty but it does its job.
 		return c, nil
 	}
 
-	// retrieve token.
-	userAuthJSON := fmt.Sprintf(`{"user":"%s", "password": "%s"}`, c.config.User, c.config.Password)
-
-	resp, err := c.do(http.MethodPost, "api/login", contentTypeJSON, []byte(userAuthJSON))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("http: StatusUnauthorized 401")
+	if clientConfig.Authentication == nil {
+		return nil, fmt.Errorf("client: auth failure: authenticator missing")
 	}
 
-	// set the token we received.
-	var loginData = struct {
-		Success              bool   `json:"success"`
-		Token                string `json:"token"`
-		User                 User   `json:"user"`
-		SchemaRegistryDelete bool   `json:"schemaRegistryDelete"`
-	}{}
-
-	if err := c.readJSON(resp, &loginData); err != nil {
-		return nil, err
+	if err := clientConfig.Authentication.Auth(c); err != nil {
+		return nil, fmt.Errorf("client: auth failure: %v", err)
 	}
 
-	if !loginData.Success {
-		return nil, fmt.Errorf("http: login failed")
+	if c.User.Token == "" { // this should never happen.
+		return nil, fmt.Errorf("client: login failure: token is undefined")
 	}
 
-	if loginData.Token == "" { // this should never happen.
-		return nil, fmt.Errorf("http: token is undefinied")
-	}
-
-	if config.Debug {
+	if clientConfig.Debug {
 		golog.SetLevel("debug")
 		golog.Debugf("Connected on %s with token: %s.\nUser details: %#+v",
-			c.config.Host, loginData.Token, loginData.User)
+			c.Config.Host, c.User.Token, c.User)
 	}
-
-	// set the generated token and the user model retrieved from server.
-	c.config.Token = loginData.Token
-	c.user = loginData.User
 
 	return c, nil
 }

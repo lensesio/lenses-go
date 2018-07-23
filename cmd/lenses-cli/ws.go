@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -13,19 +14,19 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	// TODO: start by adding this.
-	rootCmd.AddCommand(newLiveLSQLCommand())
+	app.AddCommand(newLiveLSQLCommand())
 }
 
 func readAndQuoteQueries(args []string) ([]string, error) {
 	if n := len(args); n > 0 {
 		queries := make([]string, n, n)
 		for i, arg := range args {
-			query, err := tryReadFileContents(arg)
+			query, err := bite.TryReadFileContents(arg)
 			if err != nil {
 				return nil, err
 			}
@@ -38,7 +39,7 @@ func readAndQuoteQueries(args []string) ([]string, error) {
 	}
 
 	// read from input pipe, no argument given.
-	has, b, err := readInPipe()
+	has, b, err := bite.ReadInPipe()
 	if err != nil {
 		return nil, fmt.Errorf("io pipe: %v", err)
 	}
@@ -56,7 +57,7 @@ func newLiveLSQLCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "live sql [query]",
 		Short:            "Live sql provides \"real-time\" sql queries with your lenses box",
-		Example:          exampleString(`live sql "SELECT * FROM cc_payments WHERE _vtype='AVRO' AND _ktype='STRING' AND _sample=2 AND _sampleWindow=200" "query2" "query3"`),
+		Example:          `live sql "SELECT * FROM cc_payments WHERE _vtype='AVRO' AND _ktype='STRING' AND _sample=2 AND _sampleWindow=200" "query2" "query3"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -94,11 +95,14 @@ func newLiveLSQLCommand() *cobra.Command {
 				return fmt.Errorf("query should not be empty")
 			}
 
-			currentConfig := configManager.getCurrent()
-
+			currentConfig := configManager.config.GetCurrent()
+			basicAuth, isBasicAuth := currentConfig.Authentication.(lenses.BasicAuthentication)
+			if !isBasicAuth {
+				return fmt.Errorf("not able to create a live connection using a non-basic authentication method at the moment")
+			}
 			conn, err := lenses.OpenLiveConnection(lenses.LiveConfiguration{
-				User:     currentConfig.User,
-				Password: currentConfig.Password,
+				User:     basicAuth.Username,
+				Password: basicAuth.Password,
 				Host:     currentConfig.Host,
 				Debug:    currentConfig.Debug,
 			})
@@ -112,6 +116,13 @@ func newLiveLSQLCommand() *cobra.Command {
 				// a query may be errored but another, most important may running for a long time.
 				select {
 				case err := <-conn.Err():
+					// ignore error and don't print that caused by ctrl/cmd+c while trying to read.
+					if errNet, isNetworkClosed := err.(*net.OpError); isNetworkClosed && errNet.Op == "read" {
+						if strings.Contains(errNet.Error(), "use of closed") {
+							return
+						}
+					}
+
 					fmt.Fprintf(cmd.OutOrStderr(), "%s\n", err)
 				}
 			}()

@@ -16,16 +16,27 @@ import (
 	"github.com/kataras/golog"
 )
 
+// User represents the user of the client.
+type User struct {
+	Token                string   `json:"token"`
+	Name                 string   `json:"user" header:"Name"`
+	SchemaRegistryDelete bool     `json:"schemaRegistryDelete" header:"Schema Registry Delete"`
+	Roles                []string `json:"roles" header:"Roles"`
+}
+
 // Client is the lenses http client.
 // It contains the necessary API calls to communicate and develop via lenses.
 type Client struct {
-	config Configuration
+	Config     *ClientConfig
+	configFull *Config // not exported, used for `ConnectionOptions`.
+	// PersistentRequestModifier can be used to modify the *http.Request before send it to the backend.
+	PersistentRequestModifier RequestOption
 
-	// user is generated on `lenses#OpenConnection` when configuration's token is missing,
-	// in the same api point that token is generated.
-	user User
+	// Progress                  func(current, total int64)
+	// User is generated on `lenses#OpenConnection` function based on the `Config#Authentication`.
+	User User
 
-	// the client is created on the `lenses#OpenConnection` function, it can be customized via options.
+	// the client is created on the `lenses#OpenConnection` function, it can be customized via options there.
 	client *http.Client
 }
 
@@ -40,18 +51,19 @@ func acquireBuffer(b []byte) *bytes.Buffer {
 	return noOpBuffer
 }
 
-// isAuthorized is called inside the `Client#do` and it closes the body reader if no accessible.
+// isAuthorized is called inside the `Client#Do` and it closes the body reader if no accessible.
 // 401	Unauthorized	[RFC7235, Section 3.1]
 func isAuthorized(resp *http.Response) bool { return resp.StatusCode != http.StatusUnauthorized }
 
-// isOK is called inside the `Client#do` and it closes the body reader if no accessible.
+// isOK is called inside the `Client#Do` and it closes the body reader if no accessible.
 func isOK(resp *http.Response) bool {
 	return resp.StatusCode == http.StatusOK ||
 		resp.StatusCode == http.StatusCreated || /* see CreateOrUpdateConnector for the `StatusCreated` */
 		resp.StatusCode == http.StatusAccepted || /* see PauseConnector for the `StatusAccepted` */
 		(resp.Request.Method == http.MethodDelete && resp.StatusCode == http.StatusNoContent) || /* see RemoveConnector for the `StatusNoContnet` */
 		(resp.Request.Method == http.MethodPost && resp.StatusCode == http.StatusNoContent) || /* see Restart tasks for the `StatusNoContnet` */
-		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */
+		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) || /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */
+		(resp.Request.Method == http.MethodDelete && ((resp.StatusCode == http.StatusForbidden) || (resp.StatusCode == http.StatusBadRequest))) /* for things like deletion if not proper user access or invalid value of something passed */
 }
 
 const (
@@ -68,26 +80,63 @@ const (
 
 // ErrCredentialsMissing fires on login, when credentials are missing or
 // are invalid or the specific user has no access to a specific action.
-var ErrCredentialsMissing = fmt.Errorf("client: credentials missing or invalid")
+var ErrCredentialsMissing = fmt.Errorf("credentials missing or invalid")
 
-type requestOption func(r *http.Request)
+// RequestOption is just a func which receives the current HTTP request and alters it,
+// if the return value of the error is not nil then `Client#Do` fails with that error.
+type RequestOption func(r *http.Request) error
 
-var schemaAPIOption = func(r *http.Request) {
+var schemaAPIOption = func(r *http.Request) error {
 	r.Header.Add(acceptHeaderKey, contentTypeSchemaJSON)
+	return nil
 }
 
-// ErrResourceNotFound is being fired from all API calls when a 404 not found error code is received.
-// It's a static error message of just `404`, therefore it can be used to add additional info messages based on the caller's action.
-var ErrResourceNotFound = fmt.Errorf("%d", http.StatusNotFound)
+// ResourceError is being fired from all API calls when an error code is received.
+type ResourceError struct {
+	StatusCode int    `json:"statusCode" header:"Status Code"`
+	Method     string `json:"method" header:"Method"`
+	URI        string `json:"uri" header:"Target"`
+	Body       string `json:"message" header:"Message"`
+}
 
-func (c *Client) do(method, path, contentType string, send []byte, options ...requestOption) (*http.Response, error) {
+// Error returns the detailed cause of the error.
+func (err ResourceError) Error() string {
+	return fmt.Sprintf("client: (%s: %s) failed with status code %d%s",
+		err.Method, err.URI, err.StatusCode, err.Body)
+}
+
+// Code returns the status code.
+func (err ResourceError) Code() int {
+	return err.StatusCode
+}
+
+// Message returns the message of the error or the whole body if it's unknown error.
+func (err ResourceError) Message() string {
+	return err.Body
+}
+
+// NewResourceError is just a helper to create a new `ResourceError` to return from custom calls, it's "cli-compatible".
+func NewResourceError(statusCode int, uri, method, body string) ResourceError {
+	unescapedURI, _ := url.QueryUnescape(uri)
+
+	return ResourceError{
+		StatusCode: statusCode,
+		URI:        unescapedURI,
+		Method:     method,
+		Body:       body,
+	}
+}
+
+// Do is the lower level of a client call, manually sends an HTTP request to the lenses box backend based on the `Client#Config`
+// and returns an HTTP response.
+func (c *Client) Do(method, path, contentType string, send []byte, options ...RequestOption) (*http.Response, error) {
 	if path[0] == '/' { // remove beginning slash, if any.
 		path = path[1:]
 	}
 
-	uri := c.config.Host + "/" + path
+	uri := c.Config.Host + "/" + path
 
-	golog.Debugf("Client#do.req:\n\turi: %s:%s\n\tsend: %s", method, uri, string(send))
+	golog.Debugf("Client#Do.req:\n\turi: %s:%s\n\tsend: %s", method, uri, string(send))
 
 	req, err := http.NewRequest(method, uri, acquireBuffer(send))
 	if err != nil {
@@ -96,8 +145,8 @@ func (c *Client) do(method, path, contentType string, send []byte, options ...re
 	// before sending requests here.
 
 	// set the token header.
-	if c.config.Token != "" {
-		req.Header.Set(xKafkaLensesTokenHeaderKey, c.config.Token)
+	if c.Config.Token != "" {
+		req.Header.Set(xKafkaLensesTokenHeaderKey, c.Config.Token)
 	}
 
 	// set the content type if any.
@@ -108,13 +157,21 @@ func (c *Client) do(method, path, contentType string, send []byte, options ...re
 	// response accept gziped content.
 	req.Header.Add(acceptEncodingHeaderKey, gzipEncodingHeaderValue)
 
+	if c.PersistentRequestModifier != nil {
+		if err := c.PersistentRequestModifier(req); err != nil {
+			return nil, err
+		}
+	}
+
 	for _, opt := range options {
-		opt(req)
+		if err = opt(req); err != nil {
+			return nil, err
+		}
 	}
 
 	// here will print all the headers, including the token (because it may be useful for debugging)
 	// --so bug reporters should be careful here to invalidate the token after that.
-	golog.Debugf("Client#do.req.Headers: %#+v", req.Header)
+	golog.Debugf("Client#Do.req.Headers: %#+v", req.Header)
 
 	// send the request and check the response for any connection & authorization errors here.
 	resp, err := c.client.Do(req)
@@ -128,28 +185,22 @@ func (c *Client) do(method, path, contentType string, send []byte, options ...re
 	}
 
 	if !isOK(resp) {
-		unescapedURI, _ := url.QueryUnescape(uri)
+		defer resp.Body.Close()
 		var errBody string
 
-		if resp.StatusCode != http.StatusNotFound {
-			// if the status is not just a 404, then give the whole
-			// body to the error context.
-			b, err := c.readResponseBody(resp)
-			if err != nil {
-				errBody = "unable to read body: " + err.Error()
-			}
-
-			errBody = "\n" + string(b)
+		if strings.Contains(resp.Header.Get(contentTypeHeaderKey), "text/html") {
+			// if the body is html, then don't read it, it doesn't contain the raw info we need.
 		} else {
-			defer resp.Body.Close()
+			// else give the whole body to the error context.
+			b, err := c.ReadResponseBody(resp)
+			if err != nil {
+				errBody = " unable to read body: " + err.Error()
+			} else {
+				errBody = "\n" + string(b)
+			}
 		}
 
-		if !c.config.Debug && resp.StatusCode == http.StatusNotFound {
-			// if status code is 404, then we set a static error instead of a full message, so front-ends can check.
-			return nil, ErrResourceNotFound
-		}
-		return nil, fmt.Errorf("client: (%s: %s) failed with status code %d%s",
-			method, unescapedURI, resp.StatusCode, errBody)
+		return nil, NewResourceError(resp.StatusCode, uri, method, errBody)
 	}
 
 	return resp, nil
@@ -202,59 +253,107 @@ func (c *Client) acquireResponseBodyStream(resp *http.Response) (io.ReadCloser, 
 	return reader, err
 }
 
-func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
+const bufN = 512
+
+// var errEmptyResponse = fmt.Errorf("")
+
+// ReadResponseBody is the lower-level method of client to read the result of a `Client#Do`, it closes the body stream.
+//
+// See `ReadJSON` too.
+func (c *Client) ReadResponseBody(resp *http.Response) ([]byte, error) {
 	reader, err := c.acquireResponseBodyStream(resp)
 	if err != nil {
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(reader)
+	/*
+			var body []byte
+
+			if c.Progress != nil {
+				var (
+					total   = resp.ContentLength
+					current int64
+				)
+
+				for {
+					buf := make([]byte, bufN)
+					readen, readErr := reader.Read(buf)
+					// Callers should always process the n > 0 bytes returned before
+					// considering the error err. Doing so correctly handles I/O errors
+					// that happen after reading some bytes and also both of the
+					// allowed EOF behaviors.
+					if readen > 0 {
+						current += int64(readen)
+						body = append(body, buf[:readen]...)
+						c.Progress(current, total) // call it every x ms or let the user decide?
+					}
+					if readErr != nil {
+						if readErr == io.EOF {
+							break
+						}
+
+						return nil, readErr
+					}
+				}
+			} else {
+				body, err = ioutil.ReadAll(reader)
+		    }
+	*/
+
+	b, err := ioutil.ReadAll(reader)
 	if err = reader.Close(); err != nil {
 		return nil, err
 	}
 
-	if c.config.Debug {
-		rawBodyString := string(body)
+	// if len(b) == 0 || (len(b) == 2 && (b[0] == '[' && b[1] == ']') || (b[0] == '{' && b[1] == '}')) {
+	// 	return nil, errEmptyResponse
+	// }
+
+	if c.Config.Debug {
+		rawBodyString := string(b)
 		// print both body and error, because both of them may be formated by the `readResponseBody`'s caller.
-		golog.Debugf("Client#do.resp:\n\tbody: %s\n\terror: %v", rawBodyString, err)
+		golog.Debugf("Client#Do.resp:\n\tbody: %s\n\tstatus code: %d\n\terror: %v", rawBodyString, resp.StatusCode, err)
 	}
 
 	// return the body.
-	return body, err
+	return b, err
 }
 
-func (c *Client) readJSON(resp *http.Response, valuePtr interface{}) error {
-	b, err := c.readResponseBody(resp)
+// ReadJSON is one of the lower-level methods of the client to read the result of a `Client#Do`, it closes the body stream.
+//
+// See `ReadResponseBody` lower-level of method to read a response for more details.
+func (c *Client) ReadJSON(resp *http.Response, valuePtr interface{}) error {
+	b, err := c.ReadResponseBody(resp)
 	if err != nil {
 		return err
 	}
 
-	return json.Unmarshal(b, valuePtr)
+	err = json.Unmarshal(b, valuePtr)
+	if c.Config.Debug {
+		if syntaxErr, ok := err.(*json.SyntaxError); ok {
+			golog.Errorf("Client#ReadJSON: syntax error at offset %d: %s", syntaxErr.Offset, syntaxErr.Error())
+		}
+	}
+	return err
 }
 
 // GetAccessToken returns the access token that
 // generated from the `OpenConnection` or given by the configuration.
 func (c *Client) GetAccessToken() string {
-	return c.config.Token
+	return c.Config.Token
 }
-
-// User returns the User information from `/api/login`
-// received by `OpenConnection`.
-func (c *Client) User() User {
-	return c.user
-} /* we don't expose the token value, unless otherwise requested*/
 
 const logoutPath = "api/logout?token="
 
 // Logout invalidates the token and revoke its access.
 // A new Client, using `OpenConnection`, should be created in order to continue after this call.
 func (c *Client) Logout() error {
-	if c.config.Token == "" {
+	if c.Config.Token == "" {
 		return ErrCredentialsMissing
 	}
 
-	path := logoutPath + c.config.Token
-	resp, err := c.do(http.MethodGet, path, "", nil)
+	path := logoutPath + c.Config.Token
+	resp, err := c.Do(http.MethodGet, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -264,11 +363,11 @@ func (c *Client) Logout() error {
 
 // LicenseInfo describes the data received from the `GetLicenseInfo`.
 type LicenseInfo struct {
-	ClientID    string `json:"clientId"`
-	IsRespected bool   `json:"isRespected"`
-	MaxBrokers  int    `json:"maxBrokers"`
-	MaxMessages int    `json:"maxMessages,omitempty"`
-	Expiry      int64  `json:"expiry"`
+	ClientID    string `json:"clientId" header:"ID,text"`
+	IsRespected bool   `json:"isRespected" header:"Respected"`
+	MaxBrokers  int    `json:"maxBrokers" header:"Max Brokers"`
+	MaxMessages int    `json:"maxMessages,omitempty" header:"/ Messages"`
+	Expiry      int64  `json:"expiry" header:"Expires"`
 
 	// no-payload data.
 
@@ -286,18 +385,18 @@ type LicenseInfo struct {
 	DaysToExpire int `json:"daysToExpire,omitempty"`
 }
 
-const licensePath = "/api/license"
+const licensePath = "api/license"
 
 // GetLicenseInfo returns the license information for the connected lenses box.
 func (c *Client) GetLicenseInfo() (LicenseInfo, error) {
 	var lc LicenseInfo
 
-	resp, err := c.do(http.MethodGet, licensePath, "", nil)
+	resp, err := c.Do(http.MethodGet, licensePath, "", nil)
 	if err != nil {
 		return lc, err
 	}
 
-	if err = c.readJSON(resp, &lc); err != nil {
+	if err = c.ReadJSON(resp, &lc); err != nil {
 		return lc, err
 	}
 
@@ -354,7 +453,7 @@ func MatchExecutionMode(modeStr string) (ExecutionMode, bool) {
 }
 
 const (
-	configPath = "/api/config"
+	configPath = "api/config"
 )
 
 // GetConfig returns the whole configuration of the lenses box,
@@ -365,8 +464,9 @@ const (
 // To retrieve the execution mode of the box with safety,
 // see the `Client#GetExecutionMode` instead.
 func (c *Client) GetConfig() (map[string]interface{}, error) {
-	resp, err := c.do(http.MethodGet, configPath, "", nil, func(r *http.Request) {
+	resp, err := c.Do(http.MethodGet, configPath, "", nil, func(r *http.Request) error {
 		r.Header.Set("Accept", "application/json, text/plain")
+		return nil
 	})
 
 	if err != nil {
@@ -374,7 +474,7 @@ func (c *Client) GetConfig() (map[string]interface{}, error) {
 	}
 
 	data := make(map[string]interface{}, 0) // maybe make those statically as well, we'll see.
-	if err = c.readJSON(resp, &data); err != nil {
+	if err = c.ReadJSON(resp, &data); err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -463,11 +563,11 @@ func (c *Client) GetExecutionMode() (ExecutionMode, error) {
 
 // ConnectCluster contains the connect cluster information that is returned by the `GetConnectClusters` call.
 type ConnectCluster struct {
-	Name     string `json:"name"`
-	URL      string `json:"url"`
-	Statuses string `json:"statuses"`
-	Config   string `json:"config"`
-	Offsets  string `json:"offsets"`
+	Name     string `json:"name" header:"Name"`
+	URL      string `json:"url"` //header:"URL"`
+	Statuses string `json:"statuses" header:"Status"`
+	Config   string `json:"config" header:"Config"`
+	Offsets  string `json:"offsets" header:"Offsets,count"`
 }
 
 const connectClustersKey = "lenses.connect.clusters"
@@ -507,13 +607,13 @@ func (c *Client) ValidateLSQL(sql string) (v LSQLValidation, err error) {
 	}
 
 	path := validateLSQLPath + url.QueryEscape(sql)
-	resp, respErr := c.do(http.MethodGet, path, contentTypeJSON, nil)
+	resp, respErr := c.Do(http.MethodGet, path, contentTypeJSON, nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &v)
+	err = c.ReadJSON(resp, &v)
 	return
 }
 
@@ -532,32 +632,32 @@ type (
 	// LSQLStop the form of the stop record data that LSQL call returns once.
 	LSQLStop struct {
 		// If false `max.time` was reached.
-		IsTimeRemaining bool `json:"isTimeRemaining"`
+		IsTimeRemaining bool `json:"isTimeRemaining" header:"Time Remaining"`
 		// If true there was no more data on the topic and `max.zero.polls` was reached.
-		IsTopicEnd bool `json:"isTopicEnd"`
+		IsTopicEnd bool `json:"isTopicEnd" header:"End"`
 		// If true the query has been stopped by admin  (Cancel query equivalence).
-		IsStopped bool `json:"isStopped"`
+		IsStopped bool `json:"isStopped" header:"Stopped"`
 		// Number of records read from Kafka.
-		TotalRecords int `json:"totalRecords"`
+		TotalRecords int `json:"totalRecords" header:"Total /"`
 		// Number of records not matching the filter.
-		SkippedRecords int `json:"skippedRecords"`
+		SkippedRecords int `json:"skippedRecords" header:"Skipped Records"`
 		// Max number of records to pull (driven by LIMIT X,
 		// if LIMIT is not present it gets the default config in LENSES).
-		RecordsLimit int `json:"recordsLimit"`
+		RecordsLimit int `json:"recordsLimit" header:"Records Limit"`
 		// Total size in bytes read from Kafka.
-		TotalSizeRead int64 `json:"totalSizeRead"`
+		TotalSizeRead int64 `json:"totalSizeRead" header:"Total Size Read"`
 		// Total size in bytes (Kafka size) for the records.
-		Size int64 `json:"size"`
+		Size int64 `json:"size" header:"Size"`
 		// The topic offsets.
 		// If query parameter `&offsets=true` is not present it won't pull the details.
-		Offsets []LSQLOffset `json:"offsets"`
+		Offsets []LSQLOffset `json:"offsets" header:"Offsets,count"`
 	}
 
 	// LSQLOffset the form of the offset record data that LSQL call returns once.
 	LSQLOffset struct {
-		Partition int   `json:"partition"`
-		Min       int64 `json:"min"`
-		Max       int64 `json:"max"`
+		Partition int   `json:"partition" header:"Partition"`
+		Min       int64 `json:"min" header:"Min"`
+		Max       int64 `json:"max" header:"Max"`
 	}
 
 	// LSQLError the form of the error record data that LSQL call returns once.
@@ -653,8 +753,9 @@ func (c *Client) LSQL(
 
 	// it's sse, so accept text/event-stream and stream reading the response body, no
 	// external libraries needed, it is fairly simple.
-	resp, err := c.do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) {
+	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) error {
 		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+		return nil
 	}, schemaAPIOption)
 	if err != nil {
 		return err
@@ -780,21 +881,21 @@ const queriesPath = "api/sql/queries"
 
 // LSQLRunningQuery is the form of the data that the `GetRunningQueries` returns.
 type LSQLRunningQuery struct {
-	ID        int64  `json:"id"`
-	SQL       string `json:"sql"`
-	User      string `json:"user"`
-	Timestamp int64  `json:"ts"`
+	ID        int64  `json:"id" header:"ID" header:"ID,text"`
+	SQL       string `json:"sql" header:"SQL" header:"SQL"`
+	User      string `json:"user" header:"User" header:"User"`
+	Timestamp int64  `json:"ts" header:"Timestamp" header:"Timestamp"`
 }
 
 // GetRunningQueries returns a list of the current sql running queries.
 func (c *Client) GetRunningQueries() ([]LSQLRunningQuery, error) {
-	resp, err := c.do(http.MethodGet, queriesPath, "", nil)
+	resp, err := c.Do(http.MethodGet, queriesPath, "", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var queries []LSQLRunningQuery
-	err = c.readJSON(resp, &queries)
+	err = c.ReadJSON(resp, &queries)
 	return queries, err
 }
 
@@ -802,13 +903,13 @@ func (c *Client) GetRunningQueries() ([]LSQLRunningQuery, error) {
 // It returns true whether it was cancelled otherwise false or/and error.
 func (c *Client) CancelQuery(id int64) (bool, error) {
 	path := fmt.Sprintf(queriesPath+"/%d", id)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
 	if err != nil {
 		return false, err
 	}
 
 	var canceled bool
-	err = c.readJSON(resp, &canceled)
+	err = c.ReadJSON(resp, &canceled)
 	return canceled, err
 }
 
@@ -831,13 +932,13 @@ func (c *Client) GetTopics() (topics []Topic, err error) {
 	// # List of topics
 	// GET /api/topics
 	// https://docs.confluent.io/current/kafka-rest/docs/api.html#get--topics (in that doc it says a list of topic names but it returns the full topics).
-	resp, respErr := c.do(http.MethodGet, topicsPath, "", nil)
+	resp, respErr := c.Do(http.MethodGet, topicsPath, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &topics)
+	err = c.ReadJSON(resp, &topics)
 	return
 }
 
@@ -854,6 +955,140 @@ func (c *Client) GetTopicsNames() ([]string, error) {
 	}
 
 	return topicNames, nil
+}
+
+const topicsAvailableConfigKeysPath = topicsPath + "/availableConfigKeys"
+
+// GetAvailableTopicConfigKeys retrieves a list of available configs for topics.
+func (c *Client) GetAvailableTopicConfigKeys() ([]string, error) {
+	resp, err := c.Do(http.MethodGet, topicsAvailableConfigKeysPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var keys []string
+	if err = c.ReadJSON(resp, &keys); err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
+type (
+	// TopicMetadata describes the data received from the `GetTopicsMetadata`
+	// and the payload to send on the `CreateTopicMetadata`.
+	TopicMetadata struct {
+		TopicName string `json:"topicName" yaml:"TopicName" header:"Topic"`
+		KeyType   string `json:"keyType,omitempty" yaml:"KeyType" header:"Key /,NULL"`
+		ValueType string `json:"valueType,omitempty" yaml:"ValueType" header:"Value Type,NULL"`
+
+		ValueSchemaRaw string `json:"valueSchema,omitempty" yaml:"ValueSchema,omitempty"` // for response read.
+		KeySchemaRaw   string `json:"keySchema,omitempty" yaml:"KeySchema,omitempty"`     // for response read.
+	}
+
+	/*
+		// TopicMetadataValueSchema describes the "ValueSchema" field of the `TopicMetadata` structure.
+		TopicMetadataValueSchema struct {
+			Type      string               `json:"type" yaml:"Type"`
+			Name      string               `json:"name" yaml:"Name"`
+			Namespace string               `json:"namespace" yaml:"Namespace"`
+			Doc       string               `json:"doc" yaml:"Doc"`
+			Fields    []TopicMetadataField `json:"fields" yaml:"Fields"`
+		}
+
+		// TopicMetadataField contains the "Name" and the "Type" of a topic metadata field.
+		//
+		// See `TopicMetadataValueSchema` and `TopicMetadataKeySchema` for more.
+		TopicMetadataField struct {
+			Name string `json:"name" yaml:"Name"`
+			Type string `json:"type" yaml:"Type"`
+		}
+
+		// TopicMetadataKeySchema describes the "KeySchema" field of the `TopicMetadata` structure.
+		TopicMetadataKeySchema struct {
+			Type      string               `json:"type" yaml:"Type"`
+			Name      string               `json:"name" yaml:"Name"`
+			Namespace string               `json:"namespace" yaml:"Namespace"`
+			Fields    []TopicMetadataField `json:"fields" yaml:"Fields"`
+		}
+	*/
+)
+
+const (
+	topicsMetadataPath = "api/metadata/topics"
+	topicMetadataPath  = topicsMetadataPath + "/%s"
+)
+
+// GetTopicsMetadata retrieves and returns all the topics' available metadata.
+func (c *Client) GetTopicsMetadata() ([]TopicMetadata, error) {
+	resp, err := c.Do(http.MethodGet, topicsMetadataPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var meta []TopicMetadata
+
+	err = c.ReadJSON(resp, &meta)
+	return meta, err
+}
+
+// GetTopicMetadata retrieves and returns a topic's metadata.
+func (c *Client) GetTopicMetadata(topicName string) (TopicMetadata, error) {
+	var meta TopicMetadata
+
+	if topicName == "" {
+		return meta, errRequired("topicName")
+	}
+
+	path := fmt.Sprintf(topicMetadataPath, topicName)
+	resp, err := c.Do(http.MethodGet, path, "", nil)
+	if err != nil {
+		return meta, err
+	}
+
+	err = c.ReadJSON(resp, &meta)
+	return meta, err
+}
+
+// CreateOrUpdateTopicMetadata adds or updates an existing topic metadata.
+func (c *Client) CreateOrUpdateTopicMetadata(metadata TopicMetadata) error {
+	if metadata.TopicName == "" {
+		return errRequired("metadata.TopicName")
+	}
+
+	path := fmt.Sprintf(topicMetadataPath, metadata.TopicName)
+	path += fmt.Sprintf("?keyType=%s&valueType=%s", metadata.KeyType, metadata.ValueType) // required.
+
+	// optional.
+	if len(metadata.KeySchemaRaw) > 0 {
+		path += "&keySchema=" + string(metadata.KeySchemaRaw)
+	}
+
+	if len(metadata.ValueSchemaRaw) > 0 {
+		path += "&valueSchema" + string(metadata.ValueSchemaRaw)
+	}
+
+	resp, err := c.Do(http.MethodPost, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteTopicMetadata removes an existing topic metadata.
+func (c *Client) DeleteTopicMetadata(topicName string) error {
+	if topicName == "" {
+		return errRequired("topicName")
+	}
+
+	path := fmt.Sprintf(topicMetadataPath, topicName)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
 }
 
 // CreateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
@@ -889,7 +1124,7 @@ func (c *Client) CreateTopic(topicName string, replication, partitions int, conf
 		return err
 	}
 
-	resp, err := c.do(http.MethodPost, topicsPath, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPost, topicsPath, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -897,7 +1132,10 @@ func (c *Client) CreateTopic(topicName string, replication, partitions int, conf
 	return resp.Body.Close()
 }
 
-const topicPath = topicsPath + "/%s"
+const (
+	topicPath        = topicsPath + "/%s"
+	topicRecordsPath = topicPath + "/%d/%d"
+)
 
 // DeleteTopic deletes a topic.
 // It accepts the topicName, a required, not empty string.
@@ -909,7 +1147,31 @@ func (c *Client) DeleteTopic(topicName string) error {
 	}
 
 	path := fmt.Sprintf(topicPath, topicName)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteTopicRecords deletes a topic's records from partition to an offset.
+// If user has no rights for that action it returns `ErrResourceNotAccessible`,
+// if negative value of "toOffset" then it returns `ErrResourceNotGood`.
+//
+// All input arguments are required.
+func (c *Client) DeleteTopicRecords(topicName string, fromPartition int, toOffset int64) error {
+	if topicName == "" {
+		return errRequired("topicName")
+	}
+
+	path := fmt.Sprintf(topicRecordsPath, topicName, fromPartition, toOffset)
+
+	if toOffset < 0 || fromPartition < 0 {
+		return NewResourceError(http.StatusBadRequest, c.Config.Host+"/"+path, "DELETE", "offset and partition should be positive numbers")
+	}
+
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -943,7 +1205,7 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	}
 
 	path := fmt.Sprintf(updateTopicConfigPath, topicName)
-	resp, err := c.do(http.MethodPut, path, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -953,21 +1215,21 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 
 // Topic describes the data that the `GetTopic` returns.
 type Topic struct {
-	TopicName            string             `json:"topicName"`
-	KeyType              string             `json:"keyType"`   // maybe string-based enum?
-	ValueType            string             `json:"valueType"` // maybe string-based enum?
-	Partitions           int                `json:"partitions"`
-	Replication          int                `json:"replication"`
+	TopicName            string             `json:"topicName" header:"Name"`
+	KeyType              string             `json:"keyType" header:"Key /,NULL"`        // maybe string-based enum?
+	ValueType            string             `json:"valueType" header:"Value Type,NULL"` // maybe string-based enum?
+	Partitions           int                `json:"partitions" header:"Part"`
+	Replication          int                `json:"replication" header:"Repl"`
 	IsControlTopic       bool               `json:"isControlTopic"`
 	KeySchema            string             `json:"keySchema,omitempty"`
 	ValueSchema          string             `json:"valueSchema,omitempty"`
-	MessagesPerSecond    int64              `json:"messagesPerSecond"`
-	TotalMessages        int64              `json:"totalMessages"`
+	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
+	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
 	Timestamp            int64              `json:"timestamp"`
-	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion"`
-	Config               []KV               `json:"config"`
+	Config               []KV               `json:"config" header:"Configs,count"`
 	ConsumersGroup       []ConsumersGroup   `json:"consumers"`
 	MessagesPerPartition []PartitionMessage `json:"messagesPerPartition"`
+	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
 }
 
 // ConsumersGroup describes the data that the `Topic`'s  `ConsumersGroup` field contains.
@@ -1044,13 +1306,13 @@ func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 	}
 
 	path := fmt.Sprintf(topicPath, topicName)
-	resp, respErr := c.do(http.MethodGet, path, "", nil)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &topic)
+	err = c.ReadJSON(resp, &topic)
 	return
 }
 
@@ -1100,7 +1362,7 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 		return err
 	}
 
-	resp, err := c.do(http.MethodPost, processorsPath, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPost, processorsPath, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -1126,23 +1388,27 @@ type (
 	// ProcessorStream describes the processor stream,
 	// see `ProcessorResult`.
 	ProcessorStream struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		ClusterName string `json:"clusterName"`
-		User        string `json:"user"`
-		Namespace   string `json:"namespace"`
-		Uptime      int64  `json:"uptime"`
+		ID              string `json:"id"` // header:"ID,text"`
+		Name            string `json:"name" header:"Name"`
+		DeploymentState string `json:"deploymentState" header:"State"`
+		Runners         int    `json:"runners" header:"Runners"`
+		User            string `json:"user" header:"Created By"`
+		StartTimestamp  int64  `json:"startTs" header:"Started at,timestamp(ms|02 Jan 2006 15:04)"`
+		StopTimestamp   int64  `json:"stopTs,omitempty"` // header:"Stopped,timestamp(ms|02 Jan 2006 15:04),No"`
+		Uptime          int64  `json:"uptime" header:"Up time,unixduration"`
 
-		SQL                    string `json:"sql"`
-		Runners                int    `json:"runners"`
-		DeploymentState        string `json:"deploymentState"`
-		TopicValueDecoder      string `json:"topicValueDecoder"`
-		Pipeline               string `json:"pipeline"`
-		StartTimestamp         int64  `json:"startTs"`
-		StopTimestamp          int64  `json:"stopTs,omitempty"`
-		ToTopic                string `json:"toTopic"`
-		LastActionMessage      string `json:"lastActionMsg,omitempty"`
-		DeploymentErrorMessage string `json:"deploymentErrorMsg,omitempty"`
+		Namespace   string `json:"namespace" header:"Namespace"`
+		ClusterName string `json:"clusterName" header:"Cluster"`
+
+		SQL string `json:"sql"` // header:"SQL"`
+
+		TopicValueDecoder string `json:"topicValueDecoder"` // header:"Topic Decoder"`
+		Pipeline          string `json:"pipeline"`          // header:"Pipeline"`
+
+		ToTopics               []string `json:"toTopics,omitempty"` // header:"To Topics"`
+		FromTopics             []string `json:"fromTopics,omitempty"`
+		LastActionMessage      string   `json:"lastActionMsg,omitempty"`      // header:"Last Action"`
+		DeploymentErrorMessage string   `json:"deploymentErrorMsg,omitempty"` // header:"Depl Error"`
 
 		RunnerState map[string]ProcessorRunnerState `json:"runnerState"`
 	}
@@ -1160,12 +1426,12 @@ type (
 func (c *Client) GetProcessors() (ProcessorsResult, error) {
 	var res ProcessorsResult
 
-	resp, err := c.do(http.MethodGet, processorsPath, "", nil)
+	resp, err := c.Do(http.MethodGet, processorsPath, "", nil)
 	if err != nil {
 		return res, err
 	}
 
-	if err = c.readJSON(resp, &res); err != nil {
+	if err = c.ReadJSON(resp, &res); err != nil {
 		return res, err
 	}
 
@@ -1241,7 +1507,7 @@ func (c *Client) PauseProcessor(processorID string) error {
 	}
 
 	path := fmt.Sprintf(processorPath+"/pause", processorID)
-	resp, err := c.do(http.MethodPut, path, "", nil)
+	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -1258,7 +1524,7 @@ func (c *Client) ResumeProcessor(processorID string) error {
 	}
 
 	path := fmt.Sprintf(processorResumePath, processorID)
-	resp, err := c.do(http.MethodPut, path, "", nil)
+	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -1279,7 +1545,7 @@ func (c *Client) UpdateProcessorRunners(processorID string, numberOfRunners int)
 	}
 
 	path := fmt.Sprintf(processorUpdateRunnersPath, processorID, numberOfRunners)
-	resp, err := c.do(http.MethodPut, path, "", nil)
+	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -1294,18 +1560,19 @@ func (c *Client) DeleteProcessor(processorNameOrID string) error {
 	}
 
 	path := fmt.Sprintf(processorPath, processorNameOrID)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
 	if err != nil {
 		return err
 	}
 	return resp.Body.Close()
 }
 
-// Connector API
 //
+// Connector API
 // https://docs.confluent.io/current/connect/devguide.html
 // https://docs.confluent.io/current/connect/restapi.html
 // http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
+//
 
 // ConnectorConfig the configuration parameters
 // for the connector.
@@ -1330,17 +1597,17 @@ type ConnectorTaskReadOnly struct {
 // Connector contains the connector's information, both send and receive.
 type Connector struct {
 	// https://docs.confluent.io/current/connect/restapi.html#get--connectors-(string-name)
-
-	ClusterName string `json:"clusterName,omitempty"` // internal use only, not set by response.
 	// Name of the created (or received) connector.
-	Name string `json:"name"`
+	ClusterName string `json:"clusterName,omitempty" header:"Cluster"` // internal use only, not set by response.
+	Name        string `json:"name" header:"Name"`
+
 	// Config parameters for the connector
-	Config ConnectorConfig `json:"config,omitempty"`
+	Config ConnectorConfig `json:"config,omitempty" header:"Configs,count"`
 	// Tasks is the list of active tasks generated by the connector.
-	Tasks []ConnectorTaskReadOnly `json:"tasks,omitempty"`
+	Tasks []ConnectorTaskReadOnly `json:"tasks,omitempty" header:"Tasks,count"`
 }
 
-const connectorsPath = "/api/proxy-connect/%s/connectors"
+const connectorsPath = "api/proxy-connect/%s/connectors"
 
 // GetConnectors returns a list of active connectors names as list of strings.
 //
@@ -1355,13 +1622,13 @@ func (c *Client) GetConnectors(clusterName string) (names []string, err error) {
 	// # List active connectors
 	// GET /api/proxy-connect/(string: clusterName)/connectors
 	path := fmt.Sprintf(connectorsPath, clusterName)
-	resp, respErr := c.do(http.MethodGet, path, contentTypeJSON, nil)
+	resp, respErr := c.Do(http.MethodGet, path, contentTypeJSON, nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &names)
+	err = c.ReadJSON(resp, &names)
 	return
 }
 
@@ -1409,7 +1676,7 @@ func (c *CreateUpdateConnectorPayload) ApplyAndValidateName() error {
 //
 //
 // name (string) – Name of the connector to create
-// config (map) – Configuration parameters for the connector. All values should be strings.
+// config (map) – Config parameters for the connector. All values should be strings.
 //
 // Read more at: https://docs.confluent.io/current/connect/restapi.html#post--connectors
 //
@@ -1436,14 +1703,14 @@ func (c *Client) CreateConnector(clusterName, name string, config ConnectorConfi
 	// # Create new connector
 	// POST /api/proxy-connect/(string: clusterName)/connectors [CONNECTOR_CONFIG]
 	path := fmt.Sprintf(connectorsPath, clusterName)
-	resp, respErr := c.do(http.MethodPost, path, contentTypeJSON, send)
+	resp, respErr := c.Do(http.MethodPost, path, contentTypeJSON, send)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
 	// re-use of the connector payload.
-	err = c.readJSON(resp, &connector)
+	err = c.ReadJSON(resp, &connector)
 	return
 }
 
@@ -1471,13 +1738,13 @@ func (c *Client) UpdateConnector(clusterName, name string, config ConnectorConfi
 	// # Set connector config
 	// PUT /api/proxy-connect/(string: clusterName)/connectors/(string: name)/config
 	path := fmt.Sprintf(connectorPath+"/config", clusterName, name)
-	resp, respErr := c.do(http.MethodPut, path, contentTypeJSON, send)
+	resp, respErr := c.Do(http.MethodPut, path, contentTypeJSON, send)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &connector)
+	err = c.ReadJSON(resp, &connector)
 	// updated := !(resp.StatusCode == http.StatusCreated)
 
 	return
@@ -1501,13 +1768,13 @@ func (c *Client) GetConnector(clusterName, name string) (connector Connector, er
 	// # Get information about a specific connector
 	// GET /api/proxy-connect/(string: clusterName)/connectors/(string: name)
 	path := fmt.Sprintf(connectorPath, clusterName, name)
-	resp, respErr := c.do(http.MethodGet, path, contentTypeJSON, nil)
+	resp, respErr := c.Do(http.MethodGet, path, contentTypeJSON, nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &connector)
+	err = c.ReadJSON(resp, &connector)
 	connector.ClusterName = clusterName
 	return
 }
@@ -1527,13 +1794,13 @@ func (c *Client) GetConnectorConfig(clusterName, name string) (cfg ConnectorConf
 	// # Get connector config
 	// GET /api/proxy-connect/(string: clusterName)/connectors/(string: name)/config
 	path := fmt.Sprintf(connectorPath, clusterName, name)
-	resp, respErr := c.do(http.MethodGet, path, contentTypeJSON, nil)
+	resp, respErr := c.Do(http.MethodGet, path, contentTypeJSON, nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &cfg)
+	err = c.ReadJSON(resp, &cfg)
 	return
 }
 
@@ -1557,25 +1824,25 @@ type (
 	// ConnectorStatus describes the data that are being received from the `GetConnectorStatus`.
 	ConnectorStatus struct {
 		// Name is the name of the connector.
-		Name      string                        `json:"name"`
-		Connector ConnectorStatusConnectorField `json:"connector"`
-		Tasks     []ConnectorStatusTask         `json:"tasks,omitempty"`
+		Name      string                        `json:"name" header:"Name"`
+		Connector ConnectorStatusConnectorField `json:"connector" header:"inline"`
+		Tasks     []ConnectorStatusTask         `json:"tasks,omitempty" header:"Tasks,count"`
 	}
 
 	// ConnectorStatusConnectorField describes a connector's status,
 	// see `ConnectorStatus`.
 	ConnectorStatusConnectorField struct {
-		State    string `json:"state"`     // i.e RUNNING
-		WorkerID string `json:"worker_id"` // i.e fakehost:8083
+		State    string `json:"state" header:"State"`      // i.e RUNNING
+		WorkerID string `json:"worker_id" header:"Worker"` // i.e fakehost:8083
 	}
 
 	// ConnectorStatusTask describes a connector task's status,
 	// see `ConnectorStatus`.
 	ConnectorStatusTask struct {
-		ID       int    `json:"id"`              // i.e 1
-		State    string `json:"state"`           // i.e FAILED
-		WorkerID string `json:"worker_id"`       // i.e fakehost:8083
-		Trace    string `json:"trace,omitempty"` // i.e org.apache.kafka.common.errors.RecordTooLargeException\n
+		ID       int    `json:"id" header:"ID,text"`                  // i.e 1
+		State    string `json:"state" header:"State"`                 // i.e FAILED
+		WorkerID string `json:"worker_id" header:"Worker"`            // i.e fakehost:8083
+		Trace    string `json:"trace,omitempty" header:"Trace,empty"` // i.e org.apache.kafka.common.errors.RecordTooLargeException\n
 	}
 )
 
@@ -1596,13 +1863,13 @@ func (c *Client) GetConnectorStatus(clusterName, name string) (cs ConnectorStatu
 	// # Get connector status
 	// GET /api/proxy-connect/(string: clusterName)/connectors/(string: name)/status
 	path := fmt.Sprintf(connectorPath+"/status", clusterName, name)
-	resp, respErr := c.do(http.MethodGet, path, "", nil)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &cs)
+	err = c.ReadJSON(resp, &cs)
 	return
 }
 
@@ -1620,7 +1887,7 @@ func (c *Client) PauseConnector(clusterName, name string) error {
 	// # Pause a connector
 	// PUT /api/proxy-connect/(string: clusterName)/connectors/(string: name)/pause
 	path := fmt.Sprintf(connectorPath+"/pause", clusterName, name)
-	resp, err := c.do(http.MethodPut, path, "", nil) // the success status is 202 Accepted.
+	resp, err := c.Do(http.MethodPut, path, "", nil) // the success status is 202 Accepted.
 	if err != nil {
 		return err
 	}
@@ -1642,7 +1909,7 @@ func (c *Client) ResumeConnector(clusterName, name string) error {
 	// # Resume a paused connector
 	// PUT /api/proxy-connect/(string: clusterName)/connectors/(string: name)/resume
 	path := fmt.Sprintf(connectorPath+"/resume", clusterName, name)
-	resp, err := c.do(http.MethodPut, path, "", nil)
+	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -1664,7 +1931,7 @@ func (c *Client) RestartConnector(clusterName, name string) error {
 	// # Restart a connector
 	// POST /api/proxy-connect/(string: clusterName)/connectors/(string: name)/restart
 	path := fmt.Sprintf(connectorPath+"/restart", clusterName, name)
-	resp, err := c.do(http.MethodPost, path, "", nil)
+	resp, err := c.Do(http.MethodPost, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -1686,7 +1953,7 @@ func (c *Client) DeleteConnector(clusterName, name string) error {
 	// # Remove a running connector
 	// DELETE /api/proxy-connect/(string: clusterName)/connectors/(string: name)
 	path := fmt.Sprintf(connectorPath, clusterName, name)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -1713,13 +1980,13 @@ func (c *Client) GetConnectorTasks(clusterName, name string) (m []map[string]int
 	// # Get list of connector tasks
 	// GET /api/proxy-connect/(string: clusterName)/connectors/(string: name)/tasks
 	path := fmt.Sprintf(tasksPath, clusterName, name)
-	resp, respErr := c.do(http.MethodGet, path, "", nil)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &m)
+	err = c.ReadJSON(resp, &m)
 	return
 }
 
@@ -1738,13 +2005,13 @@ func (c *Client) GetConnectorTaskStatus(clusterName, name string, taskID int) (c
 	// # Get current status of a task
 	// GET /connectors/(string: name)/tasks/(int: taskid)/status in confluent
 	path := fmt.Sprintf(taskPath+"/status", clusterName, name, taskID)
-	resp, respErr := c.do(http.MethodGet, path, "", nil)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &cst)
+	err = c.ReadJSON(resp, &cst)
 	return
 }
 
@@ -1761,7 +2028,7 @@ func (c *Client) RestartConnectorTask(clusterName, name string, taskID int) erro
 	// # Restart a connector task
 	// POST /api/proxy-connect/(string: clusterName)/connectors/(string: name)/tasks/(int: taskid)/restart
 	path := fmt.Sprintf(taskPath+"/restart", clusterName, name, taskID)
-	resp, err := c.do(http.MethodPost, path, "", nil)
+	resp, err := c.Do(http.MethodPost, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -1772,14 +2039,14 @@ func (c *Client) RestartConnectorTask(clusterName, name string, taskID int) erro
 // ConnectorPlugin describes the entry data of the list that are being received from the `GetConnectorPlugins`.
 type ConnectorPlugin struct {
 	// Class is the connector class name.
-	Class string `json:"class"`
+	Class string `json:"class" header:"Class"`
 
-	Type string `json:"type"`
+	Type string `json:"type" header:"Type"`
 
-	Version string `json:"version"`
+	Version string `json:"version" header:"Version"`
 }
 
-const pluginsPath = "/api/proxy-connect/%s/connector-plugins"
+const pluginsPath = "api/proxy-connect/%s/connector-plugins"
 
 // GetConnectorPlugins returns a list of connector plugins installed in the Kafka Connect cluster.
 // Note that the API only checks for connectors on the worker that handles the request,
@@ -1793,18 +2060,20 @@ func (c *Client) GetConnectorPlugins(clusterName string) (cp []ConnectorPlugin, 
 	// # List available connector plugins
 	// GET /api/proxy-connect/(string: clusterName)/connector-plugins
 	path := fmt.Sprintf(pluginsPath, clusterName)
-	resp, respErr := c.do(http.MethodGet, path, "", nil)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &cp)
+	err = c.ReadJSON(resp, &cp)
 	return
 }
 
+//
 // Schemas (and Subjects) API
 // https://docs.confluent.io/current/schema-registry/docs/api.html
+//
 
 const schemaAPIVersion = "v1"
 const contentTypeSchemaJSON = "application/vnd.schemaregistry." + schemaAPIVersion + "+json"
@@ -1816,13 +2085,13 @@ const subjectsPath = "api/proxy-sr/subjects"
 func (c *Client) GetSubjects() (subjects []string, err error) {
 	// # List all available subjects
 	// GET /api/proxy-sr/subjects
-	resp, respErr := c.do(http.MethodGet, subjectsPath, "", nil, schemaAPIOption)
+	resp, respErr := c.Do(http.MethodGet, subjectsPath, "", nil, schemaAPIOption)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &subjects)
+	err = c.ReadJSON(resp, &subjects)
 	return
 }
 
@@ -1838,13 +2107,13 @@ func (c *Client) GetSubjectVersions(subject string) (versions []int, err error) 
 	// # List all versions of a particular subject
 	// GET /api/proxy-sr/subjects/(string: subject)/versions
 	path := fmt.Sprintf(subjectPath, subject+"/versions")
-	resp, respErr := c.do(http.MethodGet, path, "", nil, schemaAPIOption)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil, schemaAPIOption)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &versions)
+	err = c.ReadJSON(resp, &versions)
 	return
 }
 
@@ -1859,13 +2128,13 @@ func (c *Client) DeleteSubject(subject string) (versions []int, err error) {
 
 	// DELETE /api/proxy-sr/subjects/(string: subject)
 	path := fmt.Sprintf(subjectPath, subject)
-	resp, respErr := c.do(http.MethodDelete, path, "", nil, schemaAPIOption)
+	resp, respErr := c.Do(http.MethodDelete, path, "", nil, schemaAPIOption)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &versions)
+	err = c.ReadJSON(resp, &versions)
 	return
 }
 
@@ -1881,13 +2150,13 @@ func (c *Client) GetSchema(subjectID int) (string, error) {
 	// # Get the schema for a particular subject id
 	// GET /api/proxy-sr/schemas/ids/{int: id}
 	path := fmt.Sprintf(schemaPath, subjectID)
-	resp, err := c.do(http.MethodGet, path, "", nil, schemaAPIOption)
+	resp, err := c.Do(http.MethodGet, path, "", nil, schemaAPIOption)
 	if err != nil {
 		return "", err
 	}
 
 	var res schemaOnlyJSON
-	if err = c.readJSON(resp, &res); err != nil {
+	if err = c.ReadJSON(resp, &res); err != nil {
 		return "", err
 	}
 
@@ -1896,11 +2165,11 @@ func (c *Client) GetSchema(subjectID int) (string, error) {
 
 // Schema describes a schema, look `GetSchema` for more.
 type Schema struct {
-	ID int `json:"id,omitempty" yaml:"ID,omitempty"`
+	ID int `json:"id,omitempty" yaml:"ID,omitempty" header:"ID,text"`
 	// Name is the name of the schema is registered under.
-	Name string `json:"name,omitempty" yaml:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
+	Name string `json:"subject,omitempty" yaml:"Name" header:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
 	// Version of the returned schema.
-	Version int `json:"version"`
+	Version int `json:"version" header:"Version"`
 	// AvroSchema is the Avro schema string.
 	AvroSchema string `json:"schema" yaml:"AvroSchema"`
 }
@@ -1962,13 +2231,13 @@ func (c *Client) getSubjectSchemaAtVersion(subject string, versionID interface{}
 	// # Get the schema at a particular version
 	// GET /api/proxy-sr/subjects/(string: subject)/versions/(versionId: "latest" | int)
 	path := fmt.Sprintf(subjectPath+"/versions/%v", subject, versionID)
-	resp, respErr := c.do(http.MethodGet, path, "", nil, schemaAPIOption)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil, schemaAPIOption)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &s)
+	err = c.ReadJSON(resp, &s)
 	return
 }
 
@@ -2013,13 +2282,13 @@ func (c *Client) RegisterSchema(subject string, avroSchema string) (int, error) 
 	// POST /api/proxy-sr/subjects/(string: subject)/versions
 
 	path := fmt.Sprintf(subjectPath+"/versions", subject)
-	resp, err := c.do(http.MethodPost, path, contentTypeSchemaJSON, send, schemaAPIOption)
+	resp, err := c.Do(http.MethodPost, path, contentTypeSchemaJSON, send, schemaAPIOption)
 	if err != nil {
 		return 0, err
 	}
 
 	var res idOnlyJSON
-	err = c.readJSON(resp, &res)
+	err = c.ReadJSON(resp, &res)
 	return res.ID, err
 }
 
@@ -2037,13 +2306,13 @@ func (c *Client) deleteSubjectSchemaVersion(subject string, versionID interface{
 	// # Delete a particular version of a subject
 	// DELETE /api/proxy-sr/subjects/(string: subject)/versions/(versionId: version)
 	path := fmt.Sprintf(subjectPath+"/versions/%v", subject, versionID)
-	resp, err := c.do(http.MethodDelete, path, contentTypeSchemaJSON, nil, schemaAPIOption)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeSchemaJSON, nil, schemaAPIOption)
 	if err != nil {
 		return 0, err
 	}
 
 	var res int
-	err = c.readJSON(resp, &res)
+	err = c.ReadJSON(resp, &res)
 
 	return res, err
 }
@@ -2140,7 +2409,7 @@ type (
 	}
 )
 
-const compatibilityLevelPath = "/api/proxy-sr/config"
+const compatibilityLevelPath = "api/proxy-sr/config"
 
 // UpdateGlobalCompatibilityLevel sets a new global compatibility level.
 // When there are multiple instances of schema registry running in the same cluster,
@@ -2159,7 +2428,7 @@ func (c *Client) UpdateGlobalCompatibilityLevel(level CompatibilityLevel) error 
 
 	// # Update global compatibility level
 	// PUT /api/proxy-sr/config
-	resp, err := c.do(http.MethodPut, compatibilityLevelPath, contentTypeSchemaJSON, send, schemaAPIOption)
+	resp, err := c.Do(http.MethodPut, compatibilityLevelPath, contentTypeSchemaJSON, send, schemaAPIOption)
 	if err != nil {
 		return err
 	}
@@ -2172,14 +2441,14 @@ func (c *Client) UpdateGlobalCompatibilityLevel(level CompatibilityLevel) error 
 func (c *Client) GetGlobalCompatibilityLevel() (level CompatibilityLevel, err error) {
 	// # Get global compatibility level
 	// GET /api/proxy-sr/config
-	resp, respErr := c.do(http.MethodGet, compatibilityLevelPath, "", nil, schemaAPIOption)
+	resp, respErr := c.Do(http.MethodGet, compatibilityLevelPath, "", nil, schemaAPIOption)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
 	var levelReq compatibilityOnlyJSON
-	err = c.readJSON(resp, &levelReq)
+	err = c.ReadJSON(resp, &levelReq)
 	level = CompatibilityLevel(levelReq.Compatibility)
 	return
 }
@@ -2208,7 +2477,7 @@ func (c *Client) UpdateSubjectCompatibilityLevel(subject string, level Compatibi
 	// # Change compatibility level of a subject
 	// PUT /api/proxy-sr/config/(string: subject)
 	path := fmt.Sprintf(subjectCompatibilityLevelPath, subject)
-	resp, err := c.do(http.MethodPut, path, contentTypeSchemaJSON, send, schemaAPIOption)
+	resp, err := c.Do(http.MethodPut, path, contentTypeSchemaJSON, send, schemaAPIOption)
 	if err != nil {
 		return err
 	}
@@ -2226,14 +2495,14 @@ func (c *Client) GetSubjectCompatibilityLevel(subject string) (level Compatibili
 	// # Get compatibility level of a subject
 	// GET /api/proxy-sr/config/(string: subject)
 	path := fmt.Sprintf(subjectCompatibilityLevelPath, subject)
-	resp, respErr := c.do(http.MethodGet, path, "", nil, schemaAPIOption)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil, schemaAPIOption)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
 	var levelReq compatibilityOnlyJSON
-	err = c.readJSON(resp, &levelReq)
+	err = c.ReadJSON(resp, &levelReq)
 	level = CompatibilityLevel(levelReq.Compatibility)
 
 	return
@@ -2324,12 +2593,12 @@ const (
 
 // ACL is the type which defines a single Apache Access Control List.
 type ACL struct {
-	ResourceType   ACLResourceType   `json:"resourceType" yaml:"ResourceType"`     // required.
-	ResourceName   string            `json:"resourceName" yaml:"ResourceName"`     // required.
-	Principal      string            `json:"principal" yaml:"Principal"`           // required.
-	PermissionType ACLPermissionType `json:"permissionType" yaml:"PermissionType"` // required.
-	Host           string            `json:"host" yaml:"Host"`                     // required.
-	Operation      ACLOperation      `json:"operation" yaml:"Operation"`           // required.
+	ResourceName   string            `json:"resourceName" yaml:"ResourceName" header:"Name"`           // required.
+	ResourceType   ACLResourceType   `json:"resourceType" yaml:"ResourceType" header:"Type"`           // required.
+	Principal      string            `json:"principal" yaml:"Principal" header:"Principal"`            // required.
+	PermissionType ACLPermissionType `json:"permissionType" yaml:"PermissionType" header:"Permission"` // required.
+	Host           string            `json:"host" yaml:"Host" header:"Host"`                           // required.
+	Operation      ACLOperation      `json:"operation" yaml:"Operation" header:"Operation"`            // required.
 }
 
 // Validate force validates the acl's resource type, permission type and operation.
@@ -2360,7 +2629,7 @@ func (acl *ACL) Validate() error {
 	return nil
 }
 
-const aclPath = "/api/acl"
+const aclPath = "api/acl"
 
 // CreateOrUpdateACL sets an Apache Kafka Access Control List.
 // Use the defined types when needed, example:
@@ -2377,7 +2646,7 @@ func (c *Client) CreateOrUpdateACL(acl ACL) error {
 		return err
 	}
 
-	resp, err := c.do(http.MethodPut, aclPath, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPut, aclPath, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2388,13 +2657,13 @@ func (c *Client) CreateOrUpdateACL(acl ACL) error {
 
 // GetACLs returns all the available Apache Kafka Access Control Lists.
 func (c *Client) GetACLs() ([]ACL, error) {
-	resp, err := c.do(http.MethodGet, aclPath, "", nil)
+	resp, err := c.Do(http.MethodGet, aclPath, "", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var acls []ACL
-	err = c.readJSON(resp, &acls)
+	err = c.ReadJSON(resp, &acls)
 	return acls, err
 }
 
@@ -2409,7 +2678,7 @@ func (c *Client) DeleteACL(acl ACL) error {
 		return err
 	}
 
-	resp, err := c.do(http.MethodDelete, aclPath, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodDelete, aclPath, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2444,41 +2713,45 @@ const (
 type (
 	// Quota is the type which defines a single Quota.
 	Quota struct {
+		// Entityname is the Kafka client id for "CLIENT"
+		// and "CLIENTS" and user name for "USER", "USER" and "USERCLIENT", the `QuotaEntityXXX`.
+		EntityName string `json:"entityName" yaml:"EntityName" header:"Name"`
 		// EntityType can be either `QuotaEntityClient`, `QuotaEntityClients`,
 		// `QuotaEntityClientsDefault`, `QuotaEntityUser`, `QuotaEntityUsers`, `QuotaEntityUserClient`
 		// or `QuotaEntityUsersDefault`.
-		EnityType QuotaEntityType `json:"entityType"`
-		// Entityname is the Kafka client id for "CLIENT"
-		// and "CLIENTS" and user name for "USER", "USER" and "USERCLIENT", the `QuotaEntityXXX`.
-		EntityName string `json:"entityName"`
+		EnityType QuotaEntityType `json:"entityType" yaml:"EntityType" header:"Type"`
 		// Child is optional and only present for entityType `QuotaEntityUserClient` and is the client id.
-		Child string `json:"child,omitempty"`
+		Child string `json:"child,omitempty" yaml:"Child"` // header:"Child"`
 		// Properties  is a map of the quota constraints, the `QuotaConfig`.
-		Properties QuotaConfig `json:"properties"`
+		Properties QuotaConfig `json:"properties" yaml:"Properties" header:"inline"`
 		// URL is the url from this quota in Lenses.
-		URL string `json:"url"`
+		URL string `json:"url" yaml:"URL"`
+
+		IsAuthorized bool `json:"isAuthorized" yaml:"IsAuthorized"`
 	}
 
 	// QuotaConfig is a typed struct which defines the
 	// map of the quota constraints, producer_byte_rate, consumer_byte_rate and request_percentage.
 	QuotaConfig struct {
-		ProducerByteRate  string `json:"producer_byte_rate" yaml:"ProducerByteRate"`
-		ConsumerByteRate  string `json:"consumer_byte_rate" yaml:"ConsumerByteRate"`
-		RequestPercentage string `json:"request_percentage" yaml:"RequestPercentage"`
+		// header note:
+		// if "number" and no default value, then it will add "0", we use the empty space between commas to tell that the default value is space.
+		ProducerByteRate  string `json:"producer_byte_rate" yaml:"ProducerByteRate" header:"Produce/sec, ,number"`
+		ConsumerByteRate  string `json:"consumer_byte_rate" yaml:"ConsumerByteRate" header:"Consume/sec, ,number"`
+		RequestPercentage string `json:"request_percentage" yaml:"RequestPercentage" header:"Request Percentage, ,number"`
 	}
 )
 
-const quotasPath = "/api/quotas"
+const quotasPath = "api/quotas"
 
 // GetQuotas returns a list of all available quotas.
 func (c *Client) GetQuotas() ([]Quota, error) {
-	resp, err := c.do(http.MethodGet, quotasPath, "", nil)
+	resp, err := c.Do(http.MethodGet, quotasPath, "", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var quotas []Quota
-	err = c.readJSON(resp, &quotas)
+	err = c.ReadJSON(resp, &quotas)
 	return quotas, err
 }
 
@@ -2493,120 +2766,7 @@ func (c *Client) CreateOrUpdateQuotaForAllUsers(config QuotaConfig) error {
 		return err
 	}
 
-	resp, err := c.do(http.MethodPut, quotasPathAllUsers, contentTypeJSON, send)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// DeleteQuotaForAllUsers deletes the default for all users.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
-//
-// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
-func (c *Client) DeleteQuotaForAllUsers(propertiesToRemove ...string) error {
-	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.do(http.MethodDelete, quotasPathAllUsers, contentTypeJSON, send)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// /api/quotas/users/{user}
-const quotasPathUser = quotasPathAllUsers + "/%s"
-
-// CreateOrUpdateQuotaForUser sets a quota for a user.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
-func (c *Client) CreateOrUpdateQuotaForUser(user string, config QuotaConfig) error {
-	send, err := json.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	path := fmt.Sprintf(quotasPathUser, user)
-	resp, err := c.do(http.MethodPut, path, contentTypeJSON, send)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// DeleteQuotaForUser deletes a quota for a user.
-// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
-func (c *Client) DeleteQuotaForUser(user string, propertiesToRemove ...string) error {
-	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
-	if err != nil {
-		return err
-	}
-
-	path := fmt.Sprintf(quotasPathUser, user)
-	resp, err := c.do(http.MethodDelete, path, contentTypeJSON, send)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// /api/quotas/users/{user}/clients
-const quotasPathUserAllClients = quotasPathUser + "/clients"
-
-// CreateOrUpdateQuotaForUserAllClients sets a quota for a user for all clients.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
-func (c *Client) CreateOrUpdateQuotaForUserAllClients(user string, config QuotaConfig) error {
-	send, err := json.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	path := fmt.Sprintf(quotasPathUserAllClients, user)
-	resp, err := c.do(http.MethodPut, path, contentTypeJSON, send)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// DeleteQuotaForUserAllClients deletes for all client ids for a user.
-//
-// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
-func (c *Client) DeleteQuotaForUserAllClients(user string, propertiesToRemove ...string) error {
-	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
-	if err != nil {
-		return err
-	}
-
-	path := fmt.Sprintf(quotasPathUserAllClients, user)
-	resp, err := c.do(http.MethodDelete, path, contentTypeJSON, send)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// /api/quotas/users/{user}/clients/{client-id}
-const quotasPathUserClient = quotasPathUserAllClients + "/%s"
-
-// CreateOrUpdateQuotaForUserClient sets the quota for a user/client pair.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
-func (c *Client) CreateOrUpdateQuotaForUserClient(user, clientID string, config QuotaConfig) error {
-	send, err := json.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	path := fmt.Sprintf(quotasPathUserClient, user, clientID)
-	resp, err := c.do(http.MethodPut, path, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPut, quotasPathAllUsers, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2638,6 +2798,119 @@ func marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove []string) ([]byt
 	return json.Marshal(propertiesToRemove)
 }
 
+// DeleteQuotaForAllUsers deletes the default for all users.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+//
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForAllUsers(propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.Do(http.MethodDelete, quotasPathAllUsers, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// /api/quotas/users/{user}
+const quotasPathUser = quotasPathAllUsers + "/%s"
+
+// CreateOrUpdateQuotaForUser sets a quota for a user.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+func (c *Client) CreateOrUpdateQuotaForUser(user string, config QuotaConfig) error {
+	send, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(quotasPathUser, user)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteQuotaForUser deletes a quota for a user.
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForUser(user string, propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(quotasPathUser, user)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// /api/quotas/users/{user}/clients
+const quotasPathUserAllClients = quotasPathUser + "/clients"
+
+// CreateOrUpdateQuotaForUserAllClients sets a quota for a user for all clients.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+func (c *Client) CreateOrUpdateQuotaForUserAllClients(user string, config QuotaConfig) error {
+	send, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(quotasPathUserAllClients, user)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteQuotaForUserAllClients deletes for all client ids for a user.
+//
+// if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
+func (c *Client) DeleteQuotaForUserAllClients(user string, propertiesToRemove ...string) error {
+	send, err := marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(quotasPathUserAllClients, user)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// /api/quotas/users/{user}/clients/{client-id}
+const quotasPathUserClient = quotasPathUserAllClients + "/%s"
+
+// CreateOrUpdateQuotaForUserClient sets the quota for a user/client pair.
+// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+func (c *Client) CreateOrUpdateQuotaForUserClient(user, clientID string, config QuotaConfig) error {
+	send, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(quotasPathUserClient, user, clientID)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
 // DeleteQuotaForUserClient deletes the quota for a user/client pair.
 //
 // if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
@@ -2648,7 +2921,7 @@ func (c *Client) DeleteQuotaForUserClient(user, clientID string, propertiesToRem
 	}
 
 	path := fmt.Sprintf(quotasPathUserClient, user, clientID)
-	resp, err := c.do(http.MethodDelete, path, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2667,7 +2940,7 @@ func (c *Client) CreateOrUpdateQuotaForAllClients(config QuotaConfig) error {
 		return err
 	}
 
-	resp, err := c.do(http.MethodPut, quotasPathAllClients, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPut, quotasPathAllClients, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2684,7 +2957,7 @@ func (c *Client) DeleteQuotaForAllClients(propertiesToRemove ...string) error {
 		return err
 	}
 
-	resp, err := c.do(http.MethodDelete, quotasPathAllClients, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodDelete, quotasPathAllClients, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2704,7 +2977,7 @@ func (c *Client) CreateOrUpdateQuotaForClient(clientID string, config QuotaConfi
 	}
 
 	path := fmt.Sprintf(quotasPathClient, clientID)
-	resp, err := c.do(http.MethodPut, path, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2722,7 +2995,7 @@ func (c *Client) DeleteQuotaForClient(clientID string, propertiesToRemove ...str
 	}
 
 	path := fmt.Sprintf(quotasPathClient, clientID)
-	resp, err := c.do(http.MethodDelete, path, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2735,31 +3008,31 @@ func (c *Client) DeleteQuotaForClient(clientID string, propertiesToRemove ...str
 type (
 	// AlertSetting describes the type of list entry of the `GetAlertSetting` and `CreateOrUpdateAlertSettingCondition`.
 	AlertSetting struct {
-		ID                int               `json:"id"`
-		Description       string            `json:"description"`
-		Category          string            `json:"category"`
-		Enabled           bool              `json:"enabled"`
-		Docs              string            `json:"docs,omitempty"`
-		ConditionTemplate string            `json:"conditionTemplate,omitempty"`
-		ConditionRegex    string            `json:"conditionRegex,omitempty"`
-		Conditions        map[string]string `json:"conditions,omitempty"`
-		IsAvailable       bool              `json:"isAvailable"`
+		ID                int               `json:"id" header:"ID,text"`
+		Description       string            `json:"description" header:"Desc"`
+		Category          string            `json:"category" header:"Category"`
+		Enabled           bool              `json:"enabled" header:"Enabled"`
+		IsAvailable       bool              `json:"isAvailable" header:"Available"`
+		Docs              string            `json:"docs,omitempty" header:"Docs"`
+		ConditionTemplate string            `json:"conditionTemplate,omitempty" header:"Cond Tmpl"`
+		ConditionRegex    string            `json:"conditionRegex,omitempty" header:"Cond Regex"`
+		Conditions        map[string]string `json:"conditions,omitempty" header:"Conds"`
 	}
 
 	// AlertSettings describes the type of list entry of the `GetAlertSettings`.
 	AlertSettings struct {
-		Categories AlertSettingsCategoryMap `json:"categories"`
+		Categories AlertSettingsCategoryMap `json:"categories" header:"inline"`
 	}
 
 	// AlertSettingsCategoryMap describes the type of `AlertSetting`'s Categories.
 	AlertSettingsCategoryMap struct {
-		Infrastructure []AlertSetting `json:"Infrastructure"`
-		Consumers      []AlertSetting `json:"Consumers"`
+		Infrastructure []AlertSetting `json:"Infrastructure" header:"Infrastructure"`
+		Consumers      []AlertSetting `json:"Consumers" header:"Consumers"`
 	}
 )
 
 const (
-	alertsPath                 = "/api/alerts"
+	alertsPath                 = "api/alerts"
 	alertSettingsPath          = alertsPath + "/settings"
 	alertSettingPath           = alertSettingsPath + "/%d"
 	alertSettingConditionsPath = alertSettingPath + "/condition"
@@ -2774,33 +3047,33 @@ const (
 //
 // Alert notifications are the result of an `AlertSetting` Condition being met on an `AlertSetting`.
 func (c *Client) GetAlertSettings() (AlertSettings, error) {
-	resp, err := c.do(http.MethodGet, alertSettingsPath, "", nil)
+	resp, err := c.Do(http.MethodGet, alertSettingsPath, "", nil)
 	if err != nil {
 		return AlertSettings{}, err
 	}
 
 	var settings AlertSettings
-	err = c.readJSON(resp, &settings)
+	err = c.ReadJSON(resp, &settings)
 	return settings, err
 }
 
 // GetAlertSetting returns a specific alert setting based on its "id".
 func (c *Client) GetAlertSetting(id int) (setting AlertSetting, err error) {
 	path := fmt.Sprintf(alertSettingPath, id)
-	resp, respErr := c.do(http.MethodGet, path, "", nil)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &setting)
+	err = c.ReadJSON(resp, &setting)
 	return
 }
 
 // EnableAlertSetting enables a specific alert setting based on its "id".
 func (c *Client) EnableAlertSetting(id int) error {
 	path := fmt.Sprintf(alertSettingPath, id)
-	resp, err := c.do(http.MethodPut, path, "", nil)
+	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -2814,13 +3087,13 @@ type AlertSettingConditions map[string]string
 // GetAlertSettingConditions returns alert setting's conditions as a map of strings.
 func (c *Client) GetAlertSettingConditions(id int) (AlertSettingConditions, error) {
 	path := fmt.Sprintf(alertSettingConditionsPath, id)
-	resp, err := c.do(http.MethodGet, path, "", nil)
+	resp, err := c.Do(http.MethodGet, path, "", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var conds AlertSettingConditions
-	if err = c.readJSON(resp, &conds); err != nil {
+	if err = c.ReadJSON(resp, &conds); err != nil {
 		return nil, err
 	}
 	return conds, nil
@@ -2830,32 +3103,34 @@ type (
 	// Alert is the request payload that is used to register an Alert via `RegisterAlert` and the response that client retrieves from the `GetAlerts`.
 	Alert struct {
 		// AlertID  is a unique identifier for the setting corresponding to this alert. See the available ids via `GetAlertSettings`.
-		AlertID int `json:"alertId" yaml:"AlertID"`
-		// EndsAt is the time as string the alert ended at.
-		EndsAt string `json:"endsAt" yaml:"EndsAt"`
-		// StartsAt is the time as string, in ISO format, for when the alert starts
-		StartsAt string `json:"startsAt" yaml:"StartsAt"`
+		AlertID int `json:"alertId" yaml:"AlertID" header:"ID,text"`
+
 		// Labels field is a list of key-value pairs. It must contain a non empty `Severity` value.
-		Labels AlertLabels `json:"labels" yaml:"Labels"`
+		Labels AlertLabels `json:"labels" yaml:"Labels" header:"inline"`
 		// Annotations is a list of key-value pairs. It contains the summary, source, and docs fields.
-		Annotations AlertAnnotations `json:"annotations" yaml:"Annotations"`
+		Annotations AlertAnnotations `json:"annotations" yaml:"Annotations"` // header:"inline"`
 		// GeneratorURL is a unique URL identifying the creator of this alert.
 		// It matches AlertManager requirements for providing this field.
-		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL"`
+		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL"` // header:"Gen URL"`
+
+		// StartsAt is the time as string, in ISO format, for when the alert starts
+		StartsAt string `json:"startsAt" yaml:"StartsAt" header:"Start,date"`
+		// EndsAt is the time as string the alert ended at.
+		EndsAt string `json:"endsAt" yaml:"EndsAt" header:"End,date"`
 	}
 
 	// AlertLabels labels for the `Alert`, at least Severity should be filled.
 	AlertLabels struct {
-		Category string `json:"category,omitempty" yaml:"Category,omitempty"`
-		Severity string `json:"severity" yaml:"Severity,omitempty"`
-		Instance string `json:"instance,omitempty" yaml:"Instance,omitempty"`
+		Category string `json:"category,omitempty" yaml:"Category,omitempty" header:"Category"`
+		Severity string `json:"severity" yaml:"Severity,omitempty" header:"Severity"`
+		Instance string `json:"instance,omitempty" yaml:"Instance,omitempty" header:"Instance"`
 	}
 
 	// AlertAnnotations annotations for the `Alert`, at least Summary should be filled.
 	AlertAnnotations struct {
-		Summary string `json:"summary" yaml:"Summary"`
-		Source  string `json:"source,omitempty" yaml:"Source,omitempty"`
-		Docs    string `json:"docs,omitempty" yaml:"Docs,omitempty"`
+		Summary string `json:"summary" yaml:"Summary" header:"Summary"`
+		Source  string `json:"source,omitempty" yaml:"Source,omitempty" header:"Source,empty"`
+		Docs    string `json:"docs,omitempty" yaml:"Docs,omitempty" header:"Docs,empty"`
 	}
 )
 
@@ -2872,7 +3147,7 @@ func (c *Client) RegisterAlert(alert Alert) error {
 		return err
 	}
 
-	resp, err := c.do(http.MethodPost, alertsPath, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPost, alertsPath, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -2882,20 +3157,20 @@ func (c *Client) RegisterAlert(alert Alert) error {
 
 // GetAlerts returns the registered alerts.
 func (c *Client) GetAlerts() (alerts []Alert, err error) {
-	resp, respErr := c.do(http.MethodGet, alertsPath, "", nil)
+	resp, respErr := c.Do(http.MethodGet, alertsPath, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.readJSON(resp, &alerts)
+	err = c.ReadJSON(resp, &alerts)
 	return
 }
 
 // CreateOrUpdateAlertSettingCondition sets a condition(expression text) for a specific alert setting.
 func (c *Client) CreateOrUpdateAlertSettingCondition(alertSettingID int, condition string) error {
 	path := fmt.Sprintf(alertSettingConditionsPath, alertSettingID)
-	resp, err := c.do(http.MethodPost, path, "text/plain", []byte(condition))
+	resp, err := c.Do(http.MethodPost, path, "text/plain", []byte(condition))
 	if err != nil {
 		return err
 	}
@@ -2906,7 +3181,7 @@ func (c *Client) CreateOrUpdateAlertSettingCondition(alertSettingID int, conditi
 // DeleteAlertSettingCondition deletes a condition from an alert setting.
 func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID string) error {
 	path := fmt.Sprintf(alertSettingConditionPath, alertSettingID, conditionUUID)
-	resp, err := c.do(http.MethodDelete, path, "", nil)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
 	if err != nil {
 		return err
 	}
@@ -2915,8 +3190,7 @@ func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID s
 }
 
 const (
-	alertsPathSSE       = "/api/sse/alerts"
-	alertsSSEDataPrefix = "data:"
+	alertsPathSSE = "api/sse/alerts"
 )
 
 // AlertHandler is the type of func that can be registered to receive alerts via the `GetAlertsLive`.
@@ -2924,8 +3198,9 @@ type AlertHandler func(Alert) error
 
 // GetAlertsLive receives alert notifications in real-time from the server via a Send Server Event endpoint.
 func (c *Client) GetAlertsLive(handler AlertHandler) error {
-	resp, err := c.do(http.MethodGet, alertsPathSSE, contentTypeJSON, nil, func(r *http.Request) {
+	resp, err := c.Do(http.MethodGet, alertsPathSSE, contentTypeJSON, nil, func(r *http.Request) error {
 		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+		return nil
 	}, schemaAPIOption)
 	if err != nil {
 		return err
@@ -2948,16 +3223,21 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 			return err // exit on first failure.
 		}
 
-		// ignore all except data: ..., heartbeats.
-		if len(line) < len(alertsSSEDataPrefix)+1 {
+		if len(line) < shiftN+1 { // even more +1 for the actual event.
+			// almost empty or totally invalid line,
+			// empty message maybe,
+			// we don't care, we ignore them at any way.
 			continue
 		}
 
-		message := line[len(alertsSSEDataPrefix):] // we need everything after the 'data:'.
+		if !bytes.HasPrefix(line, dataPrefix) {
+			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
+		}
 
-		// it can return data:[empty here] when it stops, let's stop it
+		message := line[shiftN:] // we need everything after the 'data:'.
+
 		if len(message) < 2 {
-			return nil // stop here for now.
+			continue // do NOT stop here, let the connection active.
 		}
 
 		alert := Alert{}
@@ -2971,4 +3251,460 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 			return err // stop on first error by the caller.
 		}
 	}
+}
+
+const processorsLogsPathSSE = "api/sse/k8/logs/%s/%s/%s"
+
+type processorLog struct {
+	Timestamp string `json:"@timestamp" Header:"Timestamp,date"`
+	Version   int    `json:"@version" Header:"Version"`
+	Message   string `json:"message" Header:"Message"`
+	// logger_name
+	// thread_name
+	Level string `json:"level"`
+	// level_value
+}
+
+const defaultProcessorsLogsFollowLines = 100
+
+// GetProcessorsLogs retrieves the LSQL processor logs if in kubernetes mode.
+func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool, lines int, handler func(level string, log string) error) error {
+	if mode, _ := c.GetExecutionMode(); mode != ExecutionModeKubernetes {
+		return fmt.Errorf("unable to retrieve logs, execution mode is not KUBERNETES")
+	}
+
+	path := fmt.Sprintf(processorsLogsPathSSE, clusterName, ns, podName)
+	if follow {
+		if lines <= 0 {
+			lines = defaultProcessorsLogsFollowLines
+		}
+
+		path += "?follow=true&lines=" + fmt.Sprintf("%d", lines)
+	}
+
+	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) error {
+		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	reader, err := c.acquireResponseBodyStream(resp)
+	if err != nil {
+		return err
+	}
+
+	streamReader := bufio.NewReader(reader)
+	for {
+		line, err := streamReader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil // we read until the the end, exit with no error here.
+			}
+			return err // exit on first failure.
+		}
+
+		if len(line) < shiftN+1 { // even more +1 for the actual event.
+			// almost empty or totally invalid line,
+			// empty message maybe,
+			// we don't care, we ignore them at any way.
+			continue
+		}
+
+		if !bytes.HasPrefix(line, dataPrefix) {
+			continue
+		}
+
+		message := line[shiftN:]
+
+		if len(message) < 2 {
+			continue
+		}
+
+		// it can be a json object or a pure string log (but always after data:, i.e data:======> Log level set to INFO).
+		logEntry := processorLog{}
+		if message[0] == '{' {
+			if err = json.Unmarshal(message, &logEntry); err == nil {
+				t, err := time.Parse(time.RFC3339, logEntry.Timestamp)
+				if err == nil {
+					logEntry.Timestamp = t.Format("2006-01-02 15:04:05")
+				}
+
+				// colorized by the caller.
+				if err = handler(logEntry.Level, fmt.Sprintf("%s %s", logEntry.Timestamp, logEntry.Message)); err != nil {
+					return err
+				}
+
+			} else {
+				// for any case.
+				handler("info", string(message))
+			}
+
+			continue
+		}
+
+		// it contains the log level itself.
+		handler("", string(message))
+	}
+}
+
+//
+// Dynamic Broker Configurations API
+//
+
+// BrokerConfig describes the kafka broker's configurations.
+type BrokerConfig struct {
+	LogCleanerThreads int    `json:"log.cleaner.threads" yaml:"LogCleanerThreads" header:"Log Cleaner Threads"`
+	CompressionType   string `json:"compression.type" yaml:"CompressionType" header:"Compression Type"`
+	AdvertisedPort    int    `json:"advertised.port" yaml:"AdvertisedPort" header:"Advertised Port"`
+}
+
+const (
+	brokersConfigsPath = "api/configs/brokers"
+	brokerConfigsPath  = brokersConfigsPath + "/%d"
+)
+
+// GetDynamicClusterConfigs returns the dynamic updated configurations for a kafka cluster.
+// Retrieves only the ones added/updated dynamically.
+func (c *Client) GetDynamicClusterConfigs() (configs BrokerConfig, err error) {
+	resp, respErr := c.Do(http.MethodGet, brokersConfigsPath, "", nil)
+	if respErr != nil {
+		err = respErr
+		return
+	}
+
+	err = c.ReadJSON(resp, &configs)
+	return
+}
+
+// GetDynamicBrokerConfigs returns the dynamic updated configurations for a kafka broker.
+// Retrieves only the ones added/updated dynamically.
+func (c *Client) GetDynamicBrokerConfigs(brokerID int) (config BrokerConfig, err error) {
+	path := fmt.Sprintf(brokerConfigsPath, brokerID)
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
+	if respErr != nil {
+		err = respErr
+		return
+	}
+
+	err = c.ReadJSON(resp, &config)
+	return
+}
+
+// UpdateDynamicClusterConfigs adds or updates cluster configuration dynamically.
+func (c *Client) UpdateDynamicClusterConfigs(toAddOrUpdate BrokerConfig) error {
+	send, err := json.Marshal(toAddOrUpdate)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.Do(http.MethodPut, brokersConfigsPath, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// UpdateDynamicBrokerConfigs adds or updates broker configuration dynamically.
+func (c *Client) UpdateDynamicBrokerConfigs(brokerID int, toAddOrUpdate BrokerConfig) error {
+	send, err := json.Marshal(toAddOrUpdate)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(brokerConfigsPath, brokerID)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteDynamicClusterConfigs deletes cluster configuration(s) dynamically.
+// It reverts the configuration to its default value.
+func (c *Client) DeleteDynamicClusterConfigs(configKeysToBeReseted ...string) error {
+	send, err := json.Marshal(configKeysToBeReseted)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.Do(http.MethodDelete, brokersConfigsPath, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteDynamicBrokerConfigs deletes a configuration for a broker.
+// Deleting a configuration dynamically reverts it to its default value.
+func (c *Client) DeleteDynamicBrokerConfigs(brokerID int, configKeysToBeReseted ...string) error {
+	send, err := json.Marshal(configKeysToBeReseted)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf(brokerConfigsPath, brokerID)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+//
+// Audit API
+//
+
+// AuditEntryType the go type for audit entry types, see the `AuditEntry` structure for more.
+type AuditEntryType string
+
+// The available audit entry types.
+// Available types: AuditEntryTopic, AuditEntryTopicData, AuditEntryQuotas, AuditEntryBrokerConfig,
+// AuditEntryACL, AuditEntrySchema, AuditEntryProcessor, AuditEntryConnector.
+const (
+	AuditEntryTopic        AuditEntryType = "TOPIC"
+	AuditEntryTopicData    AuditEntryType = "TOPIC_DATA"
+	AuditEntryQuotas       AuditEntryType = "QUOTAS"
+	AuditEntryBrokerConfig AuditEntryType = "BROKER_CONFIG"
+	AuditEntryACL          AuditEntryType = "ACL"
+	AuditEntrySchema       AuditEntryType = "SCHEMA"
+	AuditEntryProcessor    AuditEntryType = "PROCESSOR"
+	AuditEntryConnector    AuditEntryType = "CONNECTOR"
+)
+
+// AuditEntryChange the go type describer for the audit entry changes, see the `AuditEntry` structure for more.
+type AuditEntryChange string
+
+// The available audit entry changes.
+// Available types: AuditEntryAdd, AuditEntryRemove, AuditEntryUpdate, AuditEntryInsert.
+const (
+	AuditEntryAdd    AuditEntryChange = "ADD"
+	AuditEntryRemove AuditEntryChange = "REMOVE"
+	AuditEntryUpdate AuditEntryChange = "UPDATE"
+	AuditEntryInsert AuditEntryChange = "INSERT"
+)
+
+// AuditEntry describes a lenses Audit Entry, used for audit logs API.
+type AuditEntry struct {
+	Type      AuditEntryType    `json:"type" yaml:"Type" header:"Type"`
+	Change    AuditEntryChange  `json:"change" yaml:"Change" header:"Change"`
+	UserID    string            `json:"userId" yaml:"User" header:"User         "` /* make it a little bigger than expected, it looks slightly better for this field*/
+	Timestamp int64             `json:"timestamp" yaml:"Timestamp" header:"Date,timestamp(ms|utc|02 Jan 2006 15:04)"`
+	Content   map[string]string `json:"content" yaml:"Content" header:"Content"`
+}
+
+const auditPath = "api/audit"
+
+// GetAuditEntries returns the last buffered audit entries.
+//
+// Retrives the last N audit entries created.
+// See `GetAuditEntriesLive` for real-time notifications.
+func (c *Client) GetAuditEntries() (entries []AuditEntry, err error) {
+	resp, err := c.Do(http.MethodGet, auditPath, "", nil)
+	if err != nil {
+		return nil, nil
+	}
+
+	err = c.ReadJSON(resp, &entries)
+	return
+}
+
+// AuditEntryHandler is the type of the function, the listener which is
+// the input parameter of the `GetAuditEntriesLive` API call.
+type AuditEntryHandler func(AuditEntry) error
+
+const auditPathSSE = "api/sse/audit"
+
+// GetAuditEntriesLive returns the live audit notifications, see `GetAuditEntries` too.
+func (c *Client) GetAuditEntriesLive(handler AuditEntryHandler) error {
+	if handler == nil {
+		return errRequired("handler")
+	}
+
+	resp, err := c.Do(http.MethodGet, auditPathSSE, contentTypeJSON, nil, func(r *http.Request) error {
+		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	reader, err := c.acquireResponseBodyStream(resp)
+	if err != nil {
+		return err
+	}
+
+	streamReader := bufio.NewReader(reader)
+
+	for {
+		line, err := streamReader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil // we read until the the end, exit with no error here.
+			}
+			return err // exit on first failure.
+		}
+
+		if len(line) < shiftN+1 { // even more +1 for the actual event.
+			// almost empty or totally invalid line,
+			// empty message maybe,
+			// we don't care, we ignore them at any way.
+			continue
+		}
+
+		if !bytes.HasPrefix(line, dataPrefix) {
+			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
+		}
+
+		message := line[shiftN:] // we need everything after the 'data:'.
+
+		if len(message) < 2 {
+			continue // do NOT stop here, let the connection active.
+		}
+
+		entry := AuditEntry{}
+
+		if err = json.Unmarshal(message, &entry); err != nil {
+			// exit on first error here as well.
+			return err
+		}
+
+		if err = handler(entry); err != nil {
+			return err // stop on first error by the caller.
+		}
+	}
+}
+
+//
+// Logs API
+//
+
+// LogLine represents the return value(s) of the `GetLogsInfo` and `GetLogsMetrics` calls.
+type LogLine struct {
+	Level      string `json:"level" header:"Level"`
+	Thread     string `json:"thread"`
+	Logger     string `json:"logger"`
+	Message    string `json:"message" header:"Message"`
+	Stacktrace string `json:"Stacktrace"`
+	Timestmap  int64  `json:"Timestamp"`
+	Time       string `json:"time" header:"Time"`
+}
+
+const (
+	logsPath        = "api/logs"
+	logsInfoPath    = logsPath + "/INFO"
+	logsMetricsPath = logsPath + "/METRICS"
+)
+
+// GetLogsInfo returns the latest (512) INFO log lines.
+func (c *Client) GetLogsInfo() ([]LogLine, error) {
+	resp, err := c.Do(http.MethodGet, logsInfoPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	var logs []LogLine
+	err = c.ReadJSON(resp, &logs)
+	return logs, err
+}
+
+// GetLogsMetrics returns the latest (512) METRICS log lines.
+func (c *Client) GetLogsMetrics() ([]LogLine, error) {
+	resp, err := c.Do(http.MethodGet, logsMetricsPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	var logs []LogLine
+	err = c.ReadJSON(resp, &logs)
+	return logs, err
+}
+
+//
+// User Profile API
+//
+
+// UserProfile contains all the user-specific favourites, only kafka related info.
+type UserProfile struct {
+	Topics       []string `json:"topics" header:"Topics"`
+	Schemas      []string `json:"schemas" header:"Schemas"`
+	Transformers []string `json:"transformers" header:"Transformers"`
+}
+
+const (
+	userProfilePath         = "api/user/profile"
+	userProfilePropertyPath = userProfilePath + "/%s/%s"
+)
+
+// GetUserProfile returns the user-specific favourites.
+func (c *Client) GetUserProfile() (UserProfile, error) {
+	var profile UserProfile
+
+	resp, err := c.Do(http.MethodGet, userProfilePath, "", nil)
+	if err != nil {
+		return profile, err
+	}
+
+	err = c.ReadJSON(resp, &profile)
+	return profile, err
+}
+
+// CreateUserProfilePropertyValue adds a "value" to the user profile "property" entries.
+func (c *Client) CreateUserProfilePropertyValue(property, value string) error {
+	path := fmt.Sprintf(userProfilePropertyPath, property, value)
+	resp, err := c.Do(http.MethodPut, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+// DeleteUserProfilePropertyValue removes the "value" from the user profile "property" entries.
+func (c *Client) DeleteUserProfilePropertyValue(property, value string) error {
+	path := fmt.Sprintf(userProfilePropertyPath, property, value)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+//
+// Static API
+//
+
+const (
+	staticPath                    = "api/static"
+	staticSupportedConnectorsPath = staticPath + "/supported-connectors"
+)
+
+// ConnectorInfoUI describes a supported Kafka Connector, result type of the `GetSupportedConnectors` call.
+type ConnectorInfoUI struct {
+	Class       string `json:"class"` // header:"Class"`
+	Name        string `json:"name" header:"Name"`
+	Type        string `json:"type" header:"Type"`
+	Version     string `json:"version" header:"Version"`
+	Author      string `json:"author,omitempty" header:"Author"`
+	Description string `json:"description,omitempty" header:"Desc"`
+	Docs        string `json:"docs,omitempty"` // header:"Docs"`
+	UIEnabled   bool   `json:"uiEnabled" header:"UI Enabled"`
+}
+
+// GetSupportedConnectors returns the list of the supported Kafka Connectors.
+func (c *Client) GetSupportedConnectors() ([]ConnectorInfoUI, error) {
+	resp, err := c.Do(http.MethodGet, staticSupportedConnectorsPath, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var connectorsInfo []ConnectorInfoUI
+	err = c.ReadJSON(resp, &connectorsInfo)
+	return connectorsInfo, err
 }

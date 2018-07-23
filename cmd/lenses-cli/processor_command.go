@@ -1,18 +1,20 @@
 package main
 
 import (
-	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/kataras/golog"
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	rootCmd.AddCommand(newGetProcessorsCommand())
-	rootCmd.AddCommand(newProcessorGroupCommand())
+	app.AddCommand(newGetProcessorsCommand())
+	app.AddCommand(newProcessorGroupCommand())
 }
 
 func newGetProcessorsCommand() *cobra.Command {
@@ -21,7 +23,7 @@ func newGetProcessorsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "processors",
 		Short:            "List of all available processors",
-		Example:          exampleString(`processors`),
+		Example:          `processors`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -67,7 +69,7 @@ func newGetProcessorsCommand() *cobra.Command {
 				processor.SQL = strings.Replace(processor.SQL, "   ", "", -1)
 			}
 
-			return printJSON(cmd, result.Streams)
+			return bite.PrintObject(cmd, result.Streams)
 		},
 	}
 
@@ -77,8 +79,47 @@ func newGetProcessorsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&namespace, "namespace", "", "--namespace=namespace select by namespace, available only in KUBERNETES mode")
 
 	// example: lenses-cli processors --query="[?ClusterName == 'IN_PROC'].Name | sort(@) | {Processor_Names_IN_PROC: join(', ', @)}"
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
+	cmd.AddCommand(newProcessorsLogsCommand())
+
+	return cmd
+}
+
+func newProcessorsLogsCommand() *cobra.Command {
+	var (
+		clusterName, podName, namespace string
+		follow                          bool
+		lines                           int
+	)
+
+	cmd := &cobra.Command{
+		Use:              "logs",
+		Short:            "Retrieve LSQL Processor logs. Available only in KUBERNETES execution mode",
+		Example:          `processors logs --clusterName=clusterName --namespace=nameSpace --podName=runnerStateID [--follow --lines=50]`,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "namespace": namespace, "podName": podName}); err != nil {
+				return err
+			}
+
+			golog.SetTimeFormat("")
+			handler := func(level, log string) error {
+				log, _ = url.QueryUnescape(log) // for LSQL lines.
+				richLog(level, log)
+				return nil
+			}
+
+			return client.GetProcessorsLogs(clusterName, namespace, podName, follow, lines, handler)
+		},
+	}
+
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", "--clusterName=clusterName")
+	cmd.Flags().StringVar(&namespace, "namespace", "", "--namespace=namespace")
+	cmd.Flags().StringVar(&podName, "podName", "", "--podName=podName")
+	cmd.Flags().BoolVar(&follow, "follow", false, "--follow")
+	cmd.Flags().IntVar(&lines, "lines", 100, "--lines=100")
 	return cmd
 }
 
@@ -86,7 +127,7 @@ func newProcessorGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "processor",
 		Short:            "Work with a particular processor based on the processor id; pause, resume, update runners, delete or create a new processor",
-		Example:          exampleString(`processor pause --id="existing_processor_id" or processor create --name="processor_name" --sql="" --runners=1 --clusterName="" --namespace="" pipeline=""`),
+		Example:          `processor pause --id="existing_processor_id" or processor create --name="processor_name" --sql="" --runners=1 --clusterName="" --namespace="" pipeline=""`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 	}
@@ -108,11 +149,11 @@ func newProcessorCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Create a processor",
-		Example:          exampleString(`processor create --name="processor_name" --sql="" --runners=1 --clusterName="" --namespace="" pipeline=""`),
+		Example:          `processor create --name="processor_name" --sql="" --runners=1 --clusterName="" --namespace="" pipeline=""`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"name": processor.Name, "sql": processor.SQL}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": processor.Name, "sql": processor.SQL}); err != nil {
 				return err
 			}
 
@@ -122,7 +163,7 @@ func newProcessorCreateCommand() *cobra.Command {
 				return err
 			}
 
-			return echo(cmd, "Processor %s created", processor.Name)
+			return bite.PrintInfo(cmd, "Processor %s created", processor.Name)
 		},
 	}
 
@@ -133,8 +174,8 @@ func newProcessorCreateCommand() *cobra.Command {
 	cmd.Flags().IntVar(&processor.Runners, "runners", 1, "--runners=1")
 	cmd.Flags().StringVar(&processor.Pipeline, "pipeline", "", `--pipeline="pipeline" a label to apply to kubernetes processors, defaults to processor name`)
 
-	shouldTryLoadFile(cmd, &processor)
-	canBeSilent(cmd)
+	bite.Prepend(cmd, bite.FileBind(&processor))
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
@@ -145,7 +186,7 @@ func newProcessorPauseCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "pause",
 		Short:            "Pause a processor",
-		Example:          exampleString(`processor pause --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
+		Example:          `processor pause --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -155,11 +196,11 @@ func newProcessorPauseCommand() *cobra.Command {
 			}
 
 			if err := client.PauseProcessor(identifier); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to pause, processor '%s' does not exist", identifier)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to pause, processor '%s' does not exist", identifier)
 				return err
 			}
 
-			return echo(cmd, "Processor %s paused", identifier)
+			return bite.PrintInfo(cmd, "Processor %s paused", identifier)
 		},
 	}
 
@@ -167,7 +208,7 @@ func newProcessorPauseCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
@@ -178,7 +219,7 @@ func newProcessorResumeCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "resume",
 		Short:            "Resume a processor",
-		Example:          exampleString(`processor resume --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
+		Example:          `processor resume --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -188,11 +229,11 @@ func newProcessorResumeCommand() *cobra.Command {
 			}
 
 			if err := client.ResumeProcessor(identifier); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to resume, processor '%s' does not exist", identifier)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to resume, processor '%s' does not exist", identifier)
 				return err
 			}
 
-			return echo(cmd, "Processor %s resumed", identifier)
+			return bite.PrintInfo(cmd, "Processor %s resumed", identifier)
 		},
 	}
 
@@ -200,7 +241,7 @@ func newProcessorResumeCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
@@ -214,12 +255,13 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "update",
+		Aliases:          []string{"scale"},
 		Short:            "Update processor runners",
-		Example:          exampleString(`processor update --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
+		Example:          `processor update --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := checkRequiredFlags(cmd, flags{"runners": runners}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"runners": runners}); err != nil {
 				return err
 			}
 
@@ -229,11 +271,11 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 			}
 
 			if err := client.UpdateProcessorRunners(identifier, runners); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to scale to %d runners, processor '%s' does not exist", runners, identifier)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to scale to %d runners, processor '%s' does not exist", runners, identifier)
 				return err
 			}
 
-			return echo(cmd, "Processor %s scaled", identifier)
+			return bite.PrintInfo(cmd, "Processor %s scaled", identifier)
 		},
 	}
 
@@ -243,7 +285,7 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 	cmd.Flags().String("name", "", "--name=processorName")
 	cmd.Flags().String("clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().String("namespace", "", `--namespace="namespace"`)
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
@@ -254,7 +296,7 @@ func newProcessorDeleteCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete a processor",
-		Example:          exampleString(`processor delete --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`),
+		Example:          `processor delete --id="processor_id" (or --name="processor_name") --clusterName="clusterName" --namespace="namespace"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -265,7 +307,7 @@ func newProcessorDeleteCommand() *cobra.Command {
 
 			// delete the processor based on the identifier, based on the current running mode.
 			if err := client.DeleteProcessor(identifier); err != nil {
-				errResourceNotFoundMessage = fmt.Sprintf("unable to delete, processor '%s' does not exist", identifier)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, processor '%s' does not exist", identifier)
 				return err
 			}
 
@@ -274,7 +316,7 @@ func newProcessorDeleteCommand() *cobra.Command {
 				identifier = processorName
 			}
 
-			return echo(cmd, "Processor %s deleted", identifier)
+			return bite.PrintInfo(cmd, "Processor %s deleted", identifier)
 		},
 	}
 
@@ -285,7 +327,7 @@ func newProcessorDeleteCommand() *cobra.Command {
 	cmd.Flags().StringVar(&processorName, "name", "", "--name=processorName")
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().StringVar(&namespace, "namespace", "", `--namespace="namespace"`)
-	canBeSilent(cmd)
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }

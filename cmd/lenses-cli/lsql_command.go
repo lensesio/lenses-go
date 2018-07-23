@@ -9,11 +9,12 @@ import (
 
 	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	rootCmd.AddCommand(newLSQLCommand())
+	app.AddCommand(newLSQLCommand())
 }
 
 func newLSQLCommand() *cobra.Command {
@@ -35,20 +36,20 @@ func newLSQLCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:           "sql [--validate?] [query]",
 		Short:         "Execute or Validate Only Lenses query (LSQL) on the fly",
-		Example:       exampleString(`sql --offsets --stats=2s "SELECT * FROM reddit_posts LIMIT 50"`),
+		Example:       `sql --offsets --stats=2s "SELECT * FROM reddit_posts LIMIT 50"`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			var query []byte
 
 			// argument has a priority.
 			if n := len(args); n == 1 {
-				query, err = tryReadFileContents(args[0])
+				query, err = bite.TryReadFileContents(args[0])
 				if err != nil {
 					return err
 				}
 			} else if n == 0 {
 				// read from input pipe, no argument given.
-				has, b, err := readInPipe()
+				has, b, err := bite.ReadInPipe()
 				if err != nil {
 					return fmt.Errorf("io pipe: %v", err)
 				}
@@ -98,7 +99,9 @@ func newLSQLCommand() *cobra.Command {
 					return errR // fail on first error.
 				}
 
-				return printJSON(cmd, in) // if != nil then it will exit(1) and print the error.
+				// return printJSON(cmd, in)
+				return bite.PrintJSON(cmd, in) // if != nil then it will exit(1) and print the error. keep json?
+				// or tableprinter.PrintJSON(cmd.OutOrStdout(), b) ?
 			}
 
 			stopHandler := func(stopRecord lenses.LSQLStop) error {
@@ -134,7 +137,8 @@ func newLSQLCommand() *cobra.Command {
 				*/
 				// here we stop but it's not an error, so we can't return a non-nil error.
 				fmt.Fprintln(cmd.OutOrStdout(), "Stop")
-				printJSON(cmd, stopRecord)
+				// printJSON(cmd, stopRecord)
+				bite.PrintObject(cmd, stopRecord)
 				return nil
 			}
 
@@ -157,7 +161,8 @@ func newLSQLCommand() *cobra.Command {
 				}
 				*/
 				fmt.Fprintln(cmd.OutOrStdout(), "Stats")
-				return printJSON(cmd, stats)
+				// return printJSON(cmd, stats)
+				return bite.PrintObject(cmd, stats)
 			}
 
 			if statsEvery <= 0 {
@@ -173,7 +178,7 @@ func newLSQLCommand() *cobra.Command {
 	rootSub.Flags().BoolVar(&validate, "validate", false, "runs query validation only") // if --validate exists in the flags then it's true.
 	rootSub.Flags().BoolVar(&withOffsets, "offsets", false, "the stop output will contain the 'offsets' information as well")
 	rootSub.Flags().DurationVar(&statsEvery, "stats", 0, "--stats=2s if passed the client will accept stats records every 'stats' duration, therefore they will be visible to the output")
-	canPrintJSON(rootSub)
+	bite.CanPrintJSON(rootSub)
 
 	rootSub.AddCommand(
 		newGetRunningQueriesCommand(),
@@ -187,7 +192,7 @@ func newGetRunningQueriesCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "running",
 		Short:         "Print the current running queries, if any",
-		Example:       exampleString("sql running"),
+		Example:       "sql running",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			queries, err := client.GetRunningQueries()
@@ -195,10 +200,12 @@ func newGetRunningQueriesCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, queries)
+			// return printJSON(cmd, queries)
+			return bite.PrintObject(cmd, queries)
 		},
 	}
 
+	bite.CanPrintJSON(cmd)
 	return cmd
 }
 
@@ -208,7 +215,7 @@ func newCancelQueryCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "cancel",
 		Short:         "Cancels a running query by its ID. It returns true whether it was cancelled otherwise false or error",
-		Example:       exampleString("sql cancel 42 or sql cancel --id=42"),
+		Example:       "sql cancel 42 or sql cancel --id=42",
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if id == 0 {

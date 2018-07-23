@@ -2,27 +2,40 @@ package main
 
 import (
 	"github.com/landoop/lenses-go"
-	"github.com/spf13/pflag"
+	"sort"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func init() {
-	rootCmd.AddCommand(newGetACLsCommand())
-	rootCmd.AddCommand(newACLGroupCommand())
+	app.AddCommand(newGetACLsCommand())
+	app.AddCommand(newACLGroupCommand())
 }
 
 func newGetACLsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "acls",
 		Short:            "Print the list of the available Apache Kafka Access Control Lists",
-		Example:          exampleString("acls"),
+		Example:          "acls",
 		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			acls, err := client.GetACLs()
+			if err != nil {
+				return err
+			}
+
+			sort.Slice(acls, func(i, j int) bool {
+				//	return acls[i].Operation < acls[j].Operation
+				return acls[i].ResourceName < acls[j].ResourceName
+			})
+
+			return bite.PrintObject(cmd, acls)
+		},
 	}
 
-	shouldPrintJSON(cmd, func() (interface{}, error) {
-		return client.GetACLs()
-	})
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -31,76 +44,73 @@ func newACLGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "acl",
 		Short:            "Work with Apache Kafka Access Control List",
-		Example:          exampleString("acl -h"),
+		Example:          "acl -h",
 		TraverseChildren: true,
 	}
 
 	var (
 		acl                   lenses.ACL
-		childrenRequiredFlags = func() flags {
-			return flags{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}
+		childrenRequiredFlags = func() bite.FlagPair {
+			return bite.FlagPair{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}
 		}
 	)
 
-	childrenFlagSet := newFlagSet("acl")
-	childrenFlagSet.Var(newVarFlag(&acl.ResourceType), "resourceType", "the resource type: Topic, Cluster, Group or TRANSACTIONALID")
+	childrenFlagSet := pflag.NewFlagSet("acl", pflag.ExitOnError)
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resourceType", "the resource type: Topic, Cluster, Group or TRANSACTIONALID")
 	childrenFlagSet.StringVar(&acl.ResourceName, "resourceName", "", "the name of the resource")
 	childrenFlagSet.StringVar(&acl.Principal, "principal", "", "the name of the principal")
-	childrenFlagSet.Var(newVarFlag(&acl.PermissionType), "permissionType", "Allow or Deny")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "permissionType", "Allow or Deny")
 	childrenFlagSet.StringVar(&acl.Host, "acl-host", "", "the acl host, can be empty to apply to all")
-	childrenFlagSet.Var(newVarFlag(&acl.Operation), "operation", "the allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.Operation), "operation", "the allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
 
 	root.AddCommand(newCreateOrUpdateACLCommand(&acl, childrenFlagSet, childrenRequiredFlags))
 	root.AddCommand(newDeleteACLCommand(&acl, childrenFlagSet, childrenRequiredFlags))
 	return root
 }
 
-func newCreateOrUpdateACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet, requiredFlags func() flags) *cobra.Command {
+func newCreateOrUpdateACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet, requiredFlags func() bite.FlagPair) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"}, // acl create or acl update or acl set.
 		Short:            "Sets, create or update, an Apache Kafka Access Control List",
-		Example:          exampleString(`acl set --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`),
+		Example:          `acl set --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := client.CreateOrUpdateACL(*acl); err != nil {
-				return err
-			}
+		RunE: bite.Join(
+			bite.FileBind(acl),
+			bite.RequireFlags(requiredFlags),
+			func(cmd *cobra.Command, args []string) error {
+				if err := client.CreateOrUpdateACL(*acl); err != nil {
+					return err
+				}
 
-			return echo(cmd, "ACL created")
-		},
+				return bite.PrintInfo(cmd, "ACL created")
+			}),
 	}
 
 	cmd.Flags().AddFlagSet(childrenFlagSet)
-
-	canBeSilent(cmd)
-	shouldCheckRequiredFlags(cmd, requiredFlags)
-	shouldTryLoadFile(cmd, acl)
 
 	return cmd
 }
 
-func newDeleteACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet, requiredFlags func() flags) *cobra.Command {
+func newDeleteACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet, requiredFlags func() bite.FlagPair) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete an Apache Kafka Access Control List",
-		Example:          exampleString(`acl delete ./acl_to_be_deleted.json or .yml or acl delete --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`),
+		Example:          `acl delete ./acl_to_be_deleted.json or .yml or acl delete --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := client.DeleteACL(*acl); err != nil {
-				errResourceNotFoundMessage = "unable to delete, acl does not exist"
-				return err
-			}
+		RunE: bite.Join(
+			bite.FileBind(acl),
+			bite.RequireFlags(requiredFlags),
+			func(cmd *cobra.Command, args []string) error {
+				if err := client.DeleteACL(*acl); err != nil {
+					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, acl does not exist")
+					return err
+				}
 
-			return echo(cmd, "ACL deleted")
-		},
+				return bite.PrintInfo(cmd, "ACL deleted")
+			}),
 	}
 
 	cmd.Flags().AddFlagSet(childrenFlagSet)
-
-	canBeSilent(cmd)
-	shouldCheckRequiredFlags(cmd, requiredFlags)
-	shouldTryLoadFile(cmd, acl)
-
 	return cmd
 }

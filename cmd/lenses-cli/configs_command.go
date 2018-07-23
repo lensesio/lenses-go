@@ -3,19 +3,20 @@ package main
 import (
 	"fmt"
 
+	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	rootCmd.AddCommand(newGetConfigsCommand())
-	rootCmd.AddCommand(newGetModeCommand())
+	app.AddCommand(newGetConfigsCommand())
+	app.AddCommand(newGetModeCommand())
 }
 
 func newGetConfigsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "configs",
 		Short:            "Print the whole lenses box configs",
-		Example:          exampleString("config"),
+		Example:          "configs",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
@@ -29,7 +30,7 @@ func newGetConfigsCommand() *cobra.Command {
 
 				var value interface{}
 				if err := client.GetConfigEntry(&value, args[0]); err == nil {
-					return printJSON(cmd, value)
+					return bite.PrintJSON(cmd, value) // keep json?
 					// if error or no valid key then continue with printing the whole lenses configuration.
 				}
 
@@ -40,11 +41,12 @@ func newGetConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			return printJSON(cmd, config)
+			// print all as json, it's not so much a visual-required command.
+			return bite.PrintJSON(cmd, config)
 		},
 	}
 
-	canPrintJSON(cmd)
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
@@ -55,7 +57,7 @@ func newGetModeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:                   commandModeName,
 		Short:                 "Print the configuration's execution mode",
-		Example:               exampleString(commandModeName),
+		Example:               commandModeName,
 		DisableFlagParsing:    true,
 		DisableFlagsInUseLine: true,
 		DisableSuggestions:    true,

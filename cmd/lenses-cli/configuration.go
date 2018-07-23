@@ -10,154 +10,144 @@ import (
 	"github.com/landoop/lenses-go"
 
 	"github.com/joho/godotenv"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	"github.com/spf13/pflag"
 )
 
-// Configuration is the CLI's configuration.
-// The `Contexts` map of string and lenses client configuration values can be filled to map different environments.
-type Configuration struct {
-	// lenses.Configuration `yaml:",inline"`
-	CurrentContext string                           `yaml:"CurrentContext"`
-	Contexts       map[string]*lenses.Configuration `yaml:"Contexts"`
-}
-
 type configurationManager struct {
-	config   *Configuration
-	flags    lenses.Configuration
+	config *lenses.Config
+	// flags below.
+	currentContext, host, timeout, token, user, pass, kerberosConf, kerberosRealm, kerberosKeytab, kerberosCCache string
+	insecure, debug                                                                                               bool
+
 	filepath string
-	fromFile bool // if the configuration was SUCCESSFULLY loaded from --config flag.
 }
 
-func newConfigurationManager(cmd *cobra.Command) *configurationManager {
+func makeAuthFromFlags(user, pass, kerberosConf, kerberosRealm, kerberosKeytab, kerberosCCache string) (lenses.Authentication, bool) {
+	if kerberosConf != "" {
+		auth := lenses.KerberosAuthentication{
+			ConfFile: kerberosConf,
+		}
+
+		if kerberosKeytab == "" && kerberosCCache == "" && user != "" && pass != "" {
+			auth.Method = lenses.KerberosWithPassword{Username: user, Password: pass, Realm: kerberosRealm}
+		} else if kerberosKeytab != "" {
+			auth.Method = lenses.KerberosWithKeytab{KeytabFile: kerberosKeytab}
+		} else if kerberosCCache != "" {
+			auth.Method = lenses.KerberosFromCCache{CCacheFile: kerberosCCache}
+		} else {
+			return nil, false
+		}
+
+		return auth, true
+	}
+
+	if user != "" && pass != "" {
+		return lenses.BasicAuthentication{Username: user, Password: pass}, true
+	}
+
+	return nil, false
+}
+
+/*
+1. config home file not found, flags set, command run based on flags if authentication flags passed, don't save. (PASS)
+
+2. config home file not found, neither auth flags passed, auto run configure command: cannot retrieve credentials, please configure below;
+   save the configuration on the home file and run the command based on the passed configuration. (PASS)
+
+3. config home file found, run the command based on that. (PASS)
+
+4. config home file found, some flags set, set the filled flags to the config, override, and run the command, don't save. (PASS)
+
+5. config home file not found, the --config flag passed and found, run the command based on that, don't save. (PASS)
+
+6. config home file found, the --config flag passed and found, override the home's and run based on the --config, don't save. (PASS)
+
+7. config home file not found, neither auth flags passed but command was one of "context" or "contexts" then show empty screen. (PASS)
+  7.1 if "configure" command then must show the create configuration survey. (PASS)
+*/
+
+func newConfigurationManager(set *pflag.FlagSet) *configurationManager {
 	m := &configurationManager{
-		config: &Configuration{
-			Contexts: make(map[string]*lenses.Configuration),
+		config: &lenses.Config{
+			Contexts: make(map[string]*lenses.ClientConfig),
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&m.config.CurrentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
+	set.StringVar(&m.currentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
 
-	cmd.PersistentFlags().StringVar(&m.flags.Host, "host", "", "--host=https://example.com")
-	cmd.PersistentFlags().StringVar(&m.flags.User, "user", "", "--user=MyUser")
-	cmd.PersistentFlags().StringVar(&m.flags.Timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
-	cmd.PersistentFlags().StringVar(&m.flags.Password, "pass", "", "--pass=MyPassword")
-	cmd.PersistentFlags().StringVar(&m.flags.Token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
-	cmd.PersistentFlags().BoolVar(&m.flags.Debug, "debug", false, "print some information that are necessary for debugging")
+	set.StringVar(&m.host, "host", "", "--host=https://example.com")
+	// basic auth.
 
-	cmd.PersistentFlags().StringVar(&m.filepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml, toml or json)")
+	// if --kerberos-conf set and not other kerberos-* flag set,
+	// then kerberos with password method is selected based on the --user and --pass flags,
+	// otherwise basic auth.
+	set.StringVar(&m.user, "user", "", "--user=MyUser")
+	set.StringVar(&m.pass, "pass", "", "--pass=MyPassword")
+	set.StringVar(&m.kerberosConf, "kerberos-conf", "", "--kerberos-conf=krb5.conf")
+	// if --kerberos-realm not set but --kerberos-config does then auth using kerberos with the default realm, otherwise using that realm.
+	set.StringVar(&m.kerberosRealm, "kerberos-realm", "", "--kerberos-realm=kerberos.realm")
+	// if --kerberos-keytab & --kerberos-conf set then auth using kerberos keytab file.
+	set.StringVar(&m.kerberosKeytab, "kerberos-keytab", "", "--kerberos-keytab=/tmpl/krb5-my-keytab.txt")
+	// if --kerberos-ccache & --kerberos-conf set then auth from kerberos ccache file.
+	set.StringVar(&m.kerberosCCache, "kerberos-ccache", "", "--kerberos-ccache=/tmpl/krb5-ccache.txt")
+
+	set.StringVar(&m.timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
+	set.BoolVar(&m.insecure, "insecure", false, "--insecure=true")
+	set.StringVar(&m.token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
+	set.BoolVar(&m.debug, "debug", false, "print some information that are necessary for debugging")
+
+	set.StringVar(&m.filepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml or json)")
 	return m
-}
-
-// isValid returns the result of the contexts' lenses.Configuration#IsValid.
-func (m *configurationManager) isValid() bool {
-	// for a whole configuration to be valid we need to check each contexts' configs as well.
-	for _, cfg := range m.config.Contexts {
-		if !cfg.IsValid() {
-			return false
-		}
-	}
-
-	return len(m.config.Contexts) > 0
-}
-
-func (m *configurationManager) fillCurrent(cfg lenses.Configuration) {
-	c := m.config
-	context := c.CurrentContext
-
-	if _, ok := c.Contexts[context]; !ok {
-		if cfg.IsValid() {
-			c.Contexts[context] = &cfg
-		}
-	} else {
-		c.Contexts[context].Fill(cfg)
-	}
-}
-
-func (m *configurationManager) currentContextExists() bool {
-	_, ok := m.config.Contexts[m.config.CurrentContext]
-	return ok
-}
-
-func (m *configurationManager) setCurrent(currentContext string) {
-	m.config.CurrentContext = currentContext
-}
-
-func (m *configurationManager) getCurrent() *lenses.Configuration {
-	if c, has := m.config.Contexts[m.config.CurrentContext]; has {
-		// c.FormatHost()
-		return c
-	}
-
-	c := new(lenses.Configuration)
-	if m.config.CurrentContext == "" {
-		m.config.CurrentContext = "master" // the default one if missing.
-	}
-	m.config.Contexts[m.config.CurrentContext] = c
-	return c
-}
-
-func (m *configurationManager) removeTokens() {
-	for _, v := range m.config.Contexts {
-		v.Token = ""
-	}
-}
-
-// returns true if found and removed, otherwise false.
-func (m *configurationManager) removeContext(contextName string) bool {
-	if _, ok := m.config.Contexts[contextName]; ok {
-
-		canBeRemoved := false
-		// we are going to remove the current context, let's check if we can change the current context to a valid one.
-		if m.config.CurrentContext == contextName {
-			for name, c := range m.config.Contexts {
-				if name == contextName {
-					continue // skip the context we want to delete of course.
-				}
-				if c.IsValid() { // set the current to the first valid one.
-					canBeRemoved = true
-					m.setCurrent(name)
-					break
-				}
-			}
-		}
-
-		if canBeRemoved {
-			delete(m.config.Contexts, contextName)
-			if err := m.save(); err != nil {
-				return false
-			}
-		}
-
-		return canBeRemoved
-	}
-
-	return false
 }
 
 const currentContextEnvKey = "LENSES_CLI_CONTEXT"
 
 func (m *configurationManager) load() (bool, error) {
-	c := m.config
+	c := m.config // never nil here.
+
 	var found bool
 
-	contextFlag := c.CurrentContext
 	if m.filepath != "" {
 		// must read from file, otherwise fail.
-		if err := lenses.TryReadConfigurationFromFile(m.filepath, c); err != nil {
+		if err := lenses.TryReadConfigFromFile(m.filepath, c); err != nil {
 			return false, err
 		}
 		found = true
-		m.fromFile = true
-	} else if found = lenses.TryReadConfigurationFromCurrentWorkingDir(c); found {
-	} else if found = lenses.TryReadConfigurationFromExecutable(c); found {
-	} else if found = lenses.TryReadConfigurationFromHome(c); found {
+	} else if found = lenses.TryReadConfigFromCurrentWorkingDir(c); found {
+	} else if found = lenses.TryReadConfigFromExecutable(c); found {
+	} else if found = lenses.TryReadConfigFromHome(c); found {
 	}
 
+	// check --context flag (prio) and the configuration's one, if it's there and set the current context upfront.
+	currentContext := c.CurrentContext
+	currentContextChanged := false
+	if flag := m.currentContext; flag != "" && flag != currentContext {
+		currentContext = flag
+		currentContextChanged = true
+	} else if currentContext == "" {
+		currentContext = lenses.DefaultContextKey
+	}
+
+	c.SetCurrent(currentContext)
+
+	// authentication flags passed, override or set the particular authentication method.
+	if authFromFlags, ok := makeAuthFromFlags(m.user, m.pass, m.kerberosConf, m.kerberosRealm, m.kerberosKeytab, m.kerberosCCache); ok {
+		c.GetCurrent().Authentication = authFromFlags
+	}
+
+	// flags have always priority, so transfer any non-empty client configuration flag to the current,
+	// so far we don't care about the configuration file found or not.
+	c.GetCurrent().Fill(lenses.ClientConfig{
+		Host:     m.host,
+		Token:    m.token,
+		Timeout:  m.timeout,
+		Insecure: m.insecure,
+		Debug:    m.debug,
+	})
+
 	if found {
-		if contextFlag != "" && contextFlag != c.CurrentContext {
+		if currentContextChanged {
 			// save the config, the current context changed.
-			c.CurrentContext = contextFlag
 			for _, v := range c.Contexts {
 				decryptPassword(v)
 			}
@@ -181,28 +171,15 @@ func (m *configurationManager) load() (bool, error) {
 		}
 	}
 
-	m.fillCurrent(m.flags)
-
-	if m.config.CurrentContext != "" && !m.currentContextExists() {
+	if c.CurrentContext != "" && !c.CurrentContextExists() {
 		return false, fmt.Errorf("unknown context '%s' given, please use the `configure --context="+c.CurrentContext+" --reset`", c.CurrentContext)
 	}
 
-	return m.isValid(), nil
-}
-
-func (m *configurationManager) clone() Configuration {
-	c := Configuration{CurrentContext: m.config.CurrentContext}
-	c.Contexts = make(map[string]*lenses.Configuration, len(m.config.Contexts))
-	for k, v := range m.config.Contexts {
-		vCopy := *v
-		c.Contexts[k] = &vCopy
-	}
-
-	return c
+	return c.IsValid(), nil
 }
 
 func (m *configurationManager) save() error {
-	c := m.clone() // copy the configuration so all changes here will not be present after the save().
+	c := m.config.Clone() // copy the configuration so all changes here will not be present after the save().
 
 	// we encrypt every password (main and contexts) because
 	// they are decrypted on load, even if user didn't select to update a specific context.
@@ -214,7 +191,7 @@ func (m *configurationManager) save() error {
 	}
 
 	// m.removeTokens()
-	out, err := yaml.Marshal(c)
+	out, err := lenses.ConfigMarshalYAML(c)
 	if err != nil { // should never happen.
 		return fmt.Errorf("unable to marshal the configuration, error: %v", err)
 	}
@@ -231,32 +208,6 @@ func (m *configurationManager) save() error {
 	// if file exists it overrides it.
 	if err = ioutil.WriteFile(m.filepath, out, fileMode); err != nil {
 		return fmt.Errorf("unable to create the configuration file for your system, error: %v", err)
-	}
-
-	return nil
-}
-
-func (m *configurationManager) applyCompatibility() error {
-	var (
-		found     bool
-		oldFormat lenses.Configuration // <>
-	)
-
-	// here we just fetch whatever is valid.
-	if found = m.filepath != "" && (lenses.TryReadConfigurationFromFile(m.filepath, &oldFormat) == nil); found {
-		m.fromFile = true
-	} else if found = lenses.TryReadConfigurationFromCurrentWorkingDir(&oldFormat); found {
-	} else if found = lenses.TryReadConfigurationFromExecutable(&oldFormat); found {
-	} else if found = lenses.TryReadConfigurationFromHome(&oldFormat); found {
-	}
-
-	if !found || !oldFormat.IsValid() {
-		return nil
-	}
-
-	decryptPassword(&oldFormat) // decrypt before save.
-	if m.getCurrent().Fill(oldFormat) {
-		return m.save()
 	}
 
 	return nil
