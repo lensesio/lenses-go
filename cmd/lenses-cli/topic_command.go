@@ -101,7 +101,7 @@ func newTopicsGroupCommand() *cobra.Command {
 			// lenses-cli topics --machine-friendly will print all information as JSON,
 			// lenses-cli topics [--machine-friend=false] will print the necessary(struct fields tagged as "header") information as Table.
 			return bite.PrintObject(cmd, topicsView, func(t lenses.Topic) bool {
-				return !bite.GetMachineFriendlyFlag(cmd) && !t.IsControlTopic // on JSON we print everything.
+				return !t.IsControlTopic // on JSON we print everything.
 			})
 		},
 	}
