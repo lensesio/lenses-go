@@ -2527,29 +2527,29 @@ const (
 	// ACLOpUnknown ACLOperation = "unknown"
 
 	// ACLOperationAny is the "ANY" ACL operation.
-	ACLOperationAny ACLOperation = "any"
+	ACLOperationAny ACLOperation = "ANY"
 	// ACLOperationAll is the "ALL" ACL operation.
-	ACLOperationAll ACLOperation = "all"
+	ACLOperationAll ACLOperation = "ALL"
 	// ACLOperationRead is the "READ" ACL operation.
-	ACLOperationRead ACLOperation = "read"
+	ACLOperationRead ACLOperation = "READ"
 	// ACLOperationWrite is the "WRITE" ACL operation.
-	ACLOperationWrite ACLOperation = "write"
+	ACLOperationWrite ACLOperation = "WRITE"
 	// ACLOperationCreate is the "CREATE" ACL operation.
-	ACLOperationCreate ACLOperation = "create"
+	ACLOperationCreate ACLOperation = "CREATE"
 	// ACLOperationDelete is the "DELETE" ACL operation.
-	ACLOperationDelete ACLOperation = "delete"
+	ACLOperationDelete ACLOperation = "DELETE"
 	// ACLOperationAlter is the "ALTER" ACL operation.
-	ACLOperationAlter ACLOperation = "alter"
+	ACLOperationAlter ACLOperation = "ALTER"
 	// ACLOperationDescribe is the "DESCRIBE" ACL operation.
-	ACLOperationDescribe ACLOperation = "describe"
+	ACLOperationDescribe ACLOperation = "DESCRIBE"
 	// ACLOperationClusterAction is the "CLUSTER_ACTION" ACL operation.
-	ACLOperationClusterAction ACLOperation = "cluster_action"
+	ACLOperationClusterAction ACLOperation = "CLUSTER_ACTION"
 	// ACLOperationDescribeConfigs is the "DESCRIBE_CONFIGS" ACL operation.
-	ACLOperationDescribeConfigs ACLOperation = "describe_configs"
+	ACLOperationDescribeConfigs ACLOperation = "DESCRIBE_CONFIGS"
 	// ACLOperationAlterConfigs is the "ALTER_CONFIGS" ACL operation.
-	ACLOperationAlterConfigs ACLOperation = "alter_configs"
+	ACLOperationAlterConfigs ACLOperation = "ALTER_CONFIGS"
 	// ACLOperationIdempotentWrite is the "IDEMPOTENT_WRITE" ACL operation.
-	ACLOperationIdempotentWrite ACLOperation = "idempotent_write"
+	ACLOperationIdempotentWrite ACLOperation = "IDEMPOTENT_WRITE"
 )
 
 // ACLResourceType is a string and it defines the valid resource types for ACL.
@@ -2564,18 +2564,18 @@ const (
 	// ACLResourceUnknown ACLResourceType = "unknown"
 
 	// ACLResourceAny is the "ANY" ACL resource type.
-	ACLResourceAny ACLResourceType = "any"
+	ACLResourceAny ACLResourceType = "ANY"
 	// ACLResourceTopic is the "TOPIC" ACL resource type.
-	ACLResourceTopic ACLResourceType = "topic"
+	ACLResourceTopic ACLResourceType = "TOPIC"
 	// ACLResourceGroup is the "GROUP" ACL resource type.
-	ACLResourceGroup ACLResourceType = "group"
+	ACLResourceGroup ACLResourceType = "GROUP"
 	// ACLResourceCluster is the "CLUSTER" ACL resource type.
-	ACLResourceCluster ACLResourceType = "cluster"
+	ACLResourceCluster ACLResourceType = "CLUSTER"
 	// ACLResourceTransactionalID is the "TRANSACTIONAL_ID" ACL resource type.
-	ACLResourceTransactionalID ACLResourceType = "transactional_id"
+	ACLResourceTransactionalID ACLResourceType = "TRANSACTIONAL_ID"
 	// ACLResourceDelegationToken is the "DELEGATION_TOKEN" ACL resource type,
 	// available only on kafka version 1.1+.
-	ACLResourceDelegationToken ACLResourceType = "delegation_token"
+	ACLResourceDelegationToken ACLResourceType = "DELEGATION_TOKEN"
 )
 
 // ACLOperations is a map which contains the allowed ACL operations(values) per resource type(key).
@@ -2583,10 +2583,39 @@ const (
 // Based on:
 // https://docs.confluent.io/current/kafka/authorization.html#acl-format
 var ACLOperations = map[ACLResourceType][]ACLOperation{
-	ACLResourceTopic:           {ACLOperationRead, ACLOperationWrite, ACLOperationDescribe, ACLOperationDelete, ACLOperationDescribeConfigs, ACLOperationAlterConfigs, ACLOperationAll},
-	ACLResourceGroup:           {ACLOperationRead, ACLOperationDescribe, ACLOperationAll},
-	ACLResourceCluster:         {ACLOperationCreate, ACLOperationClusterAction, ACLOperationDescribeConfigs, ACLOperationAlterConfigs, ACLOperationIdempotentWrite, ACLOperationAlter, ACLOperationDescribe, ACLOperationAll},
-	ACLResourceTransactionalID: {ACLOperationDescribe, ACLOperationWrite, ACLOperationAll},
+	ACLResourceTopic: {
+		ACLOperationAll,
+		ACLOperationRead,
+		ACLOperationWrite,
+		ACLOperationDescribe,
+		ACLOperationDescribeConfigs,
+		ACLOperationAlterConfigs,
+	},
+	ACLResourceGroup: {
+		ACLOperationAll,
+		ACLOperationRead,
+		ACLOperationDescribe,
+		ACLOperationDelete,
+	},
+	ACLResourceCluster: {
+		ACLOperationAll,
+		ACLOperationCreate,
+		ACLOperationClusterAction,
+		ACLOperationDescribe,
+		ACLOperationDescribeConfigs,
+		ACLOperationAlter,
+		ACLOperationAlterConfigs,
+		ACLOperationIdempotentWrite,
+	},
+	ACLResourceTransactionalID: {
+		ACLOperationAll,
+		ACLOperationDescribe,
+		ACLOperationWrite,
+	},
+	ACLResourceDelegationToken: {
+		ACLOperationAll,
+		ACLOperationDescribe,
+	},
 }
 
 func (op ACLOperation) isValidForResourceType(resourceType ACLResourceType) bool {
@@ -2629,7 +2658,12 @@ type ACL struct {
 // Validate force validates the acl's resource type, permission type and operation.
 // It returns an error if the operation is not valid for the resource type.
 func (acl *ACL) Validate() error {
-	// upper the first letter here on the resourceType, permissionType and operation before any action.
+	if string(acl.Operation) == "*" {
+		acl.Operation = ACLOperationAll
+	}
+
+	// upper the first letter here on the resourceType, permissionType and operation before any action,
+	// although kafka internally accepts both lowercase and uppercase.
 	acl.ResourceType = ACLResourceType(strings.Title(string(acl.ResourceType)))
 	acl.PermissionType = ACLPermissionType(strings.Title(string(acl.PermissionType)))
 	acl.Operation = ACLOperation(strings.Title(string(acl.Operation)))
