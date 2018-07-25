@@ -677,6 +677,12 @@ func (c *Client) LSQL(
 			return err // exit on first failure.
 		}
 
+		// if on debug mode just read the lines and continue, it wil make easier for third-party developers to watch the response.
+		if c.config.Debug {
+			golog.Debugf("%s", string(line))
+			continue
+		}
+
 		if len(line) < shiftN+1 { // even more +1 for the actual event.
 			// almost empty or totally invalid line,
 			// empty message maybe,
