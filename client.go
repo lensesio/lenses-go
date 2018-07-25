@@ -2514,56 +2514,79 @@ func (c *Client) GetSubjectCompatibilityLevel(subject string) (level Compatibili
 //
 
 // ACLOperation is a string and it defines the valid operations for ACL.
-// See `ACLOperations` to see what operation is valid for a resource type.
+//
+// Based on:
+// https://github.com/apache/kafka/blob/1.0/clients/src/test/java/org/apache/kafka/common/acl/AclOperationTest.java#L38
+//
+// Read through `ACLOperations` to learn what operation is valid for each of the available resource types.
 type ACLOperation string
 
 const (
-	// OpRead is the "Read" ACL operation.
-	OpRead ACLOperation = "Read"
-	// OpWrite is the "Write" ACL operation.
-	OpWrite ACLOperation = "Write"
-	// OpDescribe is the "Describe" ACL operation.
-	OpDescribe ACLOperation = "Describe"
-	// OpDelete is the "Delete" ACL operation.
-	OpDelete ACLOperation = "Delete"
-	// OpDescribeConfigs is the "DescribeConfigs" ACL operation.
-	OpDescribeConfigs ACLOperation = "DescribeConfigs"
-	// OpAlterConfigs is the "AlterConfigs" ACL operation.
-	OpAlterConfigs ACLOperation = "AlterConfigs"
-	// OpAll is the "All" ACL operation.
-	OpAll ACLOperation = "All"
-	// OpCreate is the "Create" ACL operation.
-	OpCreate ACLOperation = "Create"
-	// OpClusterAction is the "ClusterAction" ACL operation.
-	OpClusterAction ACLOperation = "ClusterAction"
-	// OpIdempotentWrite is the "IdempotentWrite" ACL operation.
-	OpIdempotentWrite ACLOperation = "IdempotentWrite"
-	// OpAlter is the "Alter" ACL operation.
-	OpAlter ACLOperation = "Alter"
+	// OpUnknown is the kafka internal "UNKNOWN" ACL operation which is returned
+	// if invalid operation passed.
+	// ACLOpUnknown ACLOperation = "unknown"
+
+	// ACLOperationAny is the "ANY" ACL operation.
+	ACLOperationAny ACLOperation = "any"
+	// ACLOperationAll is the "ALL" ACL operation.
+	ACLOperationAll ACLOperation = "all"
+	// ACLOperationRead is the "READ" ACL operation.
+	ACLOperationRead ACLOperation = "read"
+	// ACLOperationWrite is the "WRITE" ACL operation.
+	ACLOperationWrite ACLOperation = "write"
+	// ACLOperationCreate is the "CREATE" ACL operation.
+	ACLOperationCreate ACLOperation = "create"
+	// ACLOperationDelete is the "DELETE" ACL operation.
+	ACLOperationDelete ACLOperation = "delete"
+	// ACLOperationAlter is the "ALTER" ACL operation.
+	ACLOperationAlter ACLOperation = "alter"
+	// ACLOperationDescribe is the "DESCRIBE" ACL operation.
+	ACLOperationDescribe ACLOperation = "describe"
+	// ACLOperationClusterAction is the "CLUSTER_ACTION" ACL operation.
+	ACLOperationClusterAction ACLOperation = "cluster_action"
+	// ACLOperationDescribeConfigs is the "DESCRIBE_CONFIGS" ACL operation.
+	ACLOperationDescribeConfigs ACLOperation = "describe_configs"
+	// ACLOperationAlterConfigs is the "ALTER_CONFIGS" ACL operation.
+	ACLOperationAlterConfigs ACLOperation = "alter_configs"
+	// ACLOperationIdempotentWrite is the "IDEMPOTENT_WRITE" ACL operation.
+	ACLOperationIdempotentWrite ACLOperation = "idempotent_write"
 )
 
 // ACLResourceType is a string and it defines the valid resource types for ACL.
+//
+// Based on:
+// https://github.com/apache/kafka/blob/1.0/clients/src/test/java/org/apache/kafka/common/resource/ResourceTypeTest.java#L38
 type ACLResourceType string
 
 const (
-	// ACLResourceTypeInvalid ACLResourceType = "Invalid"
+	// ACLResourceUnknown is the kafka internal "UNKNOWN" ACL resource type which is
+	// returned if invalid resource type passed.
+	// ACLResourceUnknown ACLResourceType = "unknown"
 
-	// ACLResourceTopic is the "Topic" ACL resource type.
-	ACLResourceTopic ACLResourceType = "Topic"
-	// ACLResourceGroup is the "Group" ACL resource type.
-	ACLResourceGroup ACLResourceType = "Group"
-	// ACLResourceCluster is the "Cluster" ACL resource type.
-	ACLResourceCluster ACLResourceType = "Cluster"
-	// ACLResourceTransactionalID is the "TransactionalId" ACL resource type.
-	ACLResourceTransactionalID ACLResourceType = "TransactionalId"
+	// ACLResourceAny is the "ANY" ACL resource type.
+	ACLResourceAny ACLResourceType = "any"
+	// ACLResourceTopic is the "TOPIC" ACL resource type.
+	ACLResourceTopic ACLResourceType = "topic"
+	// ACLResourceGroup is the "GROUP" ACL resource type.
+	ACLResourceGroup ACLResourceType = "group"
+	// ACLResourceCluster is the "CLUSTER" ACL resource type.
+	ACLResourceCluster ACLResourceType = "cluster"
+	// ACLResourceTransactionalID is the "TRANSACTIONAL_ID" ACL resource type.
+	ACLResourceTransactionalID ACLResourceType = "transactional_id"
+	// ACLResourceDelegationToken is the "DELEGATION_TOKEN" ACL resource type,
+	// available only on kafka version 1.1+.
+	ACLResourceDelegationToken ACLResourceType = "delegation_token"
 )
 
 // ACLOperations is a map which contains the allowed ACL operations(values) per resource type(key).
+//
+// Based on:
+// https://docs.confluent.io/current/kafka/authorization.html#acl-format
 var ACLOperations = map[ACLResourceType][]ACLOperation{
-	ACLResourceTopic:           {OpRead, OpWrite, OpDescribe, OpDelete, OpDescribeConfigs, OpAlterConfigs, OpAll},
-	ACLResourceGroup:           {OpRead, OpDescribe, OpAll},
-	ACLResourceCluster:         {OpCreate, OpClusterAction, OpDescribeConfigs, OpAlterConfigs, OpIdempotentWrite, OpAlter, OpDescribe, OpAll},
-	ACLResourceTransactionalID: {OpDescribe, OpWrite, OpAll},
+	ACLResourceTopic:           {ACLOperationRead, ACLOperationWrite, ACLOperationDescribe, ACLOperationDelete, ACLOperationDescribeConfigs, ACLOperationAlterConfigs, ACLOperationAll},
+	ACLResourceGroup:           {ACLOperationRead, ACLOperationDescribe, ACLOperationAll},
+	ACLResourceCluster:         {ACLOperationCreate, ACLOperationClusterAction, ACLOperationDescribeConfigs, ACLOperationAlterConfigs, ACLOperationIdempotentWrite, ACLOperationAlter, ACLOperationDescribe, ACLOperationAll},
+	ACLResourceTransactionalID: {ACLOperationDescribe, ACLOperationWrite, ACLOperationAll},
 }
 
 func (op ACLOperation) isValidForResourceType(resourceType ACLResourceType) bool {
@@ -2582,6 +2605,8 @@ func (op ACLOperation) isValidForResourceType(resourceType ACLResourceType) bool
 }
 
 // ACLPermissionType is a string and it defines the valid permission types for ACL.
+//
+// Based on: https://github.com/apache/kafka/blob/1.0/core/src/main/scala/kafka/security/auth/PermissionType.scala
 type ACLPermissionType string
 
 const (
