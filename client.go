@@ -367,7 +367,7 @@ type LicenseInfo struct {
 	IsRespected bool   `json:"isRespected" header:"Respected"`
 	MaxBrokers  int    `json:"maxBrokers" header:"Max Brokers"`
 	MaxMessages int    `json:"maxMessages,omitempty" header:"/ Messages"`
-	Expiry      int64  `json:"expiry" header:"Expires"`
+	Expiry      int64  `json:"expiry" header:"Expires,timestamp(ms|02 Jan 2006 15:04)"`
 
 	// no-payload data.
 
