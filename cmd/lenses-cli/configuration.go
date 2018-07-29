@@ -87,9 +87,9 @@ func newConfigurationManager(set *pflag.FlagSet) *configurationManager {
 	// if --kerberos-realm not set but --kerberos-config does then auth using kerberos with the default realm, otherwise using that realm.
 	set.StringVar(&m.kerberosRealm, "kerberos-realm", "", "--kerberos-realm=kerberos.realm")
 	// if --kerberos-keytab & --kerberos-conf set then auth using kerberos keytab file.
-	set.StringVar(&m.kerberosKeytab, "kerberos-keytab", "", "--kerberos-keytab=/tmpl/krb5-my-keytab.txt")
+	set.StringVar(&m.kerberosKeytab, "kerberos-keytab", "", "--kerberos-keytab=/tmp/krb5-my-keytab.txt")
 	// if --kerberos-ccache & --kerberos-conf set then auth from kerberos ccache file.
-	set.StringVar(&m.kerberosCCache, "kerberos-ccache", "", "--kerberos-ccache=/tmpl/krb5-ccache.txt")
+	set.StringVar(&m.kerberosCCache, "kerberos-ccache", "", "--kerberos-ccache=/tmp/krb5-ccache.txt")
 
 	set.StringVar(&m.timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
 	set.BoolVar(&m.insecure, "insecure", false, "--insecure=true")

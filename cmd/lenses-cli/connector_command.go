@@ -155,7 +155,7 @@ func newConnectorsCommand() *cobra.Command {
 	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
 	root.Flags().BoolVar(&namesOnly, "names", false, `--names`)
 	root.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap")
-	root.Flags().BoolVar(&showSupportedOnly, "supported", false, "--supported to list all the supported Kafka Connectors instead of the currently active ones")
+	root.Flags().BoolVar(&showSupportedOnly, "supported", false, "--supported to list all the supported Kafka Connectors instead of the currently deployed")
 
 	bite.CanPrintJSON(root)
 
@@ -322,7 +322,7 @@ func newConnectorCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Create a new connector",
-		Example:          `connector create --clusterName="cluster_name" --name="connector_name" --config="{\"key\": \"value\"}" or connector create ./connector.yml`,
+		Example:          `connector create --clusterName="cluster_name" --name="connector_name" --configs="{\"key\": \"value\"}" or connector create ./connector.yml`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -360,7 +360,7 @@ func newConnectorCreateCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
-	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
+	cmd.Flags().StringVar(&configRaw, "configs", "", `--configs="{\"key\": \"value\"}"`) // --config conflicts with the global flag.
 	bite.CanBeSilent(cmd)
 
 	bite.ShouldTryLoadFile(cmd, &connector)
@@ -377,7 +377,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 	cmd := &cobra.Command{
 		Use:              "update",
 		Short:            "Update a connector's configuration",
-		Example:          `connector update --clusterName="cluster_name" --name="connector_name" --config="{\"key\": \"value\"}" or connector update ./connector.yml`,
+		Example:          `connector update --clusterName="cluster_name" --name="connector_name" --configs="{\"key\": \"value\"}" or connector update ./connector.yml`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -428,7 +428,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 
 	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `--clusterName="cluster_name"`)
 	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
-	cmd.Flags().StringVar(&configRaw, "config", "", `--config="{\"key\": \"value\"}"`)
+	cmd.Flags().StringVar(&configRaw, "configs", "", `--configs="{\"key\": \"value\"}"`)
 
 	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
