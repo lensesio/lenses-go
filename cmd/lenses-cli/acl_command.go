@@ -21,6 +21,7 @@ func newGetACLsCommand() *cobra.Command {
 		Example:          "acls",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// if the API changes: bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "no authorizer is configured on the broker")
 			acls, err := client.GetACLs()
 			if err != nil {
 				return err

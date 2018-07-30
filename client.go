@@ -2782,6 +2782,12 @@ func (c *Client) GetACLs() ([]ACL, error) {
 		return nil, err
 	}
 
+	// unlike with other calls this one returns a plain text with no authorize-type error message
+	// instead of 403, so make that check only in this call:
+	if resp.StatusCode == http.StatusBadRequest {
+		return nil, fmt.Errorf("no authorizer is configured on the broker")
+	}
+
 	var acls []ACL
 	err = c.ReadJSON(resp, &acls)
 	return acls, err
