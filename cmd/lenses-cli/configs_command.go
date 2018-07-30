@@ -15,6 +15,7 @@ func init() {
 func newGetConfigsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "configs",
+		Aliases:          []string{"config"},
 		Short:            "Print the whole lenses box configs",
 		Example:          "configs",
 		TraverseChildren: true,
@@ -41,8 +42,7 @@ func newGetConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			// print all as json, it's not so much a visual-required command.
-			return bite.PrintJSON(cmd, config)
+			return bite.PrintObject(cmd, config)
 		},
 	}
 

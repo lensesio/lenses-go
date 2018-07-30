@@ -456,34 +456,90 @@ const (
 	configPath = "api/config"
 )
 
-// GetConfig returns the whole configuration of the lenses box,
-// which can be changed from box to box and it's read-only,
-// therefore it returns a map[string]interface{} based on the
-// json response body.
+// BoxConfig contains the structure for the lenses box configuration, see the `GetConfig` call.
 //
-// To retrieve the execution mode of the box with safety,
-// see the `Client#GetExecutionMode` instead.
-func (c *Client) GetConfig() (map[string]interface{}, error) {
+// Note that this structure contains only the properties that are exposed via the API's response data.
+type BoxConfig struct {
+	ConnectClusters []BoxConnectClusterConfigProperty `json:"lenses.connect.clusters"`
+
+	Version string `json:"lenses.version" header:"Version"`
+	IP      string `json:"lenses.ip" header:"IP"`
+	Port    int    `json:"lenses.port" header:"Port,text"`
+	JMXPort int    `json:"lenses.jmx.port" header:"JMX Port,text"`
+
+	KafkaBrokers string `json:"lenses.kafka.brokers"`
+
+	KubernetesConfigFile     string `json:"lenses.kubernetes.config.file,omitempty"`
+	KubernetesImageName      string `json:"lenses.kubernetes.image.name,omitempty" header:"K8 Image"`
+	KubernetesImageTag       string `json:"lenses.kubernetes.image.tag,omitempty" header:"K8 Tag"`
+	KubernetesServiceAccount string `json:"lenses.kubernetes.service.account,omitempty" header:"K8 Service Acc"`
+
+	LicenseFile        string                 `json:"lenses.license.file"`
+	RootPath           string                 `json:"lenses.root.path,omitempty"`
+	SchemaRegistryURLs []BoxURLConfigProperty `json:"lenses.schema.registry.urls"`
+	SecurityMode       string                 `json:"lenses.security.mode" header:"Security Mode"`
+	SQLExecutionMode   ExecutionMode          `json:"lenses.sql.execution.mode" header:"SQL Execution Mode"`
+
+	TopicsAlertsSettings   string `json:"lenses.topics.alerts.settings"`
+	TopicsAlertsStorage    string `json:"lenses.topics.alerts.storage"`
+	TopicsAudits           string `json:"lenses.topics.audits"`
+	TopicsCluster          string `json:"lenses.topics.cluster"`
+	TopicsExternalMetrics  string `json:"lenses.topics.external.metrics"`
+	TopicsExternalTopology string `json:"lenses.topics.external.topology"`
+	TopicsLSQLStorage      string `json:"lenses.topics.lsql.storage"`
+	TopicsMetadata         string `json:"lenses.topics.metadata"`
+	TopicsMetrics          string `json:"lenses.topics.metrics"`
+	TopicsProcessors       string `json:"lenses.topics.processors"`
+	TopicsProfiles         string `json:"lenses.topics.profiles"`
+
+	ZookeeperChroot string                 `json:"lenses.zookeeper.chroot"`
+	ZookeeperHosts  []BoxURLConfigProperty `json:"lenses.zookeeper.hosts"`
+}
+
+// BoxConnectClusterConfigProperty the Box Config's embedded configuration for the Connect Clusters.
+type BoxConnectClusterConfigProperty struct {
+	Configs  string                 `json:"configs"`
+	Name     string                 `json:"name"`
+	Offsets  string                 `json:"offsets"`
+	Statuses string                 `json:"statuses"`
+	URLs     []BoxURLConfigProperty `json:"urls"`
+}
+
+// BoxURLConfigProperty used on the BoxConfig to describe the urls.
+type BoxURLConfigProperty struct {
+	JMX string `json:"jmx"`
+	URL string `json:"url"`
+}
+
+func (c *Client) getBoxConfig(ptr interface{}) error {
 	resp, err := c.Do(http.MethodGet, configPath, "", nil, func(r *http.Request) error {
 		r.Header.Set("Accept", "application/json, text/plain")
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	data := make(map[string]interface{}, 0) // maybe make those statically as well, we'll see.
-	if err = c.ReadJSON(resp, &data); err != nil {
-		return nil, err
-	}
-	return data, nil
+	return c.ReadJSON(resp, ptr)
+}
+
+// GetConfig returns the whole configuration of the lenses box,
+// which can be changed from box to box and it's read-only.
+//
+// It returns a `BoxConfig`.
+//
+// If you just need to retrieve the execution mode of the box use the `GetExecutionMode` instead.
+func (c *Client) GetConfig() (cfg BoxConfig, err error) {
+	err = c.getBoxConfig(&cfg)
+	return
 }
 
 // GetConfigEntry reads the lenses back-end configuration and sets the value of a key, based on "keys", to the "outPtr".
 func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
-	config, err := c.GetConfig()
-	if err != nil || config == nil {
+	config := make(map[string]interface{})
+	err := c.getBoxConfig(config)
+	if err != nil || len(config) == 0 {
 		return fmt.Errorf("%s: cannot be extracted: unable to retrieve the config: %v", keys, err)
 	}
 
@@ -549,16 +605,15 @@ func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
 	return nil
 }
 
-const executionModeKey = "lenses.sql.execution.mode"
-
 // GetExecutionMode returns the execution mode, if not error returned
-// then the possible values are: ExecutionModeInProc, ExecutionModeConnect or ExecutionModeKubernetes.
+// then the possible values are: `ExecutionModeInProc`, `ExecutionModeConnect` or `ExecutionModeKubernetes`.
 func (c *Client) GetExecutionMode() (ExecutionMode, error) {
-	var modeStr string
-	if err := c.GetConfigEntry(&modeStr, executionModeKey); err != nil {
+	cfg, err := c.GetConfig()
+	if err != nil {
 		return ExecutionModeInvalid, err
 	}
-	return ExecutionMode(modeStr), nil
+
+	return cfg.SQLExecutionMode, nil
 }
 
 // ConnectCluster contains the connect cluster information that is returned by the `GetConnectClusters` call.
@@ -887,10 +942,10 @@ const queriesPath = "api/sql/queries"
 
 // LSQLRunningQuery is the form of the data that the `GetRunningQueries` returns.
 type LSQLRunningQuery struct {
-	ID        int64  `json:"id" header:"ID" header:"ID,text"`
-	SQL       string `json:"sql" header:"SQL" header:"SQL"`
-	User      string `json:"user" header:"User" header:"User"`
-	Timestamp int64  `json:"ts" header:"Timestamp" header:"Timestamp"`
+	ID        int64  `json:"id" header:"ID,text"`
+	SQL       string `json:"sql" header:"SQL"`
+	User      string `json:"user"  header:"User"`
+	Timestamp int64  `json:"ts" header:"Timestamp,timestamp(ms|utc|02 Jan 2006 15:04)"`
 }
 
 // GetRunningQueries returns a list of the current sql running queries.
@@ -3321,9 +3376,9 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 const processorsLogsPathSSE = "api/sse/k8/logs/%s/%s/%s"
 
 type processorLog struct {
-	Timestamp string `json:"@timestamp" Header:"Timestamp,date"`
-	Version   int    `json:"@version" Header:"Version"`
-	Message   string `json:"message" Header:"Message"`
+	Timestamp string `json:"@timestamp" header:"Timestamp,date"`
+	Version   int    `json:"@version" header:"Version,text"`
+	Message   string `json:"message" header:"Message"`
 	// logger_name
 	// thread_name
 	Level string `json:"level"`
@@ -3657,8 +3712,8 @@ type LogLine struct {
 	Thread     string `json:"thread"`
 	Logger     string `json:"logger"`
 	Message    string `json:"message" header:"Message"`
-	Stacktrace string `json:"Stacktrace"`
-	Timestmap  int64  `json:"Timestamp"`
+	Stacktrace string `json:"stacktrace"`
+	Timestmap  int64  `json:"timestamp"`
 	Time       string `json:"time" header:"Time"`
 }
 
