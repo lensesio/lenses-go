@@ -43,7 +43,7 @@ func newGetACLsCommand() *cobra.Command {
 func newACLGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "acl",
-		Short:            "Work with Apache Kafka Access Control List",
+		Short:            "Work with an Apache Kafka Access Control List",
 		Example:          "acl -h",
 		TraverseChildren: true,
 	}

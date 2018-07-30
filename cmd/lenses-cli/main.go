@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/landoop/lenses-go"
 
@@ -13,26 +14,21 @@ import (
 )
 
 var (
-	// buildRevision is the build revision (docker commit string) but it's
-	// available only on the build state, on the cli executable - via the "version" command.
-	buildRevision string
-	// buildTime is the build unix time (in nanoseconds), like the `buildRevision`,
-	// this is available on after the build state, inside the cli executable - via the "version" command.
+	// buildRevision is the build revision (docker commit string or git rev-parse HEAD) but it's
+	// available only on the build state, on the cli executable - via the "--version" flag.
+	buildRevision = ""
+	// buildTime is the build unix time (in seconds since 1970-01-01 00:00:00 UTC), like the `buildRevision`,
+	// this is available on after the build state, inside the cli executable - via the "--version" flag.
 	//
-	// Note that this BuildTime is not int64, it's type of string.
-	buildTime string
+	// Note that this buildTime is not int64, it's type of string.
+	buildTime = fmt.Sprintf("%d", time.Now().Unix())
 )
 
 var (
 	app = &bite.Application{
-		Name:        "lenses-cli",
-		Description: "Lenses-cli is the command line client for the Landoop's Lenses REST API.",
-		Version:     lenses.Version,
-		HelpTemplate: bite.HelpTemplate{
-			BuildRevision:        buildRevision,
-			BuildTime:            buildTime,
-			ShowGoRuntimeVersion: true,
-		},
+		Name:            "lenses-cli",
+		Description:     "Lenses-cli is the command line client for the Landoop's Lenses REST API.",
+		Version:         lenses.Version,
 		PersistentFlags: setupConfigManager,
 		ShowSpinner:     true,
 		Setup:           setup,
@@ -120,6 +116,14 @@ const (
 )
 
 func main() {
+	if buildRevision != "" {
+		app.HelpTemplate = bite.HelpTemplate{
+			BuildRevision:        buildRevision,
+			BuildTime:            buildTime,
+			ShowGoRuntimeVersion: true,
+		}
+	}
+
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
