@@ -118,11 +118,12 @@ func newTopicsGroupCommand() *cobra.Command {
 }
 
 func newGetAvailableTopicConfigKeysCommand() *cobra.Command {
+	var unwrap bool
+
 	cmd := &cobra.Command{
 		Use:           "keys",
 		Short:         "List all available config keys for topics",
 		Example:       "topics keys",
-		Hidden:        true, // TODO: doesn't work atm, backend has that route though.
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			keys, err := client.GetAvailableTopicConfigKeys()
@@ -130,9 +131,23 @@ func newGetAvailableTopicConfigKeysCommand() *cobra.Command {
 				return err
 			}
 
+			sort.Strings(keys)
+
+			if unwrap {
+				for _, key := range keys {
+					fmt.Fprintln(cmd.OutOrStdout(), key)
+				}
+
+				return nil
+			}
+
 			return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "key", keys))
 		},
 	}
+
+	cmd.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap to display the names separated by new lines, disables the Table or JSON view")
+
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }

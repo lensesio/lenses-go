@@ -538,7 +538,7 @@ func (c *Client) GetConfig() (cfg BoxConfig, err error) {
 // GetConfigEntry reads the lenses back-end configuration and sets the value of a key, based on "keys", to the "outPtr".
 func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
 	config := make(map[string]interface{})
-	err := c.getBoxConfig(config)
+	err := c.getBoxConfig(&config)
 	if err != nil || len(config) == 0 {
 		return fmt.Errorf("%s: cannot be extracted: unable to retrieve the config: %v", keys, err)
 	}
@@ -979,8 +979,197 @@ func (c *Client) CancelQuery(id int64) (bool, error) {
 // Follow the instructions on http://lenses.stream/dev/lenses-apis/rest-api/index.html#topic-api and read
 // the call comments for a deeper understanding.
 
-// KV is just a keyvalue map, a form of map[string]interface{}.
+// TopicConfigs describes the topics configs, use for topic creation, update topic configs and etc.
+//
+// Based on https://kafka.apache.org/documentation.html#topicconfigs.
+
+// CompressionType is the go type to safety describe and set the topic config's and broker's config `CompressionType` field.
+// The available compression types are: `Uncompressed`, `Snappy`, `LZ4`, `Gzip` and `Producer`.
+type CompressionType string
+
+// The available compression types for topics configs and broker's config.
+const (
+	Uncompressed CompressionType = "uncompressed"
+	Snappy       CompressionType = "snappy"
+	LZ4          CompressionType = "lz4"
+	Gzip         CompressionType = "gzip"
+	Producer     CompressionType = "producer"
+	/* <- don't prefix them with CompressionType, the usage is obvious */
+)
+
+// TopicCleanupPolicy is the go type to safety describe the topic config's `CleanupPolicy` field.
+// The available policies are: `TopicDeletePolicy` and `TopicCompactPolicy`.
+type TopicCleanupPolicy string
+
+// The available cleanup policies for topics.
+const (
+	TopicDeletePolicy  TopicCleanupPolicy = "delete"
+	TopicCompactPolicy TopicCleanupPolicy = "compact"
+)
+
+// TopicMessageTimestampType is the type to safety describe the topic's config's `MessageTimestampType` field.
+// The available message timestamp types are: `TopicMessageCreateTime` and `TopicMessageLogAppendTime`.
+type TopicMessageTimestampType string
+
+// The available timestamp types for topic's messages.
+const (
+	TopicMessageCreateTime    TopicMessageTimestampType = "CreateTime"
+	TopicMessageLogAppendTime TopicMessageTimestampType = "LogAppendTime"
+)
+
+// KV shouldn't be the case now that have the `TopicConfig` but the API returns different values for fetching and different for creation of topic or topics configs update.
 type KV map[string]interface{}
+
+// TopicConfig describes the topic's `Config` field.
+type TopicConfig struct {
+	// KV contains all the available topic configs keys as they sent by the backend,
+	// even if not declared into the struct,
+	// useful for debugging mostly, if somehow the available topic configs keys changed but structured data are not.
+	// Another use case is use them to accoblish custom formats, not really necessary for end-users.
+	// It's used by the CLI to make sure that no invalid config key is passed into flags as well.
+	KV KV
+
+	// The maximum difference allowed between the timestamp when a broker receives a message
+	// and the timestamp specified in the message.
+	// If MessageTimestampType=CreateTime, a message will be rejected if the difference in timestamp exceeds this threshold.
+	// This configuration is ignored if MessageTimestampType=LogAppendTime (see below).
+	//
+	// Defaults to 9223372036854775807.
+	MessageTimestampDifferenceMaxMs int64 `json:"message.timestamp.difference.max.ms"`
+	// This is largest message size Kafka will allow to be appended.
+	// Note that if you increase this size you must also increase your consumer's fetch size so they can fetch messages this large.
+	//
+	// Defaults to 1000012.
+	MaxMessageBytes int64 `json:"max.message.bytes"`
+	// This configuration controls the size of the index that maps offsets to file positions.
+	// We preallocate this index file and shrink it only after log rolls. You generally should not need to change this setting.
+	//
+	// Defaults to 10485760.
+	SegmentIndexBytes int64 `json:"segment.index.bytes"`
+	// The maximum random jitter subtracted from the scheduled segment roll time to avoid thundering herds of segment rolling.
+	//
+	// Defaults to 10485760.
+	SegmentJitterMs int64 `json:"segment.jitter.ms"`
+	// This configuration controls how frequently the log compactor will attempt to clean the log (assuming log compaction is enabled).
+	// By default we will avoid cleaning a log where more than 50% of the log has been compacted.
+	// This ratio bounds the maximum space wasted in the log by duplicates (at 50% at most 50% of the log could be duplicates).
+	// A higher ratio will mean fewer, more efficient cleanings but will mean more wasted space in the log.
+	//
+	// Defaults to 0.5.
+	MinCleanableDirtyRatio float32 `json:"min.cleanable.dirty.ratio"`
+	// This configuration controls the maximum size a log can grow to before we will discard old log segments to free up space
+	// if we are using the "delete" retention policy. By default there is no size limit only a time limit.
+	//
+	// Defaults to -1.
+	RetentionBytes int64 `json:"retention.bytes"`
+	// A list of replicas for which log replication should be throttled on the follower side.
+	// The list should describe a set of replicas in the form [PartitionId]:[BrokerId],[PartitionId]:[BrokerId]:...
+	// or alternatively the wildcard '*' can be used to throttle all replicas for this topic.
+	//
+	// Empty by default, use "*" for wildcard.
+	FollowerReplicationThrottledReplicas/* []string? */ string `json:"follower.replication.throttled.replicas"`
+	// The time to wait before deleting a file from the filesystem.
+	//
+	// Defaults to 60000.
+	FileDeleteDelayMs int64 `json:"file.delete.delay.ms"`
+	// Specify the final compression type for a given topic.
+	// This configuration accepts the standard compression codecs (`Gzip`, `Snappy`, `LZ4`).
+	// It additionally accepts 'uncompressed' which is equivalent to no compression;
+	// and `Producer` which means retain the original compression codec set by the producer.
+	//
+	// Defaults to `Producer` ("producer").
+	CompressionType CompressionType `json:"compression.type"`
+	// The minimum time a message will remain uncompacted in the log.
+	// Only applicable for logs that are being compacted.
+	//
+	// Defaults to 0.
+	MinCompactionLagMs int64 `json:"min.compaction.lag.ms"`
+	// This setting allows specifying a time interval at which we will force an fsync of data written to the log.
+	//  For example if this was set to 1000 we would fsync after 1000 ms had passed.
+	// In general we recommend you not set this and use replication for durability and
+	// allow the operating system's background flush capabilities as it is more efficient.
+	//
+	// Defaults to 9223372036854775807.
+	FlushMs int64 `json:"flush.ms"`
+	// A string that is either  `TopicDeletePolicy` or `TopicCompactPolicy`.
+	// This string designates the retention policy to use on old log segments.
+	// The default policy `TopicDeletePolicy` ("delete") will discard old segments when their retention time or size limit has been reached.
+	// The `TopicCompactPolicy` ("compact") setting will enable log compaction on the topic.
+	//
+	// Defaults to `TopicDeletePolicy` ("delete").
+	CleanupPolicy TopicCleanupPolicy `json:"cleanup.policy"`
+	// Define whether the timestamp in the message is message create time or log append time.
+	// The value should be either `TopicMessageCreateTime` ("CreateTime") or `TopicMessageLogAppendTime` ("LogAppendTime").
+	//
+	// Defaults to `TopicMessageCreateTime`.
+	MessageTimestampType TopicMessageTimestampType `json:"message.timestamp.type"`
+	// Indicates whether to enable replicas not in the ISR set to be elected as leader as a last resort,
+	// even though doing so may result in data loss.
+	//
+	// Defaults to true.
+	UncleanLeaderElectionEnable bool `json:"unclean.leader.election.enable"`
+	// This setting allows specifying an interval at which we will force an fsync of data written to the log.
+	// For example if this was set to 1 we would fsync after every message;
+	// if it were 5 we would fsync after every five messages.
+	// In general we recommend you not set this and use replication for durability and
+	// allow the operating system's background flush capabilities as it is more efficient.
+	//
+	// Note: this setting can be overridden on a per-topic basis.
+	//
+	// Defaults to 9223372036854775807.
+	FlushMessages int64 `json:"flush.messages"`
+	// This configuration controls the maximum time we will retain a log before we will discard old log segments
+	// to free up space if you are using the "delete" retention policy.
+	// This represents an SLA on how soon consumers must read their data.
+	//
+	// Defaults to 604800000.
+	RetentionMs int64 `json:"retention.ms"`
+	// When a producer sets acks to \"all\" (or \"-1\"), min.insync.replicas specifies the minimum number of replicas that must acknowledge a write for the write to be considered successful. If this minimum cannot be met, then the producer will raise an exception (either NotEnoughReplicas or NotEnoughReplicasAfterAppend). When used together, min.insync.replicas and acks allow you to enforce greater durability guarantees. A typical scenario would be to create a topic with a replication factor of 3, set min.insync.replicas to 2, and produce with acks of \"all\". This will ensure that the producer raises an exception if a majority of replicas do not receive a write.
+	//
+	// Defaults to 1.
+	MinInsyncReplicas int `json:"min.insync.replicas"`
+	// Specify the message format version the broker will use to append messages to the logs.
+	// The value should be a valid ApiVersion. Some examples are: 0.8.2, 0.9.0.0, 0.10.0, check ApiVersion for more details.
+	// By setting a particular message format version, the user is certifying that all the existing messages on disk are smaller or equal than the specified version.
+	// Setting this value incorrectly will cause consumers with older versions to break as they will receive messages with a format that they don't understand.
+	//
+	// Defaults to the relative to broker version.
+	MessageFormatVersion string `json:"message.format.version"`
+	// A list of replicas for which log replication should be throttled on the leader side.
+	// The list should describe a set of replicas in the form [PartitionId]:[BrokerId],[PartitionId]:[BrokerId]:...
+	// or alternatively the wildcard '*' can be used to throttle all replicas for this topic.
+	//
+	// Empty by default.
+	LeaderReplicationThrottledReplicas/* []string? */ string `json:"leader.replication.throttled.replicas"`
+	// The amount of time to retain delete tombstone markers for log compacted topics.
+	// This setting also gives a bound on the time in which a consumer must
+	// complete a read if they begin from offset 0 to ensure that they get a valid snapshot of
+	// the final stage (otherwise delete tombstones may be collected before they complete their scan).
+	//
+	// Defaults to 86400000 (24 hours).
+	DeleteRetentionMs int64 `json:"delete.retention.ms"`
+	// Indicates if should pre allocate file when create new segment.
+	//
+	// Defaults to false.
+	Preallocate bool `json:"preallocate"`
+	// This setting controls how frequently Kafka adds an index entry to it's offset index.
+	// The default setting ensures that we index a message roughly every 4096 bytes.
+	// More indexing allows reads to jump closer to the exact position in the log but makes the index larger.
+	// You probably don't need to change this.
+	//
+	// Defaults to 4096.
+	IndexIntervalBytes int64 `json:"index.interval.bytes"`
+	// This configuration controls the segment file size for the log.
+	// Retention and cleaning is always done a file at a time so a larger segment size means fewer files but less granular control over retention.
+	//
+	// Defaults to 1073741824.
+	SegmentBytes int64 `json:"segment.bytes"`
+	// This configuration controls the period of time after which Kafka will force the log to roll
+	// even if the segment file isn't full to ensure that retention can delete or compact old data.
+	//
+	// Defaults to 604800000.
+	SegmentMs int64 `json:"segment.ms"`
+}
 
 var errRequired = func(field string) error {
 	return fmt.Errorf("client: %s is required", field)
@@ -1018,7 +1207,7 @@ func (c *Client) GetTopicsNames() ([]string, error) {
 	return topicNames, nil
 }
 
-const topicsAvailableConfigKeysPath = topicsPath + "/availableConfigKeys"
+const topicsAvailableConfigKeysPath = "api/configs/default/topics/keys"
 
 // GetAvailableTopicConfigKeys retrieves a list of available configs for topics.
 func (c *Client) GetAvailableTopicConfigKeys() ([]string, error) {
@@ -3482,9 +3671,9 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 
 // BrokerConfig describes the kafka broker's configurations.
 type BrokerConfig struct {
-	LogCleanerThreads int    `json:"log.cleaner.threads" yaml:"LogCleanerThreads" header:"Log Cleaner Threads"`
-	CompressionType   string `json:"compression.type" yaml:"CompressionType" header:"Compression Type"`
-	AdvertisedPort    int    `json:"advertised.port" yaml:"AdvertisedPort" header:"Advertised Port"`
+	LogCleanerThreads int             `json:"log.cleaner.threads" yaml:"LogCleanerThreads" header:"Log Cleaner Threads"`
+	CompressionType   CompressionType `json:"compression.type" yaml:"CompressionType" header:"Compression Type"`
+	AdvertisedPort    int             `json:"advertised.port" yaml:"AdvertisedPort" header:"Advertised Port"`
 }
 
 const (

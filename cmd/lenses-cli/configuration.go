@@ -131,7 +131,8 @@ func (m *configurationManager) load() (bool, error) {
 	c.SetCurrent(currentContext)
 
 	// authentication flags passed, override or set the particular authentication method.
-	if authFromFlags, ok := makeAuthFromFlags(m.user, m.pass, m.kerberosConf, m.kerberosRealm, m.kerberosKeytab, m.kerberosCCache); ok {
+	authFromFlags, authLoadedFromFlags := makeAuthFromFlags(m.user, m.pass, m.kerberosConf, m.kerberosRealm, m.kerberosKeytab, m.kerberosCCache)
+	if authLoadedFromFlags {
 		c.GetCurrent().Authentication = authFromFlags
 	}
 
@@ -146,6 +147,7 @@ func (m *configurationManager) load() (bool, error) {
 	})
 
 	if found {
+
 		if currentContextChanged {
 			// save the config, the current context changed.
 			for _, v := range c.Contexts {
@@ -155,18 +157,20 @@ func (m *configurationManager) load() (bool, error) {
 				return false, err
 			}
 		} else {
-			for _, v := range c.Contexts {
-				decryptPassword(v)
-			}
-
-			// try to set the current context from *.env file or from system's env variables,
-			// if not empty, the env value has a priority over the configurated `CurrentContext`
-			// but --context flag has a priority over all (look above).
-			//
-			// Note that the env variable will NOT change the `CurrentContext` field from the configuration file, by purpose.
-			godotenv.Load()
-			if envContext := strings.TrimSpace(os.Getenv(currentContextEnvKey)); envContext != "" {
-				c.CurrentContext = envContext
+			// check if loaded from flags, if so and we proceed then the password field goes empty.
+			if !authLoadedFromFlags {
+				// try to set the current context from *.env file or from system 's env variables,
+				// if not empty, the env value has a priority over the configurated `CurrentContext`
+				// but --context flag has a priority over all (look above).
+				//
+				// Note that the env variable will NOT change the `CurrentContext` field from the configuration file, by purpose.
+				godotenv.Load()
+				if envContext := strings.TrimSpace(os.Getenv(currentContextEnvKey)); envContext != "" {
+					c.CurrentContext = envContext
+				}
+				for _, v := range c.Contexts {
+					decryptPassword(v)
+				}
 			}
 		}
 	}
