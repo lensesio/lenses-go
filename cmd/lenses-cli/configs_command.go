@@ -21,7 +21,8 @@ func newGetConfigsCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				if mode := args[0]; mode == commandModeName {
+				configEntryName := args[0]
+				if configEntryName == commandModeName {
 					// means that something like `config mode` called,
 					// let's support it here as well, although
 					// mode has its own command `mode` because it's super important
@@ -30,11 +31,13 @@ func newGetConfigsCommand() *cobra.Command {
 				}
 
 				var value interface{}
-				if err := client.GetConfigEntry(&value, args[0]); err == nil {
-					return bite.PrintJSON(cmd, value) // keep json?
-					// if error or no valid key then continue with printing the whole lenses configuration.
+
+				err := client.GetConfigEntry(&value, configEntryName)
+				if err != nil {
+					return fmt.Errorf("retrieve config value '%s' failed: %v", configEntryName, err)
 				}
 
+				return bite.PrintJSON(cmd, value) // keep json.
 			}
 
 			config, err := client.GetConfig()
