@@ -538,7 +538,7 @@ func (c *Client) GetConfig() (cfg BoxConfig, err error) {
 // GetConfigEntry reads the lenses back-end configuration and sets the value of a key, based on "keys", to the "outPtr".
 func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
 	config := make(map[string]interface{})
-	err := c.getBoxConfig(config)
+	err := c.getBoxConfig(&config)
 	if err != nil || len(config) == 0 {
 		return fmt.Errorf("%s: cannot be extracted: unable to retrieve the config: %v", keys, err)
 	}
