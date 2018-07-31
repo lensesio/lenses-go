@@ -40,6 +40,8 @@ import "github.com/landoop/lenses-go"
 
 ```go
 // Prepare authentication using raw Username and Password.
+//
+// Use it when Lenses setup with "BASIC" or "LDAP" authentication.
 auth := lenses.BasicAuthentication{Username: "user", Password: "pass"}
 ```
 

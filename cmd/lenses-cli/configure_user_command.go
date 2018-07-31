@@ -384,7 +384,7 @@ func newConfigureCommand() *cobra.Command {
 				}
 
 				var (
-					basicAuthAns    = "basic authentication (default)"
+					basicAuthAns    = "lenses BASIC auth or LDAP (default)"
 					kerberosAuthAns = "kerberos (three methods)"
 				)
 

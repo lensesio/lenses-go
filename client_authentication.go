@@ -36,6 +36,8 @@ var (
 )
 
 // BasicAuthentication for Lenses, accepts raw username and password.
+//
+// Use it when Lenses setup with "BASIC" or "LDAP" authentication.
 type BasicAuthentication struct {
 	Username string `json:"username" yaml:"Username" survey:"username"`
 	Password string `json:"password,omitempty" yaml:"Password" survey:"password"`
