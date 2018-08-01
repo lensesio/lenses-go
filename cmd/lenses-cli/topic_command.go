@@ -299,7 +299,15 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 				return err
 			}
 
-			if err := client.CreateOrUpdateTopicMetadata(meta); err != nil {
+			// it will fire 404 on the newest API if topic does not exist.
+			bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to set metadata for topic '%s'. Topic does not exist", meta.TopicName)
+
+			// older api does not make that check, so do it manually ^.
+			if _, err := client.GetTopic(meta.TopicName); err != nil {
+				return err
+			}
+
+			if err := client.CreateOrUpdateTopicMetadata(meta); err != nil { // it will fire 404 on the newest API if topic does not exist, so ^.
 				return err
 			}
 
