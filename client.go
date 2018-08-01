@@ -2912,11 +2912,11 @@ func (acl *ACL) Validate() error {
 		acl.Operation = ACLOperationAll
 	}
 
-	// upper the first letter here on the resourceType, permissionType and operation before any action,
+	// upper the all the letters here on the resourceType, permissionType and operation before any action,
 	// although kafka internally accepts both lowercase and uppercase.
-	acl.ResourceType = ACLResourceType(strings.Title(string(acl.ResourceType)))
-	acl.PermissionType = ACLPermissionType(strings.Title(string(acl.PermissionType)))
-	acl.Operation = ACLOperation(strings.Title(string(acl.Operation)))
+	acl.ResourceType = ACLResourceType(strings.ToTitle(string(acl.ResourceType)))
+	acl.PermissionType = ACLPermissionType(strings.ToTitle(string(acl.PermissionType)))
+	acl.Operation = ACLOperation(strings.ToTitle(string(acl.Operation)))
 
 	if !acl.Operation.isValidForResourceType(acl.ResourceType) {
 		validOps := ACLOperations[acl.ResourceType]
@@ -2960,6 +2960,12 @@ func (c *Client) CreateOrUpdateACL(acl ACL) error {
 		return err
 	}
 
+	// unlike with other calls this one returns a plain text with no authorize-type error message
+	// instead of 403, so make that check only on the acl API:
+	if resp.StatusCode == http.StatusBadRequest {
+		return fmt.Errorf("no authorizer is configured on the broker")
+	}
+
 	// note: the status code errors are checked in the `do` on every request.
 	return resp.Body.Close()
 }
@@ -2972,7 +2978,7 @@ func (c *Client) GetACLs() ([]ACL, error) {
 	}
 
 	// unlike with other calls this one returns a plain text with no authorize-type error message
-	// instead of 403, so make that check only in this call:
+	// instead of 403, so make that check only on the acl API:
 	if resp.StatusCode == http.StatusBadRequest {
 		return nil, fmt.Errorf("no authorizer is configured on the broker")
 	}
@@ -2996,6 +3002,12 @@ func (c *Client) DeleteACL(acl ACL) error {
 	resp, err := c.Do(http.MethodDelete, aclPath, contentTypeJSON, send)
 	if err != nil {
 		return err
+	}
+
+	// unlike with other calls this one returns a plain text with no authorize-type error message
+	// instead of 403, so make that check only on the acl API:
+	if resp.StatusCode == http.StatusBadRequest {
+		return fmt.Errorf("no authorizer is configured on the broker")
 	}
 
 	return resp.Body.Close()
