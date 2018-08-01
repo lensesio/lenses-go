@@ -725,11 +725,109 @@ func newLoginCommand() *cobra.Command {
 			signedUser := client.User
 			fmt.Fprintf(out, "Welcome %s[%s],\ntype 'help' to learn more about the available commands or 'exit' to terminate.\n",
 				signedUser.Name, strings.Join(signedUser.Roles, ", "))
+
+			/*
+				// these all can be changed to two lines, but keep them as they are for now:
+				var (
+					reader       io.Reader
+					streamReader *bufio.Reader
+					termBuf      = new(bytes.Buffer)
+				)
+
+				err := termbox.Init()
+				termOK := true
+				if err != nil {
+					if configManager.config.GetCurrent().Debug {
+						fmt.Fprintf(os.Stderr, "%v\n", err)
+					}
+					termOK = false
+				} else {
+					// termbox.SetOutputMode(termbox.Output256)
+					defer termbox.Close()
+				}
+
+				if termOK { // will be true on all known terminals, including win10.
+					reader = termBuf
+				} else {
+					reader = os.Stdin
+				}
+
+				streamReader = bufio.NewReader(reader)
+
+				var (
+					lineStart = true
+					lineEnd   bool
+
+					history []string
+				)
+			*/
+
 			// read the input pipe, on each read its buffer consumed, so loop 'forever' here.
 			streamReader := bufio.NewReader(os.Stdin)
 			for {
-				// add the 'ready to type' signal for the user.
+				/*
+					if lineStart || lineEnd {
+						// add the 'ready to type' signal for the user.
+						fmt.Fprint(out, "> ")
+						lineStart = false
+						lineEnd = false
+					}
+
+					if termOK {
+						switch e := termbox.PollEvent(); e.Type {
+						case termbox.EventKey:
+							if e.Key == termbox.KeyArrowUp {
+								if len(history) > 0 {
+									termBuf.Reset()
+									os.Stdout.WriteString("\033[2K\033[1G") // remove the line and move cursor to its beggining.
+
+									lastLineEntry := history[len(history)-1]
+									// will remove dupl later.
+									termBuf.WriteString(lastLineEntry)
+									os.Stdout.WriteString("> ")
+									os.Stdout.WriteString(lastLineEntry)
+
+									// remove the last entry.
+									history = history[0 : len(history)-1]
+									lineEnd = false
+								}
+
+								continue
+							} else if e.Key == termbox.KeyEnter {
+								termBuf.WriteString("\r\n")
+								os.Stdout.WriteString("\n")
+								lineEnd = true
+							} else if e.Key == termbox.KeyBackspace2 || e.Key == termbox.KeyBackspace {
+								// termBuf.UnreadRune()
+								if termBuf.Len() > 0 {
+									// it must have valid contents, the > does not count neither the rest of the user's terminal!
+									termBuf.Truncate(termBuf.Len() - 1)  // we need to set the value to the correct one, not just print to the screen the expected behavior of backspace.
+									os.Stdout.WriteString("\010\033[0K") // move cursor 1 back and remove all the RIGHT contents.
+								}
+
+								continue
+							} else if e.Key == termbox.KeyEsc {
+								os.Exit(0)
+							} else {
+								lineStart = false
+								termBuf.WriteRune(e.Ch)
+								os.Stdout.Write([]byte{byte(e.Ch)})
+							}
+						}
+
+						if !lineEnd {
+							continue
+						}
+					}
+
+					line, err := streamReader.ReadString('\n')
+					if err != nil {
+						return err // exit on first failure.
+					}
+				*/
+
 				fmt.Fprint(out, "> ")
+
 				line, err := streamReader.ReadString('\n')
 				if err != nil {
 					return err // exit on first failure.
@@ -737,6 +835,9 @@ func newLoginCommand() *cobra.Command {
 
 				// remove any last \r\n.
 				line = strings.TrimRight(line, "\r\n")
+
+				// TODO: here the save line for history thing with UP and DOWN keys.
+				// history = append(history, line)
 
 				// if "exit" then exit now.
 				switch line {
