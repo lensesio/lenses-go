@@ -413,6 +413,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 
 			updatedConnector, err := client.UpdateConnector(connector.ClusterName, connector.Name, connector.Config)
 			if err != nil {
+				bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to update connector '%s:%s', the action requires 'Write' permissions", connector.ClusterName, connector.Name)
 				return err
 			}
 
@@ -519,6 +520,7 @@ func newConnectorPauseCommand() *cobra.Command {
 			}
 
 			if err := client.PauseConnector(clusterName, name); err != nil {
+				bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart connector '%s:%s' due the required permissions", clusterName, name)
 				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to pause, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
@@ -549,6 +551,7 @@ func newConnectorResumeCommand() *cobra.Command {
 			}
 
 			if err := client.ResumeConnector(clusterName, name); err != nil {
+				bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to resume connector '%s:%s' due the required permissions", clusterName, name)
 				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to resume, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
@@ -579,6 +582,7 @@ func newConnectorRestartCommand() *cobra.Command {
 			}
 
 			if err := client.RestartConnector(clusterName, name); err != nil {
+				bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart connector '%s:%s' due the required permissions", clusterName, name)
 				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to restart, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
@@ -699,6 +703,7 @@ func newConnectorTaskRestartCommand() *cobra.Command {
 			}
 
 			if err := client.RestartConnectorTask(clusterName, name, taskID); err != nil {
+				bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart the task due the required permissions")
 				bite.FriendlyError(cmd, errResourceNotFoundMessage, "task does not exist")
 				return err
 			}
@@ -731,6 +736,7 @@ func newConnectorDeleteCommand() *cobra.Command {
 			}
 
 			if err := client.DeleteConnector(clusterName, name); err != nil {
+				bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete connector '%s:%s', the action requires 'Write' permissions", clusterName, name)
 				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, connector '%s:%s' does not exist", clusterName, name)
 				return err
 			}
