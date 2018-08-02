@@ -125,7 +125,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

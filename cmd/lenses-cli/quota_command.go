@@ -83,7 +83,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				return err
 			}
 
-			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to access quota, user has no rights for this action")
+			// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to access quota, user has no rights for this action")
 
 			if quota.User != "" {
 				if clientID := quota.ClientID; clientID != "" {
@@ -141,7 +141,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				actionMsg = "update"
 			}
 
-			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to %s quota, user has no rights for this action", actionMsg)
+			// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to %s quota, user has no rights for this action", actionMsg)
 
 			var user, clientID = quota.User, quota.ClientID
 
@@ -215,7 +215,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 				return err
 			}
 
-			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to access quota, user has no rights for this action")
+			// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to access quota, user has no rights for this action")
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.CreateOrUpdateQuotaForClient(quota.ClientID, quota.Config); err != nil {
@@ -254,7 +254,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 				actionMsg = "update"
 			}
 
-			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to %s quota, user has no rights for this action", actionMsg)
+			// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to %s quota, user has no rights for this action", actionMsg)
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.DeleteQuotaForClient(id, args...); err != nil {

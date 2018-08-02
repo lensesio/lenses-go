@@ -436,7 +436,7 @@ func newTopicDeleteCommand() *cobra.Command {
 				// delete records.
 				if err := client.DeleteTopicRecords(topicName, fromPartition, toOffset); err != nil {
 					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete records, topic '%s' does not exist", topicName)
-					bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete records from topic '%s', not proper access", topicName)
+					// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete records from topic '%s', not proper access", topicName)
 					bite.FriendlyError(cmd, errResourceNotGoodMessage, "unable to delete records from topic '%s', invalid offset '%d' or partition '%d' passed", topicName, toOffset, fromPartition)
 					return err
 				}

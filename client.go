@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kataras/golog"
 )
@@ -99,20 +100,39 @@ type ResourceError struct {
 	Body       string `json:"message" header:"Message"`
 }
 
-// Error returns the detailed cause of the error.
-func (err ResourceError) Error() string {
-	return fmt.Sprintf("client: (%s: %s) failed with status code %d%s",
+// String returns the detailed cause of the error.
+func (err ResourceError) String() string {
+	return fmt.Sprintf("client: (%s: %s) failed with status code %d:\n%s",
 		err.Method, err.URI, err.StatusCode, err.Body)
+}
+
+// Error returns the error's message body.
+// The result's first letter is always lowercase
+// and it never ends with examination points '.' or '!'.
+func (err ResourceError) Error() string {
+	chars := []rune(err.Body)
+	length := len(chars)
+
+	if length <= 1 {
+		return strings.ToLower(err.Body)
+	}
+
+	chars[0] = unicode.ToLower(chars[0])
+	// check the size because the examination point may be a critical part of that small error,
+	// although currently we don't have an error like that at all.
+	if length > 2 {
+		switch chars[length-1] {
+		case '.', '!':
+			chars = chars[0 : length-1]
+		}
+	}
+
+	return string(chars)
 }
 
 // Code returns the status code.
 func (err ResourceError) Code() int {
 	return err.StatusCode
-}
-
-// Message returns the message of the error or the whole body if it's unknown error.
-func (err ResourceError) Message() string {
-	return err.Body
 }
 
 // NewResourceError is just a helper to create a new `ResourceError` to return from custom calls, it's "cli-compatible".
@@ -196,7 +216,7 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 			if err != nil {
 				errBody = " unable to read body: " + err.Error()
 			} else {
-				errBody = "\n" + string(b)
+				errBody = /* "\n" +*/ string(b)
 			}
 		}
 
