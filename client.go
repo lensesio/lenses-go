@@ -63,8 +63,8 @@ func isOK(resp *http.Response) bool {
 		resp.StatusCode == http.StatusAccepted || /* see PauseConnector for the `StatusAccepted` */
 		(resp.Request.Method == http.MethodDelete && resp.StatusCode == http.StatusNoContent) || /* see RemoveConnector for the `StatusNoContnet` */
 		(resp.Request.Method == http.MethodPost && resp.StatusCode == http.StatusNoContent) || /* see Restart tasks for the `StatusNoContnet` */
-		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) || /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */
-		(resp.Request.Method == http.MethodDelete && ((resp.StatusCode == http.StatusForbidden) || (resp.StatusCode == http.StatusBadRequest))) /* for things like deletion if not proper user access or invalid value of something passed */
+		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) /*||*/ /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */
+	// (resp.Request.Method == http.MethodDelete && ((resp.StatusCode == http.StatusForbidden) || (resp.StatusCode == http.StatusBadRequest))) /* invalid value of something passed */
 }
 
 const (
