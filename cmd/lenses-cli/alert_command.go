@@ -174,7 +174,7 @@ func newAlertSettingGroupCommand() *cobra.Command {
 	root.Flags().BoolVar(&mustEnable, "enable", false, "--enable")
 
 	bite.CanPrintJSON(root)
-	bite.CanBeSilent(cmd)
+	bite.CanBeSilent(root)
 
 	root.AddCommand(newGetAlertSettingConditionsCommand())
 	root.AddCommand(newAlertSettingConditionGroupCommand())
