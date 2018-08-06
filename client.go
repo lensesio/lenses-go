@@ -273,7 +273,7 @@ func (c *Client) acquireResponseBodyStream(resp *http.Response) (io.ReadCloser, 
 	return reader, err
 }
 
-const bufN = 512
+// const bufN = 512
 
 // var errEmptyResponse = fmt.Errorf("")
 
