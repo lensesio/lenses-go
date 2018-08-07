@@ -147,6 +147,11 @@ func NewResourceError(statusCode int, uri, method, body string) ResourceError {
 	}
 }
 
+type jsonResourceError struct {
+	ErrorCode int    `json:"error_code"`
+	Message   string `json:"message"`
+}
+
 // Do is the lower level of a client call, manually sends an HTTP request to the lenses box backend based on the `Client#Config`
 // and returns an HTTP response.
 func (c *Client) Do(method, path, contentType string, send []byte, options ...RequestOption) (*http.Response, error) {
@@ -208,10 +213,16 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 		defer resp.Body.Close()
 		var errBody string
 
-		if strings.Contains(resp.Header.Get(contentTypeHeaderKey), "text/html") {
+		cType := resp.Header.Get(contentTypeHeaderKey)
+		if strings.Contains(cType, "text/html") {
 			// if the body is html, then don't read it, it doesn't contain the raw info we need.
+		} else if strings.Contains(cType, contentTypeJSON) || strings.Contains(cType, contentTypeSchemaJSON) {
+			// read it, it's an error in JSON format.
+			var jsonErr jsonResourceError
+			c.ReadJSON(resp, &jsonErr)
+			errBody = jsonErr.Message
 		} else {
-			// else give the whole body to the error context.
+			// else give the whole body to the error context, i.e from "text/plain".
 			b, err := c.ReadResponseBody(resp)
 			if err != nil {
 				errBody = " unable to read body: " + err.Error()

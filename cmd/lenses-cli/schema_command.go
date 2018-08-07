@@ -455,7 +455,7 @@ func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 
 			lv, err := client.GetSubjectCompatibilityLevel(name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve the compatibility level, schema '%s' does not exist", name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve the compatibility level, subject '%s' does not exist", name)
 				return err
 			}
 
