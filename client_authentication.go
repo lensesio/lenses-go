@@ -52,8 +52,12 @@ func (auth BasicAuthentication) Auth(c *Client) error {
 
 	// retrieve token.
 	userAuthJSON := fmt.Sprintf(`{"user":"%s", "password": "%s"}`, auth.Username, auth.Password)
+	loginPath := "api/login"
+	resp, err := c.Do(http.MethodPost, loginPath, contentTypeJSON, []byte(userAuthJSON))
+	if resp == nil || (resp.StatusCode == http.StatusNotFound) {
+		return fmt.Errorf("the requested URL %s was not found on this server. That’s all we know", c.Config.Host+"/"+loginPath)
+	}
 
-	resp, err := c.Do(http.MethodPost, "api/login", contentTypeJSON, []byte(userAuthJSON))
 	if err != nil {
 		return fmt.Errorf("%s or kerberos authentication is required", err.Error())
 	}
@@ -146,7 +150,12 @@ func (auth KerberosAuthentication) Auth(c *Client) error {
 		return kerberosClient.SetSPNEGOHeader(r, fmt.Sprintf("%s/%s", "HTTP", r.URL.Hostname()))
 	}
 
-	resp, err := c.Do(http.MethodGet, "/api/auth", contentTypeJSON, nil)
+	authPath := "api/auth"
+	resp, err := c.Do(http.MethodGet, authPath, contentTypeJSON, nil)
+	if resp == nil || (resp.StatusCode == http.StatusNotFound) {
+		return fmt.Errorf("the requested URL %s was not found on this server. That’s all we know", c.Config.Host+"/"+authPath)
+	}
+
 	if err != nil {
 		return fmt.Errorf("kerberos failure: unable to send SPNEGO header: %v", err)
 	}

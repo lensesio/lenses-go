@@ -213,21 +213,21 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 		defer resp.Body.Close()
 		var errBody string
 
-		cType := resp.Header.Get(contentTypeHeaderKey)
-		if strings.Contains(cType, "text/html") {
-			// if the body is html, then don't read it, it doesn't contain the raw info we need.
-		} else if strings.Contains(cType, contentTypeJSON) || strings.Contains(cType, contentTypeSchemaJSON) {
+		if cType := resp.Header.Get(contentTypeHeaderKey); strings.Contains(cType, contentTypeJSON) ||
+			strings.Contains(cType, contentTypeSchemaJSON) {
 			// read it, it's an error in JSON format.
 			var jsonErr jsonResourceError
 			c.ReadJSON(resp, &jsonErr)
 			errBody = jsonErr.Message
-		} else {
-			// else give the whole body to the error context, i.e from "text/plain".
+		}
+
+		if errBody == "" {
+			// else give the whole body to the error context, i.e from "text/plain", "text/html" etc.
 			b, err := c.ReadResponseBody(resp)
 			if err != nil {
 				errBody = " unable to read body: " + err.Error()
 			} else {
-				errBody = /* "\n" +*/ string(b)
+				errBody = string(b)
 			}
 		}
 
@@ -288,6 +288,10 @@ func (c *Client) acquireResponseBodyStream(resp *http.Response) (io.ReadCloser, 
 
 // var errEmptyResponse = fmt.Errorf("")
 
+// ErrUnknownResponse is fired when unknown error caused an empty response, usually html content with 404 status code,
+// more information can be displayed if `ClientConfig#Debug` is enabled.
+var ErrUnknownResponse = fmt.Errorf("unknown")
+
 // ReadResponseBody is the lower-level method of client to read the result of a `Client#Do`, it closes the body stream.
 //
 // See `ReadJSON` too.
@@ -342,6 +346,14 @@ func (c *Client) ReadResponseBody(resp *http.Response) ([]byte, error) {
 
 	if c.Config.Debug {
 		rawBodyString := string(b)
+
+		if strings.Contains(resp.Header.Get(contentTypeHeaderKey), "text/html") {
+			// If debug will print the full body through "rawBodyString", but the error here is the same content,
+			// so no need to duplicate it.
+			// The error should be minimal in this case in order to be resolved by callers: `lenses.ErrUnknownResponse`, same for !debug.
+			err = ErrUnknownResponse
+		}
+
 		// print both body and error, because both of them may be formated by the `readResponseBody`'s caller.
 		golog.Debugf("Client#Do.resp:\n\tbody: %s\n\tstatus code: %d\n\terror: %v", rawBodyString, resp.StatusCode, err)
 	}
