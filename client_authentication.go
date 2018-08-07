@@ -43,6 +43,10 @@ type BasicAuthentication struct {
 	Password string `json:"password,omitempty" yaml:"Password" survey:"password"`
 }
 
+var errUnknownPath = func(c *Client, relPath string) error {
+	return fmt.Errorf("the requested URL %s was not found on this server. That’s all we know", c.Config.Host+"/"+relPath)
+}
+
 // Auth implements the `Authentication` for the `BasicAuthentication`.
 func (auth BasicAuthentication) Auth(c *Client) error {
 	// auth by raw username/password.
@@ -55,7 +59,7 @@ func (auth BasicAuthentication) Auth(c *Client) error {
 	loginPath := "api/login"
 	resp, err := c.Do(http.MethodPost, loginPath, contentTypeJSON, []byte(userAuthJSON))
 	if resp == nil || (resp.StatusCode == http.StatusNotFound) {
-		return fmt.Errorf("the requested URL %s was not found on this server. That’s all we know", c.Config.Host+"/"+loginPath)
+		return errUnknownPath(c, loginPath)
 	}
 
 	if err != nil {
@@ -153,7 +157,7 @@ func (auth KerberosAuthentication) Auth(c *Client) error {
 	authPath := "api/auth"
 	resp, err := c.Do(http.MethodGet, authPath, contentTypeJSON, nil)
 	if resp == nil || (resp.StatusCode == http.StatusNotFound) {
-		return fmt.Errorf("the requested URL %s was not found on this server. That’s all we know", c.Config.Host+"/"+authPath)
+		return errUnknownPath(c, authPath)
 	}
 
 	if err != nil {
