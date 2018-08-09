@@ -8,8 +8,7 @@ import (
 )
 
 func TestBasicAuthenticationMarshalYAML(t *testing.T) {
-	expectedConfig := fmt.Sprintf(`
-CurrentContext: %s
+	expectedConfig := fmt.Sprintf(`CurrentContext: %s
 Contexts:
   %s:
     Host: %s
@@ -18,8 +17,7 @@ Contexts:
     Debug: %v
     %s:
       Username: %s
-      Password: %s
-		`,
+      Password: %s`,
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
@@ -48,15 +46,14 @@ Contexts:
 		t.Fatal(err)
 	}
 
-	if expected, got := strings.TrimSpace(expectedConfig), strings.TrimSpace(string(gotConfig)); expected != got {
+	if expected, got := expectedConfig, string(gotConfig); expected != got {
 		t.Fatalf("expected raw yaml configuration to be:\n'%s'\nbut got:\n'%s'", expected, got)
 	}
 }
 
 // tests marshal and unmarshal.
 func testKerberosAuthenticationYAML(t *testing.T, expectedAuthStr string, expectedMethod KerberosAuthenticationMethod) {
-	expectedConfigStr := strings.TrimSpace(fmt.Sprintf(`
-        CurrentContext: %s
+	expectedConfigStr := strings.TrimSpace(fmt.Sprintf(`CurrentContext: %s
 Contexts:
   %s:
     Host: %s
@@ -64,8 +61,7 @@ Contexts:
     Insecure: %v
     Debug: %v
     %s:
-      %s: %s%s
-                `,
+      %s: %s%s`,
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
@@ -97,7 +93,7 @@ Contexts:
 		t.Fatal(err)
 	}
 
-	if expected, got := expectedConfigStr, strings.TrimSpace(string(gotConfig)); expected != got {
+	if expected, got := expectedConfigStr, string(gotConfig); expected != got {
 		t.Fatalf("expected raw yaml configuration to be:\n'%s'\nbut got:\n'%s'", expected, got)
 	}
 
