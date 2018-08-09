@@ -107,7 +107,7 @@ func (err ResourceError) String() string {
 }
 
 // Error returns the error's message body.
-// The result's first letter is always lowercase
+// The result's first letter is lowercase when the above rule is applied
 // and it never ends with examination points '.' or '!'.
 func (err ResourceError) Error() string {
 	chars := []rune(err.Body)
@@ -117,7 +117,14 @@ func (err ResourceError) Error() string {
 		return strings.ToLower(err.Body)
 	}
 
-	chars[0] = unicode.ToLower(chars[0])
+	// check for second first second chars as letters before lowercase the first one:
+	// if it's uppercase then skip the force-lowercase of the first letter of the error body,
+	// no need to check for status code or the whole word or the last letter of the word(<-at least as we know so far).
+	firstChar, secondChar := chars[0], chars[1]
+	if shouldLowercase := unicode.IsLetter(firstChar) && unicode.IsLetter(secondChar) && unicode.IsLower(secondChar); shouldLowercase {
+		chars[0] = unicode.ToLower(firstChar)
+	}
+
 	// check the size because the examination point may be a critical part of that small error,
 	// although currently we don't have an error like that at all.
 	if length > 2 {
