@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kataras/golog"
 )
@@ -62,8 +63,8 @@ func isOK(resp *http.Response) bool {
 		resp.StatusCode == http.StatusAccepted || /* see PauseConnector for the `StatusAccepted` */
 		(resp.Request.Method == http.MethodDelete && resp.StatusCode == http.StatusNoContent) || /* see RemoveConnector for the `StatusNoContnet` */
 		(resp.Request.Method == http.MethodPost && resp.StatusCode == http.StatusNoContent) || /* see Restart tasks for the `StatusNoContnet` */
-		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) || /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */
-		(resp.Request.Method == http.MethodDelete && ((resp.StatusCode == http.StatusForbidden) || (resp.StatusCode == http.StatusBadRequest))) /* for things like deletion if not proper user access or invalid value of something passed */
+		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) /*||*/ /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */
+	// (resp.Request.Method == http.MethodDelete && ((resp.StatusCode == http.StatusForbidden) || (resp.StatusCode == http.StatusBadRequest))) /* invalid value of something passed */
 }
 
 const (
@@ -99,20 +100,46 @@ type ResourceError struct {
 	Body       string `json:"message" header:"Message"`
 }
 
-// Error returns the detailed cause of the error.
-func (err ResourceError) Error() string {
-	return fmt.Sprintf("client: (%s: %s) failed with status code %d%s",
+// String returns the detailed cause of the error.
+func (err ResourceError) String() string {
+	return fmt.Sprintf("client: (%s: %s) failed with status code %d:\n%s",
 		err.Method, err.URI, err.StatusCode, err.Body)
+}
+
+// Error returns the error's message body.
+// The result's first letter is lowercase when the above rule is applied
+// and it never ends with examination points '.' or '!'.
+func (err ResourceError) Error() string {
+	chars := []rune(err.Body)
+	length := len(chars)
+
+	if length <= 1 {
+		return strings.ToLower(err.Body)
+	}
+
+	// check for second first second chars as letters before lowercase the first one:
+	// if it's uppercase then skip the force-lowercase of the first letter of the error body,
+	// no need to check for status code or the whole word or the last letter of the word(<-at least as we know so far).
+	firstChar, secondChar := chars[0], chars[1]
+	if shouldLowercase := unicode.IsLetter(firstChar) && unicode.IsLetter(secondChar) && unicode.IsLower(secondChar); shouldLowercase {
+		chars[0] = unicode.ToLower(firstChar)
+	}
+
+	// check the size because the examination point may be a critical part of that small error,
+	// although currently we don't have an error like that at all.
+	if length > 2 {
+		switch chars[length-1] {
+		case '.', '!':
+			chars = chars[0 : length-1]
+		}
+	}
+
+	return string(chars)
 }
 
 // Code returns the status code.
 func (err ResourceError) Code() int {
 	return err.StatusCode
-}
-
-// Message returns the message of the error or the whole body if it's unknown error.
-func (err ResourceError) Message() string {
-	return err.Body
 }
 
 // NewResourceError is just a helper to create a new `ResourceError` to return from custom calls, it's "cli-compatible".
@@ -125,6 +152,11 @@ func NewResourceError(statusCode int, uri, method, body string) ResourceError {
 		Method:     method,
 		Body:       body,
 	}
+}
+
+type jsonResourceError struct {
+	ErrorCode int    `json:"error_code"`
+	Message   string `json:"message"`
 }
 
 // Do is the lower level of a client call, manually sends an HTTP request to the lenses box backend based on the `Client#Config`
@@ -188,15 +220,21 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 		defer resp.Body.Close()
 		var errBody string
 
-		if strings.Contains(resp.Header.Get(contentTypeHeaderKey), "text/html") {
-			// if the body is html, then don't read it, it doesn't contain the raw info we need.
-		} else {
-			// else give the whole body to the error context.
+		if cType := resp.Header.Get(contentTypeHeaderKey); strings.Contains(cType, contentTypeJSON) ||
+			strings.Contains(cType, contentTypeSchemaJSON) {
+			// read it, it's an error in JSON format.
+			var jsonErr jsonResourceError
+			c.ReadJSON(resp, &jsonErr)
+			errBody = jsonErr.Message
+		}
+
+		if errBody == "" {
+			// else give the whole body to the error context, i.e from "text/plain", "text/html" etc.
 			b, err := c.ReadResponseBody(resp)
 			if err != nil {
 				errBody = " unable to read body: " + err.Error()
 			} else {
-				errBody = "\n" + string(b)
+				errBody = string(b)
 			}
 		}
 
@@ -253,9 +291,13 @@ func (c *Client) acquireResponseBodyStream(resp *http.Response) (io.ReadCloser, 
 	return reader, err
 }
 
-const bufN = 512
+// const bufN = 512
 
 // var errEmptyResponse = fmt.Errorf("")
+
+// ErrUnknownResponse is fired when unknown error caused an empty response, usually html content with 404 status code,
+// more information can be displayed if `ClientConfig#Debug` is enabled.
+var ErrUnknownResponse = fmt.Errorf("unknown")
 
 // ReadResponseBody is the lower-level method of client to read the result of a `Client#Do`, it closes the body stream.
 //
@@ -311,6 +353,14 @@ func (c *Client) ReadResponseBody(resp *http.Response) ([]byte, error) {
 
 	if c.Config.Debug {
 		rawBodyString := string(b)
+
+		if strings.Contains(resp.Header.Get(contentTypeHeaderKey), "text/html") {
+			// If debug will print the full body through "rawBodyString", but the error here is the same content,
+			// so no need to duplicate it.
+			// The error should be minimal in this case in order to be resolved by callers: `lenses.ErrUnknownResponse`, same for !debug.
+			err = ErrUnknownResponse
+		}
+
 		// print both body and error, because both of them may be formated by the `readResponseBody`'s caller.
 		golog.Debugf("Client#Do.resp:\n\tbody: %s\n\tstatus code: %d\n\terror: %v", rawBodyString, resp.StatusCode, err)
 	}
@@ -2912,11 +2962,11 @@ func (acl *ACL) Validate() error {
 		acl.Operation = ACLOperationAll
 	}
 
-	// upper the first letter here on the resourceType, permissionType and operation before any action,
+	// upper the all the letters here on the resourceType, permissionType and operation before any action,
 	// although kafka internally accepts both lowercase and uppercase.
-	acl.ResourceType = ACLResourceType(strings.Title(string(acl.ResourceType)))
-	acl.PermissionType = ACLPermissionType(strings.Title(string(acl.PermissionType)))
-	acl.Operation = ACLOperation(strings.Title(string(acl.Operation)))
+	acl.ResourceType = ACLResourceType(strings.ToTitle(string(acl.ResourceType)))
+	acl.PermissionType = ACLPermissionType(strings.ToTitle(string(acl.PermissionType)))
+	acl.Operation = ACLOperation(strings.ToTitle(string(acl.Operation)))
 
 	if !acl.Operation.isValidForResourceType(acl.ResourceType) {
 		validOps := ACLOperations[acl.ResourceType]
@@ -2960,6 +3010,12 @@ func (c *Client) CreateOrUpdateACL(acl ACL) error {
 		return err
 	}
 
+	// unlike with other calls this one returns a plain text with no authorize-type error message
+	// instead of 403, so make that check only on the acl API:
+	if resp.StatusCode == http.StatusBadRequest {
+		return fmt.Errorf("no authorizer is configured on the broker")
+	}
+
 	// note: the status code errors are checked in the `do` on every request.
 	return resp.Body.Close()
 }
@@ -2972,7 +3028,7 @@ func (c *Client) GetACLs() ([]ACL, error) {
 	}
 
 	// unlike with other calls this one returns a plain text with no authorize-type error message
-	// instead of 403, so make that check only in this call:
+	// instead of 403, so make that check only on the acl API:
 	if resp.StatusCode == http.StatusBadRequest {
 		return nil, fmt.Errorf("no authorizer is configured on the broker")
 	}
@@ -2996,6 +3052,12 @@ func (c *Client) DeleteACL(acl ACL) error {
 	resp, err := c.Do(http.MethodDelete, aclPath, contentTypeJSON, send)
 	if err != nil {
 		return err
+	}
+
+	// unlike with other calls this one returns a plain text with no authorize-type error message
+	// instead of 403, so make that check only on the acl API:
+	if resp.StatusCode == http.StatusBadRequest {
+		return fmt.Errorf("no authorizer is configured on the broker")
 	}
 
 	return resp.Body.Close()

@@ -107,6 +107,8 @@ func newRegisterAlertCommand() *cobra.Command {
 
 	bite.Prepend(cmd, bite.FileBind(&alert))
 
+	bite.CanBeSilent(cmd)
+
 	return cmd
 }
 
@@ -172,6 +174,7 @@ func newAlertSettingGroupCommand() *cobra.Command {
 	root.Flags().BoolVar(&mustEnable, "enable", false, "--enable")
 
 	bite.CanPrintJSON(root)
+	bite.CanBeSilent(root)
 
 	root.AddCommand(newGetAlertSettingConditionsCommand())
 	root.AddCommand(newAlertSettingConditionGroupCommand())
@@ -255,6 +258,8 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&cond.AlertID, "alert", 0, "--alert=1001")
 	cmd.Flags().StringVar(&cond.Condition, "condition", "", `--condition="lag >= 100000 on group group and topic topicA"`)
+
+	bite.CanBeSilent(cmd)
 
 	bite.Prepend(cmd, bite.FileBind(&cond))
 

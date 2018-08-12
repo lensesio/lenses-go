@@ -35,7 +35,14 @@ func ConfigMarshalYAML(c Config) ([]byte, error) {
 		}
 
 		result.WriteString(fmt.Sprintf("  %s:\n", contextKey))
-		b = bytes.Replace(b, newLineB, append(newLineB, []byte("    ")...), -1)
+		newLineWithMoreSpaces := append(newLineB, []byte("    ")...)
+		b = bytes.Replace(b, newLineB, newLineWithMoreSpaces, -1)
+		// remove trailing \n   but make a check because if it's only the context key
+		// but not content below it (it can happen if user mess up with his config) it would panic.
+		if len(b) > len(newLineWithMoreSpaces)+1 {
+			b = b[0 : len(b)-len(newLineWithMoreSpaces)]
+		}
+
 		result.Write(append([]byte("    "), b...))
 
 		if n < len(c.Contexts) {

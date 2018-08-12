@@ -90,6 +90,7 @@ func newCreateOrUpdateACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet
 
 	cmd.Flags().AddFlagSet(childrenFlagSet)
 
+	bite.CanBeSilent(cmd)
 	return cmd
 }
 
@@ -113,5 +114,7 @@ func newDeleteACLCommand(acl *lenses.ACL, childrenFlagSet *pflag.FlagSet, requir
 	}
 
 	cmd.Flags().AddFlagSet(childrenFlagSet)
+	bite.CanBeSilent(cmd)
+
 	return cmd
 }

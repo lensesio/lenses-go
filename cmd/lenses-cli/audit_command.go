@@ -27,8 +27,7 @@ func newGetAuditEntriesCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to access audit entries, user has no rights for this action")
-
+			// Audits entries are accesable for all roles atm.
 			withoutContentColumn := !bite.GetMachineFriendlyFlag(cmd) && !tableOnlyWithContent
 			if sse {
 				handler := func(entry lenses.AuditEntry) error {

@@ -30,7 +30,7 @@ var (
 		Description:     "Lenses-cli is the command line client for the Landoop's Lenses REST API.",
 		Version:         lenses.Version,
 		PersistentFlags: setupConfigManager,
-		ShowSpinner:     true,
+		ShowSpinner:     false,
 		Setup:           setup,
 	}
 
@@ -125,7 +125,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

@@ -3,13 +3,11 @@ package lenses
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 )
 
 func TestBasicAuthenticationMarshalYAML(t *testing.T) {
-	expectedConfig := fmt.Sprintf(`
-CurrentContext: %s
+	expectedConfig := fmt.Sprintf(`CurrentContext: %s
 Contexts:
   %s:
     Host: %s
@@ -18,8 +16,7 @@ Contexts:
     Debug: %v
     %s:
       Username: %s
-      Password: %s
-		`,
+      Password: %s`,
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
@@ -48,15 +45,14 @@ Contexts:
 		t.Fatal(err)
 	}
 
-	if expected, got := strings.TrimSpace(expectedConfig), strings.TrimSpace(string(gotConfig)); expected != got {
+	if expected, got := expectedConfig, string(gotConfig); expected != got {
 		t.Fatalf("expected raw yaml configuration to be:\n'%s'\nbut got:\n'%s'", expected, got)
 	}
 }
 
 // tests marshal and unmarshal.
 func testKerberosAuthenticationYAML(t *testing.T, expectedAuthStr string, expectedMethod KerberosAuthenticationMethod) {
-	expectedConfigStr := strings.TrimSpace(fmt.Sprintf(`
-        CurrentContext: %s
+	expectedConfigStr := fmt.Sprintf(`CurrentContext: %s
 Contexts:
   %s:
     Host: %s
@@ -64,8 +60,7 @@ Contexts:
     Insecure: %v
     Debug: %v
     %s:
-      %s: %s%s
-                `,
+      %s: %s%s`,
 		testCurrentContextField,
 		testCurrentContextField,
 		testHostField,
@@ -76,7 +71,7 @@ Contexts:
 		kerberosConfFileKeyYAML,
 		testKerberosConfFileField,
 		expectedAuthStr,
-	))
+	)
 
 	expectedConfig := Config{
 		CurrentContext: testCurrentContextField,
@@ -97,7 +92,7 @@ Contexts:
 		t.Fatal(err)
 	}
 
-	if expected, got := expectedConfigStr, strings.TrimSpace(string(gotConfig)); expected != got {
+	if expected, got := expectedConfigStr, string(gotConfig); expected != got {
 		t.Fatalf("expected raw yaml configuration to be:\n'%s'\nbut got:\n'%s'", expected, got)
 	}
 
@@ -120,8 +115,7 @@ func TestKerberosAuthenticationYAML_WithPassword(t *testing.T) {
       %s:
         Username: %s
         Password: %s
-        Realm: %s
-		`,
+        Realm: %s`,
 		kerberosWithPasswordMethodKeyYAML,
 		testUsernameField,
 		testPasswordField,
@@ -136,8 +130,7 @@ func TestKerberosAuthenticationYAML_WithKeytab(t *testing.T) {
       %s:
         Username: %s
         Realm: %s
-        KeytabFile: %s
-		`,
+        KeytabFile: %s`,
 		kerberosWithKeytabMethodKeyYAML,
 		testUsernameField,
 		testKerberosRealmField,
@@ -150,8 +143,7 @@ func TestKerberosAuthenticationYAML_WithKeytab(t *testing.T) {
 func TestKerberosAuthenticationYAML_FromCCache(t *testing.T) {
 	expectedAuthStr := fmt.Sprintf(`
       %s:
-        CCacheFile: %s
-		`,
+        CCacheFile: %s`,
 		kerberosFromCCacheMethodKeyYAML,
 		testKerberosCCacheField,
 	)

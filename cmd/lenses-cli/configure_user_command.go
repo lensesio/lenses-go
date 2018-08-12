@@ -129,12 +129,7 @@ func showOptionsForConfigurationContext(cmd *cobra.Command, name string) error {
 
 	if action == "delete" {
 		deleteCmd := newDeleteConfigurationContextCommand()
-		deleteCmd.SetArgs([]string{name})
-		if err := deleteCmd.Execute(); err != nil {
-			return err
-		}
-
-		return nil
+		return deleteCmd.RunE(deleteCmd, []string{name})
 	}
 
 	if action == "edit" {
@@ -238,6 +233,8 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 
 		},
 	}
+
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
