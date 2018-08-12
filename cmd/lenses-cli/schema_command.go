@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/landoop/lenses-go"
 
@@ -68,45 +70,102 @@ func newSchemasGroupCommand() *cobra.Command {
 				return nil
 			}
 
+			// Author's note: if you ever change this code please re-run it with go build -race && ./lenses-cli schemas.
+			getSchemaDetails := func(subject string, tableMode bool, schemas chan<- schemaView, errors chan<- error, wg *sync.WaitGroup) {
+				defer wg.Done()
+
+				sc, err := client.GetLatestSchema(subject)
+				if err != nil {
+					errors <- err
+					return
+				}
+
+				schema, err := newSchemaView(sc, !tableMode)
+				if err != nil {
+					errors <- err
+					return
+				}
+
+				schemas <- schema
+			}
+
 			var (
-				total   = len(subjects)
-				schemas = make([]schemaView, total)
+				schemas = make(chan schemaView)
+				errors  = make(chan error, len(subjects))
 			)
 
-			for idx, name := range subjects {
-				tablemode := bite.ExpectsFeedback(cmd)
+			wg := new(sync.WaitGroup)
+			wg.Add(len(subjects))
 
-				sc, err := client.GetLatestSchema(name)
-				if err != nil {
-					return err
-				}
+			tableMode := bite.ExpectsFeedback(cmd)
 
-				schema, err := newSchemaView(sc, !tablemode)
-				if err != nil {
-					return err
-				}
+			// collect schemas in their own context.
+			go func() {
+				var (
+					totalSchemas []schemaView
+					proceeds     uint64
+					total        = len(subjects)
+				)
 
-				if tablemode {
-					c := idx + 1
+				for sch := range schemas {
+					// note that we need the completed list of schemas
+					// in order to have all table features for all rows that may be useful for end-users,
+					// so we can't just print the incoming, we must wait to finish all fetch operations.
+					totalSchemas = append(totalSchemas, sch)
+
+					proceeds++
 					// move two columns forward,
 					// try to avoid first-pos blinking,
 					// blinking only when the number changes, the text shows 1 col after the bar,
 					// and when finish
 					// reposition of the cursor to the beginning and clean the view, so table can be rendered
 					// without any join headers.
-					fmt.Fprintf(os.Stdout, "\033[2C%d/%d\r", c, total) /* \033[23C */
-					if c == total {
-						// last, remove the prev line so we can show a clean table.
-						fmt.Fprintf(os.Stdout, "\n\033[1A\033[K")
-					}
+					//
+					// How to debug the order of proceeds:
+					// comment the line after wg.Wait(): fmt.Fprintf(os.Stdout, "\n\033[1A\033[K")
+					// remove the last \r from the below fmt.Pritnf.
+					fmt.Fprintf(os.Stdout, "\033[2C%d/%d\r", proceeds, total)
 				}
 
-				schemas[idx] = schema
+				// remove the prev line(the processing current/total line) so we can show a clean table or errors.
+				fmt.Fprintf(os.Stdout, "\n\033[1A\033[K")
+
+				if err := bite.PrintObject(cmd, totalSchemas); err != nil {
+					errors <- err
+				}
+
+				close(errors)
+			}()
+
+			for _, subject := range subjects {
+				go getSchemaDetails(subject, tableMode, schemas, errors, wg)
 			}
 
-			// return bite.PrintObject(cmd, bite.OutlineStringResults(cmd, "name", subjects))
-			// <- it works fine but better to show more info here:
-			return bite.PrintObject(cmd, schemas)
+			wg.Wait()
+
+			// close the schemas but not the errors yet, after all schemas we must make sure that we can still retrieve errors
+			// from the bite.PrintObject, although is extremely rare to error there.
+			close(schemas)
+
+			// collect any errors.
+			var (
+				errBody = new(bytes.Buffer)
+				errOL   int
+			)
+
+			for err := range errors {
+				errOL++
+				errBody.WriteString(fmt.Sprintf("%s%d. %v\n", strings.Repeat(" ", 2), errOL, err))
+			}
+
+			if errBody.Len() > 0 {
+				if tableMode {
+					return fmt.Errorf("\nErrors raised during the operation:\n%s", errBody.String())
+				}
+				return fmt.Errorf(errBody.String())
+			}
+
+			return nil
 		},
 	}
 

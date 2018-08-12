@@ -30,7 +30,7 @@ var (
 		Description:     "Lenses-cli is the command line client for the Landoop's Lenses REST API.",
 		Version:         lenses.Version,
 		PersistentFlags: setupConfigManager,
-		ShowSpinner:     true,
+		ShowSpinner:     false,
 		Setup:           setup,
 	}
 
