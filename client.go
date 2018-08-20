@@ -1479,7 +1479,7 @@ func (c *Client) DeleteTopicRecords(topicName string, fromPartition int, toOffse
 	return resp.Body.Close()
 }
 
-const updateTopicConfigPath = topicsPath + "/config/%s"
+const updateTopicConfigPath = "configs/topics/%s"
 
 // UpdateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
 type UpdateTopicPayload struct {

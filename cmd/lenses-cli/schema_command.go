@@ -153,6 +153,8 @@ func newSchemasGroupCommand() *cobra.Command {
 				errOL   int
 			)
 
+			// Author's note for future contributors, do not confuse about this style:
+			// this will block until we finish with the schemas goroutine -> see close(errors) above.
 			for err := range errors {
 				errOL++
 				errBody.WriteString(fmt.Sprintf("%s%d. %v\n", strings.Repeat(" ", 2), errOL, err))

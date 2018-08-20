@@ -11,7 +11,7 @@ import (
 )
 
 // Version is the current semantic version of the lenses client and cli.
-const Version = "2.1.8"
+const Version = "2.1.9"
 
 // ConnectionOption describes an optional runtime configurator that can be passed on `OpenConnection`.
 // Custom `ConnectionOption` can be used as well, it's just a type of `func(*lenses.Client)`.
