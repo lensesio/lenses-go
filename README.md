@@ -202,7 +202,7 @@ Detailed documentation can be found at [godocs](https://godoc.org/github.com/lan
 
 ## Versioning
 
-Current: **v2.1.8**
+Current: **v2.1.9**
 
 Read more about Semantic Versioning 2.0.0
 
