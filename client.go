@@ -1703,6 +1703,7 @@ type (
 		SQL string `json:"sql"` // header:"SQL"`
 
 		TopicValueDecoder string `json:"topicValueDecoder"` // header:"Topic Decoder"`
+		TopicKeyDecoder   string `json:"topicKeyDecoder"`   // header:"Topic Decoder"`
 		Pipeline          string `json:"pipeline"`          // header:"Pipeline"`
 
 		ToTopics               []string `json:"toTopics,omitempty"` // header:"To Topics"`
