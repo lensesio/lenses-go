@@ -96,7 +96,7 @@ func newLSQLCommand() *cobra.Command {
 				b := []byte(r.Value) // we care for the value here, which is a json raw string.
 				var in interface{}
 				if errR := json.Unmarshal(b, &in); errR != nil {
-					return errR // fail on first error.
+					return bite.PrintJSON(cmd, r)
 				}
 
 				// return printJSON(cmd, in)

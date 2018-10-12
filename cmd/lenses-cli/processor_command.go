@@ -170,7 +170,7 @@ func newProcessorCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&processor.Name, "name", "", "--name=processorName")
 	cmd.Flags().StringVar(&processor.ClusterName, "clusterName", "", `--clusterName="clusterName"`)
 	cmd.Flags().StringVar(&processor.Namespace, "namespace", "", `--namespace="namespace"`)
-	cmd.Flags().StringVar(&processor.SQL, "sql", "", `--sql="SET autocreate=true;INSERT INTO topic1 SELECT * FROM topicA WHERE  _ktype='BYTES' AND _vtype='AVRO'"`)
+	cmd.Flags().StringVar(&processor.SQL, "sql", "", `--sql="SET autocreate=true;INSERT INTO topic1 SELECT * FROM topicA"`)
 	cmd.Flags().IntVar(&processor.Runners, "runners", 1, "--runners=1")
 	cmd.Flags().StringVar(&processor.Pipeline, "pipeline", "", `--pipeline="pipeline" a label to apply to kubernetes processors, defaults to processor name`)
 

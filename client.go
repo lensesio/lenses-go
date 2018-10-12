@@ -862,12 +862,14 @@ func (c *Client) LSQL(
 		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
 		return nil
 	}, schemaAPIOption)
+
 	if err != nil {
 		return err
 	}
 
 	defer resp.Body.Close()
 	reader, err := c.acquireResponseBodyStream(resp)
+
 	if err != nil {
 		return err
 	}
@@ -886,7 +888,7 @@ func (c *Client) LSQL(
 		// if on debug mode just read the lines and continue, it wil make easier for third-party developers to watch the response.
 		if c.Config.Debug {
 			golog.Debugf("%s", string(line))
-			continue
+			//continue
 		}
 
 		if len(line) < shiftN+1 { // even more +1 for the actual event.
@@ -908,6 +910,7 @@ func (c *Client) LSQL(
 			break // ignore.
 		case recordPayloadType:
 			record := LSQLRecord{}
+
 			if err = json.Unmarshal(message, &record); err != nil {
 				// exit on first error here as well.
 				return err
@@ -916,6 +919,7 @@ func (c *Client) LSQL(
 			if err = recordHandler(record); err != nil {
 				return err
 			}
+
 			break
 		case stopPayloadType:
 			if !withStop {
@@ -1231,7 +1235,6 @@ const topicsPath = "api/topics"
 func (c *Client) GetTopics() (topics []Topic, err error) {
 	// # List of topics
 	// GET /api/topics
-	// https://docs.confluent.io/current/kafka-rest/docs/api.html#get--topics (in that doc it says a list of topic names but it returns the full topics).
 	resp, respErr := c.Do(http.MethodGet, topicsPath, "", nil)
 	if respErr != nil {
 		err = respErr
@@ -1532,6 +1535,22 @@ type Topic struct {
 	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
 }
 
+type TopicAsRequest struct {
+	TopicName            string             `json:"topicName" yaml:"topicName" header:"Name"`
+	Partitions           int                `json:"partitions" yaml:"topicName" header:"Part"`
+	Replication          int                `json:"replication" yaml:"topicName" header:"Repl"`
+	Config               []KV               `json:"config" yaml:"topicName" header:"Configs,count"`
+}
+
+func (c *Client) GetTopicAsRequest(topic Topic) TopicAsRequest {
+	return TopicAsRequest{
+		TopicName: topic.TopicName,
+		Partitions: topic.Partitions,
+		Replication: topic.Replication,
+		Config: topic.Config,
+	}
+}
+
 // ConsumersGroup describes the data that the `Topic`'s  `ConsumersGroup` field contains.
 type ConsumersGroup struct {
 	ID          string              `json:"id"`
@@ -1630,6 +1649,28 @@ type CreateProcessorPayload struct {
 	Pipeline    string `json:"pipeline" yaml:"Pipeline"` // defaults to Name if not set.
 }
 
+func (c *Client) ExportProcessor(processorID string) (CreateProcessorPayload, error) {
+
+	var res CreateProcessorPayload
+
+	if processorID == "" {
+		return res, errRequired("processorID")
+	}
+
+	path := fmt.Sprintf(processorPath+"/export", processorID)
+	resp, err := c.Do(http.MethodPut, path, "", nil)
+
+	if err != nil {
+		return res, err
+	}
+
+	if err = c.ReadJSON(resp, &res); err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
 // CreateProcessor creates a new LSQL processor.
 func (c *Client) CreateProcessor(name string, sql string, runners int, clusterName, namespace, pipeline string) error {
 	if name == "" {
@@ -1671,6 +1712,12 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 }
 
 type (
+	//ProcessorRequests describes the requests required to create the current processors
+	ProcessorRequests struct {
+		Targets []ProcessorTarget `json:"targets"`
+		Streams []CreateProcessorPayload `json:"streams"`
+	}
+
 	// ProcessorsResult describes the data that are being received from the `GetProcessors`.
 	ProcessorsResult struct {
 		Targets []ProcessorTarget `json:"targets"`
@@ -1702,12 +1749,13 @@ type (
 
 		SQL string `json:"sql"` // header:"SQL"`
 
+		TopicKeyDecoder   string `json:"topicKeyDecoder"`
 		TopicValueDecoder string `json:"topicValueDecoder"` // header:"Topic Decoder"`
-		TopicKeyDecoder   string `json:"topicKeyDecoder"`   // header:"Topic Decoder"`
 		Pipeline          string `json:"pipeline"`          // header:"Pipeline"`
 
 		ToTopics               []string `json:"toTopics,omitempty"` // header:"To Topics"`
 		FromTopics             []string `json:"fromTopics,omitempty"`
+		LastAction             string   `json:"lastAction"`
 		LastActionMessage      string   `json:"lastActionMsg,omitempty"`      // header:"Last Action"`
 		DeploymentErrorMessage string   `json:"deploymentErrorMsg,omitempty"` // header:"Depl Error"`
 
@@ -1870,8 +1918,6 @@ func (c *Client) DeleteProcessor(processorNameOrID string) error {
 
 //
 // Connector API
-// https://docs.confluent.io/current/connect/devguide.html
-// https://docs.confluent.io/current/connect/restapi.html
 // http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
 //
 
@@ -1879,7 +1925,6 @@ func (c *Client) DeleteProcessor(processorNameOrID string) error {
 // for the connector.
 //
 // For both send and receive:
-// https://docs.confluent.io/current/connect/restapi.html#post--connectors
 type ConnectorConfig map[string]interface{}
 
 // ConnectorTaskReadOnly is the type that returned
@@ -1897,7 +1942,6 @@ type ConnectorTaskReadOnly struct {
 
 // Connector contains the connector's information, both send and receive.
 type Connector struct {
-	// https://docs.confluent.io/current/connect/restapi.html#get--connectors-(string-name)
 	// Name of the created (or received) connector.
 	ClusterName string `json:"clusterName,omitempty" header:"Cluster"` // internal use only, not set by response.
 	Name        string `json:"name" header:"Name"`
@@ -1908,12 +1952,21 @@ type Connector struct {
 	Tasks []ConnectorTaskReadOnly `json:"tasks,omitempty" header:"Tasks,count"`
 }
 
+// ConnectorAsRequest contains the connector's information as a request
+type ConnectorAsRequest struct {
+	// Name of the created (or received) connector.
+	ClusterName string `json:"clusterName,omitempty" header:"Cluster"` // internal use only, not set by response.
+	Name        string `json:"name" header:"Name"`
+
+	// Config parameters for the connector
+	Config ConnectorConfig `json:"config,omitempty" header:"Configs,count"`
+}
+
 const connectorsPath = "api/proxy-connect/%s/connectors"
 
 // GetConnectors returns a list of active connectors names as list of strings.
 //
 // Visit http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
-// and https://docs.confluent.io/current/connect/restapi.html for a deeper understanding.
 func (c *Client) GetConnectors(clusterName string) (names []string, err error) {
 	if clusterName == "" {
 		err = errRequired("clusterName")
@@ -1979,7 +2032,6 @@ func (c *CreateUpdateConnectorPayload) ApplyAndValidateName() error {
 // name (string) – Name of the connector to create
 // config (map) – Config parameters for the connector. All values should be strings.
 //
-// Read more at: https://docs.confluent.io/current/connect/restapi.html#post--connectors
 //
 // Look `UpdateConnector` too.
 func (c *Client) CreateConnector(clusterName, name string, config ConnectorConfig) (connector Connector, err error) {
@@ -2054,7 +2106,7 @@ func (c *Client) UpdateConnector(clusterName, name string, config ConnectorConfi
 const connectorPath = connectorsPath + "/%s"
 
 // GetConnector returns the information about the connector.
-// See `Connector` type and read more at: https://docs.confluent.io/current/connect/restapi.html#get--connectors-(string-name)
+// See `Connector` type
 func (c *Client) GetConnector(clusterName, name string) (connector Connector, err error) {
 	if clusterName == "" {
 		err = errRequired("clusterName")
@@ -2106,7 +2158,6 @@ func (c *Client) GetConnectorConfig(clusterName, name string) (cfg ConnectorConf
 }
 
 // ConnectorState indicates the connector status task's state and connector's state.
-// As defined at: https://docs.confluent.io/current/connect/managing.html#connector-and-task-status
 type ConnectorState string
 
 const (
@@ -2268,7 +2319,6 @@ const (
 )
 
 // GetConnectorTasks returns a list of tasks currently running for the connector.
-// Read more at: https://docs.confluent.io/current/connect/restapi.html#get--connectors-(string-name)-tasks.
 func (c *Client) GetConnectorTasks(clusterName, name string) (m []map[string]interface{}, err error) {
 	if clusterName == "" {
 		return nil, errRequired("clusterName")
@@ -2304,7 +2354,7 @@ func (c *Client) GetConnectorTaskStatus(clusterName, name string, taskID int) (c
 	}
 
 	// # Get current status of a task
-	// GET /connectors/(string: name)/tasks/(int: taskid)/status in confluent
+	// GET /connectors/(string: name)/tasks/(int: taskid)/status
 	path := fmt.Sprintf(taskPath+"/status", clusterName, name, taskID)
 	resp, respErr := c.Do(http.MethodGet, path, "", nil)
 	if respErr != nil {
@@ -2373,7 +2423,6 @@ func (c *Client) GetConnectorPlugins(clusterName string) (cp []ConnectorPlugin, 
 
 //
 // Schemas (and Subjects) API
-// https://docs.confluent.io/current/schema-registry/docs/api.html
 //
 
 const schemaAPIVersion = "v1"
@@ -2382,7 +2431,6 @@ const contentTypeSchemaJSON = "application/vnd.schemaregistry." + schemaAPIVersi
 const subjectsPath = "api/proxy-sr/subjects"
 
 // GetSubjects returns a list of the available subjects(schemas).
-// https://docs.confluent.io/current/schema-registry/docs/api.html#subjects
 func (c *Client) GetSubjects() (subjects []string, err error) {
 	// # List all available subjects
 	// GET /api/proxy-sr/subjects
@@ -2653,7 +2701,6 @@ func (c *Client) DeleteLatestSubjectVersion(subject string) (int, error) {
 // `CompatibilityLevelNone`, `CompatibilityLevelFull`, `CompatibilityLevelForward`, `CompatibilityLevelBackward`
 // `CompatibilityLevelFullTransitive`, `CompatibilityLevelForwardTransitive`, `CompatibilityLevelBackwardTransitive`.
 //
-// Read https://docs.confluent.io/current/schema-registry/docs/api.html#compatibility for more.
 type CompatibilityLevel string
 
 const (
@@ -2882,7 +2929,6 @@ const (
 // ACLOperations is a map which contains the allowed ACL operations(values) per resource type(key).
 //
 // Based on:
-// https://docs.confluent.io/current/kafka/authorization.html#acl-format
 var ACLOperations = map[ACLResourceType][]ACLOperation{
 	ACLResourceTopic: {
 		ACLOperationAll,
@@ -4086,3 +4132,25 @@ func (c *Client) GetSupportedConnectors() ([]ConnectorInfoUI, error) {
 	err = c.ReadJSON(resp, &connectorsInfo)
 	return connectorsInfo, err
 }
+
+const (
+	topicExtractPath = "/api/topology/"
+)
+
+type TopicExtract struct {
+	Parents		[]string `json:"parents" yaml:"parents" header:"Parents"`
+	Decendants	[]string `json:"descendants" yaml:"descendants" header:"descendants"`
+}
+
+func (c *Client) GetTopicExtract(id string) ([]TopicExtract, error) {
+	var topics []TopicExtract
+
+	resp, err := c.Do(http.MethodGet, topicExtractPath + id, "", nil)
+	if err != nil {
+		return topics, err
+	}
+
+	err = c.ReadJSON(resp, &topics)
+	return topics, err
+}
+ 
