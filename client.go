@@ -515,7 +515,7 @@ type BoxConfig struct {
 	Version string `json:"lenses.version" header:"Version"`
 	IP      string `json:"lenses.ip" header:"IP"`
 	Port    int    `json:"lenses.port" header:"Port,text"`
-	JMXPort int    `json:"lenses.jmx.port" header:"JMX Port,text"`
+	JMXPort int    `json:"lenses.jmx.port,omitempty" header:"JMX Port,text"`
 
 	KafkaBrokers string `json:"lenses.kafka.brokers"`
 
