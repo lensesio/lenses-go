@@ -31,7 +31,7 @@ func ConfigMarshalYAML(c Config) ([]byte, error) {
 		n++
 		b, err := ClientConfigMarshalYAML(*clientConfig)
 		if err != nil {
-			return nil, fmt.Errorf("yaml write: error writing the context '%s': %v", contextKey, err)
+			return nil, fmt.Errorf("yaml write: error writing the context [%s]: %v", contextKey, err)
 		}
 
 		result.WriteString(fmt.Sprintf("  %s:\n", contextKey))
@@ -188,7 +188,7 @@ func ConfigUnmarshalYAML(b []byte, c *Config) error {
 				//  Value:yaml.MapSlice{
 				contextTree, ok := contextKeyItem.Value.(yaml.MapSlice)
 				if !ok || len(contextTree) == 0 {
-					return fmt.Errorf("yaml: unable to unmarshal context '%s', not a valid map type", contextKey)
+					return fmt.Errorf("yaml: unable to unmarshal context [%s], not a valid map type", contextKey)
 				}
 
 				clientConfig := new(ClientConfig)
@@ -206,7 +206,7 @@ func ConfigUnmarshalYAML(b []byte, c *Config) error {
 					// yaml.MapItem{Key:"Host", Value:"..."}
 					propertyKey, ok := contextPropertyItem.Key.(string)
 					if !ok {
-						return fmt.Errorf("yaml: expected property key '%v' to be a string", contextPropertyItem.Key)
+						return fmt.Errorf("yaml: expected property key [%v] to be a string", contextPropertyItem.Key)
 					}
 
 					isBasicAuth := propertyKey == basicAuthenticationKeyYAML
@@ -258,7 +258,7 @@ func ConfigUnmarshalYAML(b []byte, c *Config) error {
 
 				if clientConfig.Authentication == nil {
 					// don't allow empty auth ofc.
-					return fmt.Errorf("yaml: unknown or missing authentication key for context '%s'", contextKey)
+					return fmt.Errorf("yaml: unknown or missing authentication key for context [%s]", contextKey)
 				}
 
 				c.Contexts[contextKey] = clientConfig
@@ -320,7 +320,7 @@ func kerberosAuthenticationUnmarshalYAML(b []byte, auth *KerberosAuthentication)
 			}
 			auth.Method = method
 		default:
-			return fmt.Errorf("yaml: unexpected key: %s", key)
+			return fmt.Errorf("yaml: unexpected key: [%s]", key)
 		}
 	}
 

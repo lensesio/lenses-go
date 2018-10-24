@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/landoop/bite"
 	"fmt"
 	"os"
 	// "net/url"
@@ -10,14 +11,13 @@ import (
 	"github.com/landoop/lenses-go"
 
 	"github.com/kataras/golog"
-	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
-	"github.com/ghodss/yaml"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -35,7 +35,7 @@ const (
 	alertsPath = monitoringPath + "/alerts/"
 )
 
-var resourceName, namespace, clusterName, stdout, branchName string
+var resourceName, namespace, clusterName, branchName string
 
 func init() {
 	app.AddCommand(initRepoCommand())
@@ -57,23 +57,21 @@ func toYaml(o interface{}) ([]byte, error) {
 	return y, err
 }
 
-func toConsole(resource interface{}) {
-	y, err := toYaml(resource)
-
-	if err != nil {
-		golog.Error(err)
-	}
-
-	fmt.Println(string(y))
-}
-
-func writeYaml(path string, resource interface{}) {
+func writeYaml(basePath, fileName string, resource interface{}) error {
 
 	y, err := toYaml(resource)
 
 	if err != nil {
 		golog.Error(err)
+		return err
 	}
+
+	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+		golog.Error(fmt.Sprintf("Directory [%s] does not exist", basePath))
+		return err
+	}
+
+	path := fmt.Sprintf("%s/%s", basePath, fileName)
 
 	file, err := os.OpenFile(
 		path,
@@ -83,6 +81,7 @@ func writeYaml(path string, resource interface{}) {
 
 	if err != nil {
 		golog.Fatal(err)
+		return err
 	}
 	defer file.Close()
 
@@ -90,26 +89,100 @@ func writeYaml(path string, resource interface{}) {
 
 	if writeErr != nil {
 		golog.Fatal(writeErr)
+		return writeErr
 	}
+
+	return nil
 }
 
-func writeProcessor(id string) {
-	processor, err := client.ExportProcessor(id)
+
+func writeProcessor(cmd *cobra.Command, cluster, namespace, name string) error {
+	mode, err := client.GetExecutionMode()
+	if err != nil {
+		return err
+	}
+
+	if mode == lenses.ExecutionModeInProcess {
+		clusterName = "IN_PROC"
+		namespace = "lenses"
+	}
+
+	// no name set to get all processors
+	processors, err := client.GetProcessors()
 
 	if err != nil {
-		golog.Error(err)
-		golog.Error(err)
+		return err
 	}
 
-	// write to output
-	if stdout == "file" {
-		identifier := processorPath + "processor-" + strings.Replace(id, ".", "-", len(id))
-		writeYaml(identifier, processor)
-	} else {
-		println("\n---")
-		toConsole(processor)
+	for _, processor := range processors.Streams {
+
+		if clusterName != "" && clusterName != processor.ClusterName {
+			continue
+		}
+
+		if namespace != "" && namespace != processor.Namespace {
+			continue
+		}
+
+		if name != "" && name != processor.Name {
+			continue
+		}
+
+		request := processor.ProcessorAsRequest()
+
+		//get topics
+		topics, err := getAttachedTopics(processor.ID)
+
+		if err != nil {
+			golog.Error(err)
+			return err
+		}
+
+
+		if !bite.GetMachineFriendlyFlag(cmd) {
+
+			var fileName string
+
+			if mode == lenses.ExecutionModeInProcess {
+				fileName = processor.Name
+			} else if mode == lenses.ExecutionModeConnect {
+				fileName = fmt.Sprintf("processor-%s-%s.yaml", processor.ClusterName, processor.Name)
+			} else {
+				fileName = fmt.Sprintf("processor-%s-%s-%s.yaml", processor.ClusterName, processor.Namespace, processor.Name)
+			}
+
+			// trim so the yaml is a multiline string
+			request.SQL = strings.TrimSpace(request.SQL)
+
+			err := writeYaml(processorPath, fileName, request)
+			if err != nil {
+				golog.Error(err)
+				return err
+			}
+
+			// write topics
+			for _, topic := range topics {
+				fileName := fmt.Sprintf("topic-%s.yaml", topic.TopicName)
+				err := writeYaml(topicsPath, fileName, topic)
+
+				if err != nil {
+					golog.Error(err)
+					return err
+				}
+			}
+		} else {
+			println("\n---")
+			bite.PrintJSON(cmd, request)
+
+			golog.Info("Attached Topics")
+			for _, topic := range topics {
+				println("\n---")
+				bite.PrintJSON(cmd, topic)
+			}
+		}
 	}
 
+	return nil
 }
 
 func getAttachedTopics(id string) ([]lenses.TopicAsRequest, error) {
@@ -137,7 +210,8 @@ func getAttachedTopics(id string) ([]lenses.TopicAsRequest, error) {
 					return topics, err
 				}
 
-				topics = append(topics, client.GetTopicAsRequest(topic))
+				overrides := getTopicConfigOverrides(topic.Config)
+				topics = append(topics, topic.GetTopicAsRequest(overrides))
 			}
 		}
 	}
@@ -182,7 +256,7 @@ func createBranch(branchName string) error {
 // writeConnectors writes the connectors to files as yaml
 // If a clusterName is provided the connectors are filtered by clusterName
 // If a name is provided the connectors are filtered by connector name
-func writeConnectors(clusterName string, name string) error {
+func writeConnectors(cmd *cobra.Command, clusterName string, name string) error {
 	clusters, err := client.GetConnectClusters()
 	if err != nil {
 		golog.Error(err)
@@ -212,11 +286,7 @@ func writeConnectors(clusterName string, name string) error {
 			}
 
 			connector, err := client.GetConnector(cluster.Name, connectorName)
-			request := lenses.ConnectorAsRequest{
-				ClusterName: connector.ClusterName,
-				Name:        connector.Name,
-				Config:      connector.Config,
-			}
+			request := connector.ConnectorAsRequest()
 
 			if err != nil {
 				golog.Error(err)
@@ -231,23 +301,31 @@ func writeConnectors(clusterName string, name string) error {
 				return err
 			}
 
-			if stdout == "file" {
-				path := fmt.Sprintf("%sconnector-%s-%s.yaml", connectorPath, cluster.Name, connectorName)
-				writeYaml(path, request)
+			if !bite.GetMachineFriendlyFlag(cmd) {
+				fileName := fmt.Sprintf("connector-%s-%s.yaml", cluster.Name, connectorName)
+				err := writeYaml(connectorPath, fileName, request)
+				if err != nil {
+					golog.Error(err)
+					return err
+				}
 
 				// write topics
 				for _, topic := range topics {
-					path := fmt.Sprintf("%stopic-%s.yaml", topicsPath, topic.TopicName)
-					writeYaml(path, topic)
+					fileName := fmt.Sprintf("topic-%s.yaml", topic.TopicName)
+					err := writeYaml(topicsPath, fileName, topic)
+					if err != nil {
+						golog.Error(err)
+						return err
+					}
 				}
 			} else {
 				println("\n---")
-				toConsole(request)
+				bite.PrintJSON(cmd, request)
 
 				golog.Info("Attached Topics")
 				for _, topic := range topics {
 					println("\n---")
-					toConsole(topic)
+					bite.PrintJSON(cmd, topic)
 				}
 			}
 		}
@@ -255,8 +333,191 @@ func writeConnectors(clusterName string, name string) error {
 	return nil
 }
 
+func writeTopics(topicName string) error {
+
+	topics, err := client.GetTopics()
+
+	if err != nil {
+		return err
+	}
+
+	for _, topic := range topics {
+		overrides := getTopicConfigOverrides(topic.Config)
+		asRequest := topic.GetTopicAsRequest(overrides)
+		fileName := fmt.Sprintf("topic-%s.yaml", asRequest.TopicName)
+		writeYaml(topicsPath, fileName, asRequest)
+
+		if topicName == asRequest.TopicName {
+			break
+		}
+	}
+
+	return nil 
+}
+
+func getTopicConfigOverrides(configs []lenses.KV) []lenses.KV {
+	var overrides []lenses.KV
+	for _, kv := range configs {
+
+		if val, ok := kv["isDefault"]; ok {
+			if (val.(bool) == false) {
+				overrides = append(overrides, kv)
+			}
+		}
+	}
+
+	return overrides
+}
+
+// func writeQuotas(quoteType, quotaName string) error {
+
+// 	quotas, err := client.GetQuotas()
+
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	for _, quota := range quotas {
+// 		request := quota.GetQuotaAsRequest()
+// 		path := fmt.Sprintf("%squota-%s-%s", quotasPath, quoteType, entityName)
+// 		writeYaml(path, request)
+
+// 		if quotaName != "" || quotaName != "*" {
+// 			if quotaName == quota.EntityName {
+// 				if quoteType == quota.EntityType {
+// 					break
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+// func writeAlerts(alertName string) error {
+// 	alerts, err := client.GetAlerts()
+
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	for _, alert := range alerts {
+// 		request := alert.GetAlertAsRequest()
+// 		path := fmt.Sprintf("%salert-%s", alertsPath, alertName)
+// 		writeYaml(path, request)
+
+// 		if alertName == alert.Name {
+// 			break
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+// func writeACLs(name string) error {
+// 	acls, err := client.GetACLs()
+
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	for _, acl := range acls {
+// 		path := fmt.Sprintf("%sacl-%s", controlListsPath, name)
+// 		writeYaml(path, acl)
+
+// 		if name == acl.Name {
+// 			break
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+func addGitSupport(gitURL string) error {
+	repo, err := git.PlainOpen("")
+
+	if err == nil {
+		pwd, _ := os.Getwd()
+		golog.Error(fmt.Sprintf("Git repo already exists in directory [%s]", pwd))
+		return err
+	}
+
+	// initialise the git repo
+	repo, initErr := git.PlainInit("", false)
+
+	if initErr != nil {
+		golog.Error("A repo already exists")
+	}
+
+	file, err := os.OpenFile(
+			".gitignore",
+			os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
+			0666,
+	)
+	
+	if err != nil {
+		golog.Fatal(err)
+	}
+	defer file.Close()
+
+	file.WriteString("/export")	
+
+	readme, err := os.OpenFile(
+		"README.md",
+		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
+		0666,
+	)
+
+	if err != nil {
+		golog.Fatal(err)
+	}
+	defer readme.Close()
+
+	// write readme
+	readme.WriteString(`# Lenses Landscape
+
+This repo contains Lenses landscape resource descriptions described in yaml files
+	`)
+
+	wt, err := repo.Worktree()
+
+	if err != nil {
+		return err
+	}
+	
+	wt.Add(".gitignore")
+	wt.Add("landscape")
+	wt.Add("README.md")
+
+	golog.Info("Landscape directory structure created")
+
+	if gitURL != "" {
+		golog.Info("Setting remote to [" + gitURL + "]")
+		repo.CreateRemote(&config.RemoteConfig{
+			Name: "origin",
+			URLs: []string{gitURL},
+		})
+	}
+
+	return nil
+}
+
+func setupBranch(branchName string) error {
+	if branchName != "" {
+		err := createBranch(branchName)
+
+		if err != nil {
+			golog.Error(err)
+			return err
+		}
+	}
+
+	return nil
+}
+
 func initRepoCommand() *cobra.Command {
-	var gitURL, name string
+	var gitURL string
+	var gitSupport bool
 
 	cmd := &cobra.Command{
 		Use:              "init-repo",
@@ -275,29 +536,16 @@ func initRepoCommand() *cobra.Command {
 			createDirectory(quotasPath)
 			createDirectory(alertsPath)
 
-			// initialise the git repo
-			repo, err := git.PlainInit("", false)
-
-			if err != nil {
-				golog.Error("A repo already exists")
-			}
-
-			golog.Info("Landscape directory structure created")
-
-			if gitURL != "" {
-				golog.Info("Setting remote to [" + gitURL + "]")
-				repo.CreateRemote(&config.RemoteConfig{
-					Name: "origin",
-					URLs: []string{gitURL},
-				})
+			if gitSupport {
+				addGitSupport(gitURL)
 			}
 
 			return nil
 		},
 	}
 
+	cmd.Flags().BoolVar(&gitSupport, "git", false, "--git Initialize a git repo")
 	cmd.Flags().StringVar(&gitURL, "git-url", "", "--git-url=git@gitlab.com:landoop/demo-landscape.git Remote url to set for the repo, default is no remote")
-
 	return cmd
 }
 
@@ -316,20 +564,16 @@ func exportGroupCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&branchName, "name", "", "--name=my-pipeline The name of the branch to create in git repo, if not set no branch is created")
-	cmd.PersistentFlags().StringVar(&resourceName, "resource-name", "", "--resource-name=my-remote The resource name to export, defaults to all")
-	cmd.PersistentFlags().StringVar(&clusterName, "clusterName", "", "--clusterName=clusterName select by cluster name, available only in CONNECT and KUBERNETES mode")
-	cmd.PersistentFlags().StringVar(&namespace, "namespace", "", "--namespace=namespace select by namespace, available only in KUBERNETES mode")
-	cmd.PersistentFlags().StringVar(&stdout, "stdout", "file", "--output=console output to the console or file. Default is file.")
-
 	cmd.AddCommand(exportProcessorsCommand())
 	cmd.AddCommand(exportConnectorsCommand())
-
+	cmd.AddCommand(exportTopicsCommand())
+	cmd.AddCommand(exportAlertsCommand())
+	cmd.AddCommand(exportQuotasCommand())
+	cmd.AddCommand(exportAclsCommand())
 	return cmd
 }
 
 func exportProcessorsCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:              "processors",
 		Short:            "export processors",
@@ -337,61 +581,87 @@ func exportProcessorsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if branchName != "" {
-				err := createBranch(branchName)
-
-				if err != nil {
-					golog.Error(err)
-				}
-			}
-
-			mode, err := client.GetExecutionMode()
-			if err != nil {
-				return err
-			}
-
-			if mode == lenses.ExecutionModeInProcess {
-				clusterName = "IN_PROC"
-				namespace = "lenses"
-			}
-
-			if resourceName != "" {
-				identifier, err := client.LookupProcessorIdentifier("", resourceName, clusterName, namespace)
-
-				if err != nil {
-					bite.FriendlyError(cmd, errResourceNotFoundMessage, fmt.Sprintf("Unable to find processor [%s] in namespace [%s] in cluster [%s]", resourceName, namespace, clusterName))
-					return err
-				}
-
-				writeProcessor(identifier)
-				return nil
-			}
-
-			// no name set to get all processors
-			processors, err := client.GetProcessors()
-
-			if err != nil {
-				return err
-			}
-
-			for _, processor := range processors.Streams {
-
-				if clusterName != "" && clusterName != processor.ClusterName {
-					continue
-				}
-
-				if namespace != "" && namespace != processor.Namespace {
-					continue
-				}
-
-				writeProcessor(processor.ID)
-			}
-
+			writeProcessor(cmd, clusterName, namespace, resourceName)
 			return nil
 		},
 	}
 
+	cmd.Flags().StringVar(&resourceName, "resource-name", "", "--resource-name=my-processor The resource name to export, defaults to all")
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", "--clusterName=clusterName select by cluster name, available only in CONNECT and KUBERNETES mode")
+	cmd.Flags().StringVar(&namespace, "namespace", "", "--namespace=namespace select by namespace, available only in KUBERNETES mode")
+	return cmd
+}
+
+func exportTopicsCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:              "topics",
+		Short:            "export topics",
+		Example:          `export topics --resource-name my-topic`,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			writeTopics(resourceName)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&resourceName, "resource-name", "", "--resource-name=my-topic The resource name to export, defaults to all")
+	return cmd
+}
+
+func exportAlertsCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:              "alerts",
+		Short:            "export alerts",
+		Example:          `export alerts --resource-name my-alert`,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// writeAlerts(resourceName)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&resourceName, "resource-name", "", "--resource-name=my-alert The resource name to export, defaults to all")
+	return cmd
+}
+
+func exportAclsCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:              "acls",
+		Short:            "export acls",
+		Example:          `export acls --resource-name my-acls`,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// writeACLs(resourceName)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&resourceName, "resource-name", "", "--resource-name=my-acl The resource name to export, defaults to all")
+	return cmd
+}
+
+func exportQuotasCommand() *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:              "quotas",
+		Short:            "export quotas",
+		Example:          `export quota --resource-name my-quota`,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// writeQuotas(resourceName, "entity-type")
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&resourceName, "resource-name", "", "--resource-name=my-quota The resource name to export, defaults to all")
+	cmd.Flags().StringVar(&resourceName, "entity-type", "", "--entity-type=my-quota-entity-type The quota entity type name to export, defaults to all")
 	return cmd
 }
 
@@ -404,17 +674,12 @@ func exportConnectorsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if branchName != "" {
-				err := createBranch(branchName)
-
-				if err != nil {
-					golog.Error(err)
-				}
-			}
-			writeConnectors(clusterName, resourceName)
+			writeConnectors(cmd, clusterName, resourceName)
 			return nil
 		},
 	}
 
+	cmd.Flags().StringVar(&resourceName, "resource-name", "", "--resource-name=my-remote The resource name to export, defaults to all")
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", "--clusterName=clusterName select by cluster name, available only in CONNECT and KUBERNETES mode")
 	return cmd
 }

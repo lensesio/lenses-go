@@ -1079,7 +1079,7 @@ type TopicConfig struct {
 	// KV contains all the available topic configs keys as they sent by the backend,
 	// even if not declared into the struct,
 	// useful for debugging mostly, if somehow the available topic configs keys changed but structured data are not.
-	// Another use case is use them to accoblish custom formats, not really necessary for end-users.
+	// Another use case is use them to accomplish custom formats, not really necessary for end-users.
 	// It's used by the CLI to make sure that no invalid config key is passed into flags as well.
 	KV KV
 
@@ -1537,17 +1537,18 @@ type Topic struct {
 
 type TopicAsRequest struct {
 	TopicName            string             `json:"topicName" yaml:"topicName" header:"Name"`
-	Partitions           int                `json:"partitions" yaml:"topicName" header:"Part"`
-	Replication          int                `json:"replication" yaml:"topicName" header:"Repl"`
-	Config               []KV               `json:"config" yaml:"topicName" header:"Configs,count"`
+	Partitions           int                `json:"partitions" yaml:"partitions" header:"Part"`
+	Replication          int                `json:"replication" yaml:"replication" header:"Repl"`
+	Config               []KV               `json:"config" yaml:"config" header:"Configs,count"`
 }
 
-func (c *Client) GetTopicAsRequest(topic Topic) TopicAsRequest {
+// GetTopicAsRequest takes a topic returned from Lenses and transforms to a request
+func (topic *Topic) GetTopicAsRequest(config []KV) TopicAsRequest {
 	return TopicAsRequest{
 		TopicName: topic.TopicName,
 		Partitions: topic.Partitions,
 		Replication: topic.Replication,
-		Config: topic.Config,
+		Config: config,
 	}
 }
 
@@ -1641,34 +1642,23 @@ const processorsPath = "api/streams"
 
 // CreateProcessorPayload holds the data to be sent from `CreateProcessor`.
 type CreateProcessorPayload struct {
-	Name        string `json:"name" yaml:"Name"` // required
-	SQL         string `json:"sql" yaml:"SQL"`   // required
-	Runners     int    `json:"runners" yaml:"Runners"`
-	ClusterName string `json:"clusterName" yaml:"ClusterName"`
-	Namespace   string `json:"namespace" yaml:"Namespace"`
-	Pipeline    string `json:"pipeline" yaml:"Pipeline"` // defaults to Name if not set.
+	Name        string `json:"name"` // required
+	SQL         string `json:"sql"`   // required
+	Runners     int    `json:"runners"`
+	ClusterName string `json:"clusterName"`
+	Namespace   string `json:"namespace"`
+	Pipeline    string `json:"pipeline"` // defaults to Name if not set.
 }
 
-func (c *Client) ExportProcessor(processorID string) (CreateProcessorPayload, error) {
-
-	var res CreateProcessorPayload
-
-	if processorID == "" {
-		return res, errRequired("processorID")
+func (p *ProcessorStream) ProcessorAsRequest() CreateProcessorPayload {
+	return CreateProcessorPayload{
+		Name: p.Name,
+		SQL: p.SQL,
+		Runners: p.Runners,
+		ClusterName: p.ClusterName,
+		Namespace: p.Namespace,
+		Pipeline: p.Pipeline,
 	}
-
-	path := fmt.Sprintf(processorPath+"/export", processorID)
-	resp, err := c.Do(http.MethodPut, path, "", nil)
-
-	if err != nil {
-		return res, err
-	}
-
-	if err = c.ReadJSON(resp, &res); err != nil {
-		return res, err
-	}
-
-	return res, nil
 }
 
 // CreateProcessor creates a new LSQL processor.
@@ -1956,10 +1946,16 @@ type Connector struct {
 type ConnectorAsRequest struct {
 	// Name of the created (or received) connector.
 	ClusterName string `json:"clusterName,omitempty" header:"Cluster"` // internal use only, not set by response.
-	Name        string `json:"name" header:"Name"`
 
 	// Config parameters for the connector
 	Config ConnectorConfig `json:"config,omitempty" header:"Configs,count"`
+}
+
+func (connector *Connector) ConnectorAsRequest()  ConnectorAsRequest{
+	return ConnectorAsRequest{
+		ClusterName: connector.ClusterName,
+		Config: connector.Config,
+	}
 }
 
 const connectorsPath = "api/proxy-connect/%s/connectors"
@@ -3164,6 +3160,15 @@ type (
 		RequestPercentage string `json:"request_percentage" yaml:"RequestPercentage" header:"Request Percentage, ,number"`
 	}
 )
+
+func (q *Quota) GetQuotaAsRequest() QuotaConfig {
+	return QuotaConfig{
+		ProducerByteRate: q.Properties.ProducerByteRate,
+		ConsumerByteRate: q.Properties.ConsumerByteRate,
+		RequestPercentage: q.Properties.RequestPercentage,
+
+	}
+}
 
 const quotasPath = "api/quotas"
 

@@ -3,7 +3,7 @@ package main
 import (
 	"net/url"
 	"sort"
-	"strings"
+	//"strings"
 
 	"github.com/landoop/lenses-go"
 
@@ -27,6 +27,8 @@ func newGetProcessorsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+
 			result, err := client.GetProcessors()
 			if err != nil {
 				return err
@@ -37,39 +39,38 @@ func newGetProcessorsCommand() *cobra.Command {
 				return err
 			}
 
+			if mode == lenses.ExecutionModeInProcess {
+				clusterName = "IN_PROC"
+				namespace = "lenses"
+			}
+
 			sort.Slice(result.Streams, func(i, j int) bool {
 				return result.Streams[i].Name < result.Streams[j].Name
 			})
 
+			var final []lenses.ProcessorStream
+
 			for _, processor := range result.Streams {
-				if mode == lenses.ExecutionModeConnect || mode == lenses.ExecutionModeKubernetes {
 
-					if name != "" {
-						if processor.Name != name {
-							continue
-						}
-					}
-
-					if clusterName != "" {
-						if processor.ClusterName != clusterName {
-							continue
-						}
-					}
+				if clusterName != "" && clusterName != processor.ClusterName {
+					continue
 				}
-
-				if mode == lenses.ExecutionModeKubernetes {
-					if namespace != "" {
-						if processor.Namespace != namespace {
-							continue
-						}
-					}
+		
+				if namespace != "" && namespace != processor.Namespace {
+					continue
 				}
+		
+				if name != "" && name != processor.Name {
+					continue
+				}
+				
+				//processor.SQL = strings.Replace(processor.SQL, "\n", "", -1)
+				//processor.SQL = strings.Replace(processor.SQL, "   ", "", -1)
 
-				processor.SQL = strings.Replace(processor.SQL, "\n", "", -1)
-				processor.SQL = strings.Replace(processor.SQL, "   ", "", -1)
+				final = append(final, processor)
 			}
 
-			return bite.PrintObject(cmd, result.Streams)
+			return bite.PrintObject(cmd, final)
 		},
 	}
 
@@ -77,7 +78,6 @@ func newGetProcessorsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "--name=processorName select by processor name, available only in CONNECT and KUBERNETES mode")
 	cmd.Flags().StringVar(&clusterName, "clusterName", "", "--clusterName=clusterName select by cluster name, available only in CONNECT and KUBERNETES mode")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "--namespace=namespace select by namespace, available only in KUBERNETES mode")
-
 	// example: lenses-cli processors --query="[?ClusterName == 'IN_PROC'].Name | sort(@) | {Processor_Names_IN_PROC: join(', ', @)}"
 	bite.CanPrintJSON(cmd)
 

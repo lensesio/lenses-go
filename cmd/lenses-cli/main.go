@@ -27,7 +27,7 @@ var (
 var (
 	app = &bite.Application{
 		Name:            "lenses-cli",
-		Description:     "Lenses-cli is the command line client for the Landoop's Lenses REST API.",
+		Description:     "Lenses-cli is the command line client for the Lenses REST API.",
 		Version:         lenses.Version,
 		PersistentFlags: setupConfigManager,
 		ShowSpinner:     false,

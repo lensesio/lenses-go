@@ -208,7 +208,7 @@ func (c *LiveConnection) start() error {
 	conn, _, err := dialer.Dial(c.endpoint, nil)
 
 	if err != nil {
-		err = fmt.Errorf("connect failure for '%s': %v", c.config.Host, err)
+		err = fmt.Errorf("connect failure for [%s]: %v", c.config.Host, err)
 		golog.Debug(err)
 		return err
 	}
@@ -223,7 +223,7 @@ func (c *LiveConnection) start() error {
 			// the login, otherwise it sends the topic name for example after the subscribe.
 			err := json.Unmarshal(resp.Content, &c.authToken)
 			if err == nil {
-				golog.Debugf("login succeed, auth token: %s", c.authToken)
+				golog.Debugf("login succeed, auth token: [%s]", c.authToken)
 			}
 			return err
 		}
@@ -234,7 +234,7 @@ func (c *LiveConnection) start() error {
 
 	// then login.
 	if err := c.login(); err != nil {
-		err = fmt.Errorf("login failure: %v", err)
+		err = fmt.Errorf("login failure: [%v]", err)
 		golog.Debug(err)
 		return err
 	}
@@ -305,11 +305,11 @@ func (c *LiveConnection) readLoop() {
 					c.sendErr(err)
 					continue
 				}
-				c.sendErr(fmt.Errorf("live: read json: %v", err))
+				c.sendErr(fmt.Errorf("live: read json: [%v]", err))
 				continue
 			}
 
-			golog.Debugf("read: %#+v", resp)
+			golog.Debugf("read: [%#+v]", resp)
 
 			// fire.
 			c.mu.RLock()
