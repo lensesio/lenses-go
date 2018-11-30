@@ -176,7 +176,7 @@ func (m *configurationManager) load() (bool, error) {
 	}
 
 	if c.CurrentContext != "" && !c.CurrentContextExists() {
-		return false, fmt.Errorf("unknown context '%s' given, please use the `configure --context="+c.CurrentContext+" --reset`", c.CurrentContext)
+		return false, fmt.Errorf("unknown context [%s] given, please use the `configure --context="+c.CurrentContext+" --reset`", c.CurrentContext)
 	}
 
 	return c.IsValid(), nil
@@ -197,7 +197,7 @@ func (m *configurationManager) save() error {
 	// m.removeTokens()
 	out, err := lenses.ConfigMarshalYAML(c)
 	if err != nil { // should never happen.
-		return fmt.Errorf("unable to marshal the configuration, error: %v", err)
+		return fmt.Errorf("unable to marshal the configuration, error: [%v]", err)
 	}
 
 	if m.filepath == "" {
@@ -211,7 +211,7 @@ func (m *configurationManager) save() error {
 	fileMode := os.FileMode(0600)
 	// if file exists it overrides it.
 	if err = ioutil.WriteFile(m.filepath, out, fileMode); err != nil {
-		return fmt.Errorf("unable to create the configuration file for your system, error: %v", err)
+		return fmt.Errorf("unable to create the configuration file for your system, error: [%v]", err)
 	}
 
 	return nil

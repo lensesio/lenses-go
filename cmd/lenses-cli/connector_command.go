@@ -85,7 +85,7 @@ func newConnectorsCommand() *cobra.Command {
 			} else {
 				names, err := client.GetConnectors(clusterName)
 				if err != nil {
-					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve connectors, cluster with name '%s' does not exist", clusterName)
+					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve connectors, cluster with name [%s] does not exist", clusterName)
 					return err
 				}
 
@@ -112,26 +112,7 @@ func newConnectorsCommand() *cobra.Command {
 			}
 
 			// if json output requested, create a json object which is the group of cluster:[]connectors and print as json.
-			if bite.GetMachineFriendlyFlag(cmd) {
-				connectors := make(map[string][]lenses.Connector, len(connectorNames))
-
-				for cluster, names := range connectorNames {
-					sort.Strings(names)
-
-					for _, name := range names {
-						connector, err := client.GetConnector(cluster, name)
-						if err != nil {
-							fmt.Fprintf(cmd.OutOrStderr(), "get connector error: %v\n", err)
-							continue
-						}
-
-						connectors[cluster] = append(connectors[cluster], connector)
-
-					}
-				}
-				return bite.PrintJSON(cmd, connectors)
-			}
-
+			
 			// if table mode view, select all connectors as a list,
 			// do not make the group "visual" based on cluster name here (still they are grouped).
 			var connectors []lenses.Connector
@@ -140,7 +121,7 @@ func newConnectorsCommand() *cobra.Command {
 				for _, name := range names {
 					connector, err := client.GetConnector(cluster, name)
 					if err != nil {
-						fmt.Fprintf(cmd.OutOrStderr(), "get connector error: %v\n", err)
+						fmt.Fprintf(cmd.OutOrStderr(), "get connector error: [%v]\n", err)
 						continue
 					}
 
@@ -283,7 +264,7 @@ func newConnectorGroupCommand() *cobra.Command {
 
 			connector, err := client.GetConnector(clusterName, name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "connector '%s:%s' does not exist", clusterName, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "connector [%s:%s] does not exist", clusterName, name)
 				return err
 			}
 
@@ -338,7 +319,7 @@ func newConnectorCreateCommand() *cobra.Command {
 				if err := bite.TryReadFile(configRaw, &connector.Config); err != nil {
 					// from flag as json.
 					if err = json.Unmarshal([]byte(configRaw), &connector.Config); err != nil {
-						return fmt.Errorf("unable to unmarshal the config: %v", err)
+						return fmt.Errorf("unable to unmarshal the config: [%v]", err)
 					}
 				}
 			}
@@ -348,7 +329,7 @@ func newConnectorCreateCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Connector %s created", connector.Name)
+			return bite.PrintInfo(cmd, "Connector [%s] created", connector.Name)
 		},
 	}
 
@@ -387,7 +368,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 				if err := bite.TryReadFile(configRaw, &connector.Config); err != nil {
 					// from flag as json.
 					if err = json.Unmarshal([]byte(configRaw), &connector.Config); err != nil {
-						return fmt.Errorf("unable to unmarshal the config: %v", err)
+						return fmt.Errorf("unable to unmarshal the config: [%v]", err)
 					}
 				}
 			}
@@ -395,25 +376,25 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 			// for any case.
 			existingConnector, err := client.GetConnector(connector.ClusterName, connector.Name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "connector '%s:%s' does not exist", connector.ClusterName, connector.Name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "connector [%s:%s] does not exist", connector.ClusterName, connector.Name)
 				return err
 			}
 
 			if existingConnector.Config != nil {
 				if existingNameValue := existingConnector.Config["name"]; existingNameValue != connector.Name {
-					return fmt.Errorf(`connector config["name"] '%s' does not match with the existing one '%s'`, connector.Name, existingNameValue)
+					return fmt.Errorf(`connector config["name"] [%s] does not match with the existing one [%s]`, connector.Name, existingNameValue)
 				}
 			}
 
 			updatedConnector, err := client.UpdateConnector(connector.ClusterName, connector.Name, connector.Config)
 			if err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to update connector '%s:%s', the action requires 'Write' permissions", connector.ClusterName, connector.Name)
+				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to update connector [%s:%s], the action requires 'Write' permissions", connector.ClusterName, connector.Name)
 				return err
 			}
 
 			//  why we print it back based on the --silent? Because of the connector.Tasks.
 			if !bite.ExpectsFeedback(cmd) {
-				bite.PrintInfo(cmd, "Connector %s updated\n\n", connector.Name)
+				bite.PrintInfo(cmd, "Connector [%s] updated\n\n", connector.Name)
 				return bite.PrintObject(cmd, updatedConnector)
 			}
 
@@ -449,7 +430,7 @@ func newConnectorGetConfigCommand() *cobra.Command {
 
 			cfg, err := client.GetConnectorConfig(clusterName, name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve config, connector '%s:%s' does not exist", clusterName, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve config, connector [%s:%s] does not exist", clusterName, name)
 				return err
 			}
 
@@ -482,7 +463,7 @@ func newConnectorGetStatusCommand() *cobra.Command {
 
 			cs, err := client.GetConnectorStatus(clusterName, name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve status, connector '%s:%s' does not exist", clusterName, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve status, connector [%s:%s] does not exist", clusterName, name)
 				return err
 			}
 
@@ -514,12 +495,12 @@ func newConnectorPauseCommand() *cobra.Command {
 			}
 
 			if err := client.PauseConnector(clusterName, name); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart connector '%s:%s' due the required permissions", clusterName, name)
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to pause, connector '%s:%s' does not exist", clusterName, name)
+				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart connector [%s:%s] due the required permissions", clusterName, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to pause, connector [%s:%s] does not exist", clusterName, name)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Connector %s:%s paused", clusterName, name)
+			return bite.PrintInfo(cmd, "Connector [%s:%s] paused", clusterName, name)
 		},
 	}
 
@@ -545,12 +526,12 @@ func newConnectorResumeCommand() *cobra.Command {
 			}
 
 			if err := client.ResumeConnector(clusterName, name); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to resume connector '%s:%s' due the required permissions", clusterName, name)
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to resume, connector '%s:%s' does not exist", clusterName, name)
+				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to resume connector [%s:%s] due the required permissions", clusterName, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to resume, connector [%s:%s] does not exist", clusterName, name)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Connector %s:%s resumed", clusterName, name)
+			return bite.PrintInfo(cmd, "Connector [%s:%s] resumed", clusterName, name)
 		},
 	}
 
@@ -576,12 +557,12 @@ func newConnectorRestartCommand() *cobra.Command {
 			}
 
 			if err := client.RestartConnector(clusterName, name); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart connector '%s:%s' due the required permissions", clusterName, name)
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to restart, connector '%s:%s' does not exist", clusterName, name)
+				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart connector [%s:%s] due the required permissions", clusterName, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to restart, connector [%s:%s] does not exist", clusterName, name)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Connector %s:%s restarted", clusterName, name)
+			return bite.PrintInfo(cmd, "Connector [%s:%s] restarted", clusterName, name)
 		},
 	}
 
@@ -608,7 +589,7 @@ func newConnectorGetTasksCommand() *cobra.Command {
 
 			tasksMap, err := client.GetConnectorTasks(clusterName, name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve tasks, connector '%s:%s' does not exist", clusterName, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve tasks, connector [%s:%s] does not exist", clusterName, name)
 				return err
 			}
 
@@ -702,7 +683,7 @@ func newConnectorTaskRestartCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Connector task %s:%s:%d restarted", clusterName, name, taskID)
+			return bite.PrintInfo(cmd, "Connector task [%s:%s:%d] restarted", clusterName, name, taskID)
 		},
 	}
 
@@ -730,12 +711,12 @@ func newConnectorDeleteCommand() *cobra.Command {
 			}
 
 			if err := client.DeleteConnector(clusterName, name); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete connector '%s:%s', the action requires 'Write' permissions", clusterName, name)
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, connector '%s:%s' does not exist", clusterName, name)
+				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete connector [%s:%s], the action requires 'Write' permissions", clusterName, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, connector [%s:%s] does not exist", clusterName, name)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Connector %s:%s deleted", clusterName, name)
+			return bite.PrintInfo(cmd, "Connector [%s:%s] deleted", clusterName, name)
 		},
 	}
 

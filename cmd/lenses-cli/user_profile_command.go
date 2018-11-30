@@ -99,11 +99,11 @@ func newCreateUserProfilePropertyValueCommand() *cobra.Command {
 
 			return walkPropertyValueFromArgs(args, func(property, value string) error {
 				if err := client.CreateUserProfilePropertyValue(property, value); err != nil {
-					bite.FriendlyError(cmd, errResourceInternal, "unable to add a user profile value '%s' for property '%s'", value, property)
+					bite.FriendlyError(cmd, errResourceInternal, "unable to add a user profile value [%s] for property [%s]", value, property)
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "User profile value: '%s' for property: '%s' added", value, property)
+				return bite.PrintInfo(cmd, "User profile value: [%s] for property: [%s] added", value, property)
 			})
 		},
 	}
@@ -124,11 +124,11 @@ func newDeleteUserProfilePropertyValueCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return walkPropertyValueFromArgs(args, func(property, value string) error {
 				if err := client.DeleteUserProfilePropertyValue(property, value); err != nil {
-					bite.FriendlyError(cmd, errResourceInternal, "unable to remove the user profile value '%s' from property '%s'", value, property)
+					bite.FriendlyError(cmd, errResourceInternal, "unable to remove the user profile value [%s] from property [%s]", value, property)
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "User profile value: '%s' from property: '%s' removed", value, property)
+				return bite.PrintInfo(cmd, "User profile value: [%s] from property: [%s] removed", value, property)
 			})
 		},
 	}

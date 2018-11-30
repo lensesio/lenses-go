@@ -37,7 +37,7 @@ func newGetAlertsCommand() *cobra.Command {
 				return err
 			}
 
-			// return printJSON(cmd, alerts)
+			//return bite.PrintJSON(cmd, alerts)
 			return bite.PrintObject(cmd, alerts)
 		},
 	}
@@ -90,7 +90,7 @@ func newRegisterAlertCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Alert with ID %d registered", alert.AlertID)
+			return bite.PrintInfo(cmd, "Alert with ID [%d] registered", alert.AlertID)
 		},
 	}
 
@@ -148,14 +148,14 @@ func newAlertSettingGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bite.FriendlyError(cmd, errResourceNotFoundMessage, "alert setting with id %d does not exist", id)
+			bite.FriendlyError(cmd, errResourceNotFoundMessage, "alert setting with id [%d] does not exist", id)
 
 			if mustEnable {
 				if err := client.EnableAlertSetting(id); err != nil {
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "Alert setting %d enabled", id)
+				return bite.PrintInfo(cmd, "Alert setting [%d] enabled", id)
 			}
 
 			settings, err := client.GetAlertSetting(id)
@@ -194,7 +194,7 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conds, err := client.GetAlertSettingConditions(alertID)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve conditions, alert setting with id %d does not exist", alertID)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve conditions, alert setting with id [%d] does not exist", alertID)
 				return err
 			}
 
@@ -227,22 +227,42 @@ func newAlertSettingConditionGroupCommand() *cobra.Command {
 	return rootSub
 }
 
-type alertSettingConditionPayload struct {
-	AlertID   int    `json:"alert" yaml:"Alert"`
-	Condition string `json:"condition" yaml:"Condition"`
+type AlertSettingConditionPayloads struct {
+	AlertID   int    `json:"alert" yaml:"alert"`
+	Conditions []string `json:"conditions" yaml:"conditions"`
+}
+
+type AlertSettingConditionPayload struct {
+	AlertID   int    `json:"alert" yaml:"alert"`
+	Condition string `json:"condition" yaml:"condition"`
 }
 
 func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
-	var cond alertSettingConditionPayload
+	var conds AlertSettingConditionPayloads
+	var cond AlertSettingConditionPayload
 
 	cmd := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
-		Short:            "Create or Update an alert setting's condition",
-		Example:          `alert setting condition set --alert=1001 --condition="lag >= 100000 on group group and topic topicA" or alert setting condition set ./alert_cond.yml`,
+		Short:            "Create or Update an alert setting's condition or load from file",
+		Example:          `alert setting condition set --alert=1001 --condition="lag >= 100000or alert setting condition set ./alert_cond.yml`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			
+				
+			if len(conds.Conditions) > 0 {
+				alertID := conds.AlertID
+					for _, condition := range conds.Conditions {
+						err := client.CreateOrUpdateAlertSettingCondition(alertID, condition)
+						if err != nil {
+							return err
+						}
+						bite.PrintInfo(cmd, "Condition [%s] added", condition)
+				}
+				return nil
+			}
+
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
 				return err
 			}
@@ -252,7 +272,7 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Condition for alert setting %d updated", cond.AlertID)
+			return bite.PrintInfo(cmd, "Condition [%s] added", cond.Condition)
 		},
 	}
 
@@ -261,7 +281,7 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 
 	bite.CanBeSilent(cmd)
 
-	bite.Prepend(cmd, bite.FileBind(&cond))
+	bite.Prepend(cmd, bite.FileBind(&conds))
 
 	return cmd
 }
@@ -281,11 +301,11 @@ func newDeleteAlertSettingConditionCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := client.DeleteAlertSettingCondition(alertID, conditionUUID)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete condition, alert setting with id %d or condition with UUID '%s' does not exist", alertID, conditionUUID)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete condition, alert setting with id [%d] or condition with UUID [%s] does not exist", alertID, conditionUUID)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Condition '%s' for alert setting %d deleted", conditionUUID, alertID)
+			return bite.PrintInfo(cmd, "Condition [%s] for alert setting [%d] deleted", conditionUUID, alertID)
 		},
 	}
 

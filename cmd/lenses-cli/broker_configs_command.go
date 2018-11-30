@@ -77,7 +77,7 @@ func newSetDynamicClusterConfigsCommand() *cobra.Command {
 			if err := bite.TryReadFile(configsRaw, &configs); err != nil {
 				// from flag as json.
 				if err = json.Unmarshal([]byte(configsRaw), &configs); err != nil {
-					return fmt.Errorf("unable to unmarshal the configs: %v. Try using a yaml or json file instead", err)
+					return fmt.Errorf("unable to unmarshal the configs: [%v]. Try using a yaml or json file instead", err)
 				}
 			}
 
@@ -112,14 +112,14 @@ func newDeleteDynamicClusterConfigsCommand() *cobra.Command {
 
 			bite.FriendlyError(cmd, errResourceInternal, "failed to retrieve cluster configurations")
 			keysStr := strings.Join(keysToBeReseted, ", ")
-			bite.FriendlyError(cmd, errResourceNotGoodMessage, "unknown keys where provided: %s", keysStr)
+			bite.FriendlyError(cmd, errResourceNotGoodMessage, "unknown keys where provided: [%s]", keysStr)
 
 			err := client.DeleteDynamicClusterConfigs(keysToBeReseted...)
 			if err != nil {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Cluster configs %s reseted", keysStr)
+			return bite.PrintInfo(cmd, "Cluster configs [%s] reseted", keysStr)
 		},
 	}
 
@@ -150,8 +150,8 @@ func newGetDynamicBrokerConfigsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bite.FriendlyError(cmd, errResourceInternal, "could not retrieve configurations for broker: %d", brokerID)
-			bite.FriendlyError(cmd, errResourceNotFoundMessage, "could not retrieve broker: %d", brokerID)
+			bite.FriendlyError(cmd, errResourceInternal, "could not retrieve configurations for broker: [%d]", brokerID)
+			bite.FriendlyError(cmd, errResourceNotFoundMessage, "could not retrieve broker: [%d]", brokerID)
 
 			configs, err := client.GetDynamicBrokerConfigs(brokerID)
 			if err != nil {
@@ -191,7 +191,7 @@ func newSetDynamicBrokerConfigsCommand() *cobra.Command {
 			if err := bite.TryReadFile(configsRaw, &configs); err != nil {
 				// from flag as json.
 				if err = json.Unmarshal([]byte(configsRaw), &configs); err != nil {
-					return fmt.Errorf("unable to unmarshal the configs: %v. Try using a yaml or json file instead", err)
+					return fmt.Errorf("unable to unmarshal the configs: [%v]. Try using a yaml or json file instead", err)
 				}
 			}
 
@@ -200,7 +200,7 @@ func newSetDynamicBrokerConfigsCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Configs updated for broker with id: %d", brokerID)
+			return bite.PrintInfo(cmd, "Configs updated for broker with id: [%d]", brokerID)
 		},
 	}
 
@@ -224,21 +224,21 @@ func newDeleteDynamicBrokerConfigsCommand() *cobra.Command {
 		Example:          `broker configs delete --broker=brokerID log.cleaner.threads compression.type snappy`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, keysToBeReseted []string) error {
-			if len(keysToBeReseted) == 0 {
-				return bite.PrintInfo(cmd, "keys are required, pass the config's keys to be removed/reseted to their default values through command's arguments separated by space")
+		RunE: func(cmd *cobra.Command, keysToBeReset []string) error {
+			if len(keysToBeReset) == 0 {
+				return bite.PrintInfo(cmd, "keys are required, pass the config's keys to be removed/reset to their default values through command's arguments separated by space")
 			}
 
-			bite.FriendlyError(cmd, errResourceInternal, "could not retrieve configurations for broker: %d", brokerID)
-			keysStr := strings.Join(keysToBeReseted, ", ")
-			bite.FriendlyError(cmd, errResourceNotGoodMessage, "unknown keys where provided: %s", keysStr)
+			bite.FriendlyError(cmd, errResourceInternal, "could not retrieve configurations for broker: [%d]", brokerID)
+			keysStr := strings.Join(keysToBeReset, ", ")
+			bite.FriendlyError(cmd, errResourceNotGoodMessage, "unknown keys where provided: [%s]", keysStr)
 
-			err := client.DeleteDynamicBrokerConfigs(brokerID, keysToBeReseted...)
+			err := client.DeleteDynamicBrokerConfigs(brokerID, keysToBeReset...)
 			if err != nil {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Configs %s reseted for broker with id: %d", keysStr, brokerID)
+			return bite.PrintInfo(cmd, "Configs [%s] reseted for broker with id: [%d]", keysStr, brokerID)
 		},
 	}
 

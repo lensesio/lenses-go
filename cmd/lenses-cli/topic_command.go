@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -25,9 +26,10 @@ type topicView struct {
 
 func newTopicView(cmd *cobra.Command, topic lenses.Topic) (t topicView) {
 	t.Topic = topic
+	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
 	// don't spend time here if we are not in the machine-friendly mode, table mode does not show so much details and couldn't be, schemas are big.
-	if !bite.GetMachineFriendlyFlag(cmd) {
+	if output != "JSON" && output != "YAML" {
 		return
 	}
 
@@ -98,8 +100,6 @@ func newTopicsGroupCommand() *cobra.Command {
 			}
 
 			// return printJSON(cmd, topics)
-			// lenses-cli topics --machine-friendly will print all information as JSON,
-			// lenses-cli topics [--machine-friend=false] will print the necessary(struct fields tagged as "header") information as Table.
 			return bite.PrintObject(cmd, topicsView, func(t topicView) bool {
 				return !t.IsControlTopic // on JSON we print everything.
 			})
@@ -202,7 +202,7 @@ func newTopicsMetadataSubgroupCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if topicName != "" {
 				// view single.
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve topic's metadata for '%s', it does not exist", topicName)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve topic's metadata for [%s], it does not exist", topicName)
 				// it does not return error if topic does not exists, it returns status code 200, so we have to manually fetch for the topic first.
 				_, err := client.GetTopic(topicName)
 				if err != nil {
@@ -269,11 +269,11 @@ func newTopicMetadataDeleteCommand() *cobra.Command {
 			}
 
 			if err := client.DeleteTopicMetadata(topicName); err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, metadata for topic '%s' does not exist", topicName)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, metadata for topic [%s] does not exist", topicName)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Metadata for topic '%s' deleted", topicName)
+			return bite.PrintInfo(cmd, "Metadata for topic [%s] deleted", topicName)
 		},
 	}
 
@@ -300,7 +300,7 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 			}
 
 			// it will fire 404 on the newest API if topic does not exist.
-			bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to set metadata for topic '%s'. Topic does not exist", meta.TopicName)
+			bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to set metadata for topic [%s]. Topic does not exist", meta.TopicName)
 
 			// older api does not make that check, so do it manually ^.
 			if _, err := client.GetTopic(meta.TopicName); err != nil {
@@ -311,7 +311,7 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Metadata for topic '%s' created", meta.TopicName)
+			return bite.PrintInfo(cmd, "Metadata for topic [%s] created", meta.TopicName)
 		},
 	}
 
@@ -342,7 +342,7 @@ func newTopicGroupCommand() *cobra.Command {
 			// default is the retrieval of the particular topic info.
 			topic, err := client.GetTopic(topicName)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "topic with name: '%s' does not exist", topicName)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "topic with name: [%s] does not exist", topicName)
 				return err
 			}
 
@@ -386,17 +386,17 @@ func newTopicCreateCommand() *cobra.Command {
 				if err := bite.TryReadFile(configsRaw, &topic.Configs); err != nil {
 					// from flag as json.
 					if err = json.Unmarshal([]byte(configsRaw), &topic.Configs); err != nil {
-						return fmt.Errorf("unable to unmarshal the configs: %v", err)
+						return fmt.Errorf("unable to unmarshal the configs: [%v]", err)
 					}
 				}
 			}
 
 			if err := client.CreateTopic(topic.TopicName, topic.Replication, topic.Partitions, topic.Configs); err != nil {
-				bite.FriendlyError(cmd, errResourceNotGoodMessage, "unable to create topic with name '%s', already exists", topic.TopicName)
+				bite.FriendlyError(cmd, errResourceNotGoodMessage, "unable to create topic with name [%s], already exists", topic.TopicName)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Topic '%s' created", topic.TopicName)
+			return bite.PrintInfo(cmd, "Topic [%s] created", topic.TopicName)
 		},
 	}
 
@@ -435,21 +435,21 @@ func newTopicDeleteCommand() *cobra.Command {
 			if fromPartition >= 0 && toOffset >= 0 {
 				// delete records.
 				if err := client.DeleteTopicRecords(topicName, fromPartition, toOffset); err != nil {
-					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete records, topic '%s' does not exist", topicName)
-					// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete records from topic '%s', not proper access", topicName)
-					bite.FriendlyError(cmd, errResourceNotGoodMessage, "unable to delete records from topic '%s', invalid offset '%d' or partition '%d' passed", topicName, toOffset, fromPartition)
+					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete records, topic [%s] does not exist", topicName)
+					// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete records from topic [%s], not proper access", topicName)
+					bite.FriendlyError(cmd, errResourceNotGoodMessage, "unable to delete records from topic [%s], invalid offset [%d] or partition [%d] passed", topicName, toOffset, fromPartition)
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "Records from topic '%s' and partition '%d' up to offset '%d', are marked for deletion. This may take a few moments to have effect", topicName, fromPartition, toOffset)
+				return bite.PrintInfo(cmd, "Records from topic [%s] and partition [%d] up to offset [%d], are marked for deletion. This may take a few moments to have effect", topicName, fromPartition, toOffset)
 			}
 
 			if err := client.DeleteTopic(topicName); err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, topic '%s' does not exist", topicName)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, topic [%s] does not exist", topicName)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Topic '%s' marked for deletion. This may take a few moments to have effect", topicName)
+			return bite.PrintInfo(cmd, "Topic [%s] marked for deletion. This may take a few moments to have effect", topicName)
 		},
 	}
 
@@ -487,7 +487,7 @@ func newTopicUpdateCommand() *cobra.Command {
 				if err := bite.TryReadFile(configsRaw, &topic.Configs); err != nil {
 					// from flag as json.
 					if err = json.Unmarshal([]byte(configsRaw), &cfg); err != nil {
-						return fmt.Errorf("unable to unmarshal the configs: %v", err)
+						return fmt.Errorf("unable to unmarshal the configs: [%v]", err)
 					}
 				}
 
@@ -495,11 +495,11 @@ func newTopicUpdateCommand() *cobra.Command {
 			}
 
 			if err := client.UpdateTopic(topic.Name, topic.Configs); err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to update configs, topic '%s' does not exist", topic.Name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to update configs, topic [%s] does not exist", topic.Name)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Config updated for topic '%s'", topic.Name)
+			return bite.PrintInfo(cmd, "Config updated for topic [%s]", topic.Name)
 		},
 	}
 

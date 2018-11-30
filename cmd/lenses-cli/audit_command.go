@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"fmt"
 
 	"github.com/landoop/lenses-go"
@@ -27,8 +28,8 @@ func newGetAuditEntriesCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Audits entries are accesable for all roles atm.
-			withoutContentColumn := !bite.GetMachineFriendlyFlag(cmd) && !tableOnlyWithContent
+			// Audits entries are accessible for all roles atm.
+			withoutContentColumn := strings.ToUpper(bite.GetOutPutFlag(cmd)) == "TABLE" && !tableOnlyWithContent
 			if sse {
 				handler := func(entry lenses.AuditEntry) error {
 					if withoutContentColumn {
@@ -61,7 +62,7 @@ func newGetAuditEntriesCommand() *cobra.Command {
 					newEntry := tableprinter.RemoveStructHeader(entries[i], "Content")
 					// show the length of types by overriding the type header struct(cached or not), printer don't really know how much they are in this time.
 					// LINK:lenses.Entry.Type
-					newEntry = tableprinter.SetStructHeader(newEntry, "Type", fmt.Sprintf("TYPE (%d)", len(entries)))
+					newEntry = tableprinter.SetStructHeader(newEntry, "Type", fmt.Sprintf("TYPE [%d]", len(entries)))
 					if err = bite.PrintObject(cmd, newEntry); err != nil {
 						return err
 					}

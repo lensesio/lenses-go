@@ -25,7 +25,7 @@ func newLogsCommandGroup() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	asObjects := root.PersistentFlags().Bool("no-text", false, "no-text will print as objects (json if --machine-friendly or table otherwise), defaults to false")
+	asObjects := root.PersistentFlags().Bool("no-text", false, "no-text will print as objects, defaults to false")
 
 	var (
 		logsInfoSubComamnd    = newGetLogsInfoCommand(asObjects)
