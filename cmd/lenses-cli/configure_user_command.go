@@ -758,66 +758,6 @@ func newLoginCommand() *cobra.Command {
 			// read the input pipe, on each read its buffer consumed, so loop 'forever' here.
 			streamReader := bufio.NewReader(os.Stdin)
 			for {
-				/*
-					if lineStart || lineEnd {
-						// add the 'ready to type' signal for the user.
-						fmt.Fprint(out, "> ")
-						lineStart = false
-						lineEnd = false
-					}
-
-					if termOK {
-						switch e := termbox.PollEvent(); e.Type {
-						case termbox.EventKey:
-							if e.Key == termbox.KeyArrowUp {
-								if len(history) > 0 {
-									termBuf.Reset()
-									os.Stdout.WriteString("\033[2K\033[1G") // remove the line and move cursor to its beggining.
-
-									lastLineEntry := history[len(history)-1]
-									// will remove dupl later.
-									termBuf.WriteString(lastLineEntry)
-									os.Stdout.WriteString("> ")
-									os.Stdout.WriteString(lastLineEntry)
-
-									// remove the last entry.
-									history = history[0 : len(history)-1]
-									lineEnd = false
-								}
-
-								continue
-							} else if e.Key == termbox.KeyEnter {
-								termBuf.WriteString("\r\n")
-								os.Stdout.WriteString("\n")
-								lineEnd = true
-							} else if e.Key == termbox.KeyBackspace2 || e.Key == termbox.KeyBackspace {
-								// termBuf.UnreadRune()
-								if termBuf.Len() > 0 {
-									// it must have valid contents, the > does not count neither the rest of the user's terminal!
-									termBuf.Truncate(termBuf.Len() - 1)  // we need to set the value to the correct one, not just print to the screen the expected behavior of backspace.
-									os.Stdout.WriteString("\010\033[0K") // move cursor 1 back and remove all the RIGHT contents.
-								}
-
-								continue
-							} else if e.Key == termbox.KeyEsc {
-								os.Exit(0)
-							} else {
-								lineStart = false
-								termBuf.WriteRune(e.Ch)
-								os.Stdout.Write([]byte{byte(e.Ch)})
-							}
-						}
-
-						if !lineEnd {
-							continue
-						}
-					}
-
-					line, err := streamReader.ReadString('\n')
-					if err != nil {
-						return err // exit on first failure.
-					}
-				*/
 
 				fmt.Fprint(out, "> ")
 
