@@ -59,7 +59,7 @@ func sqlExecutor(sql string) {
 			return
 		}
 
-		if trimmed == "!keysOnly" {
+		if trimmed == "!keys-only" {
 			if sqlKeysOnly {
 				sqlKeysOnly = false
 			} else {

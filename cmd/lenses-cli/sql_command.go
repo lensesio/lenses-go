@@ -220,9 +220,9 @@ func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool,
 func newLiveLSQLCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:              "sql [query]",
-		Short:            "sql queries, either browsing for continuous (live-stream)",
-		Example:          `sql "SELECT * FROM cc_payments LIMIT 10"`,
+		Use:              "query",
+		Short:            "Queries, either browsing for continuous (live-stream)",
+		Example:          `query "SELECT * FROM cc_payments LIMIT 10"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -261,11 +261,11 @@ func newLiveLSQLCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&sqlLiveStream, "live-stream", false, "--live-stream run in continuous query mode")
-	cmd.Flags().BoolVar(&sqlStats, "stats", false, "--stats print query")
-	cmd.Flags().BoolVar(&sqlKeys, "keys", false, "--keys print message keys")
-	cmd.Flags().BoolVar(&sqlKeysOnly, "keys-only", false, "--keys-only print message keys only")
-	cmd.Flags().BoolVar(&sqlMeta, "meta", false, "--meta print message metadata")
+	cmd.Flags().BoolVar(&sqlLiveStream, "live-stream", false, "Run in continuous query mode")
+	cmd.Flags().BoolVar(&sqlStats, "stats", false, "Print query stats")
+	cmd.Flags().BoolVar(&sqlKeys, "keys", false, "Print message keys")
+	cmd.Flags().BoolVar(&sqlKeysOnly, "keys-only", false, "Print message keys only")
+	cmd.Flags().BoolVar(&sqlMeta, "meta", false, "Print message metadata")
 
 	bite.CanPrintJSON(cmd)
 

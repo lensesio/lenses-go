@@ -635,6 +635,23 @@ func writeSchemas(cmd *cobra.Command) error {
 			continue
 		}
 
+			// don't export control topics
+			excluded := false
+			for _, exclude := range systemTopicExclusions {
+				if strings.HasPrefix(subject, exclude) || 
+					strings.Contains(subject, "KSTREAM-") ||
+					strings.Contains(subject, "_agg_") ||
+					strings.Contains(subject, "_sql_store_") {
+					excluded = true
+					break
+				} 
+			}
+	
+			if excluded {
+				continue
+			}
+
+
 		if err := writeSchema(cmd, subject, 0); err != nil {
 			return err
 		}
@@ -851,14 +868,14 @@ func exportGroupCommand() *cobra.Command {
 		Use:              "export",
 		Short:            "export a landscape",
 		Example:          `	
-export acls --dir my-dir --resource-type CLUSTER
-export alert-settings --dir my-dir --resource-name=my-alert
+export acls --dir my-dir
+export alert-settings --dir my-dir
 export connectors --dir my-dir --resource-name my-connector --cluster-name Cluster1
 export processors --dir my-dir --resource-name my-processor
-export quota --dir my-dir --quota-type="CLIENTS DEFAULT"
+export quota --dir my-dir
 export schemas --dir my-dir --resource-name my-schema-value --version 1
 export topics --dir my-dir --resource-name my-topic
-export policies --dir my-dir --resource-name *`,
+export policies --dir my-dir --resource-name my-policy`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 	}
