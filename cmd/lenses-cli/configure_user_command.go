@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/kataras/golog"
 	"bufio"
 	"bytes"
 	"crypto/aes"
@@ -18,9 +17,11 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/landoop/lenses-go"
+	"github.com/kataras/golog"
+
 	"github.com/kataras/survey"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -308,7 +309,7 @@ func newUseContextCommand() *cobra.Command {
 				configManager.save()
 				bite.PrintInfo(cmd, "Current context set to [%s]", name)
 				return nil
-			} 
+			}
 
 			golog.Errorf("Context [%s] not found", name)
 			return nil
@@ -548,7 +549,7 @@ Docs at https://docs.lenses.io
 					}
 
 					currentConfig.Authentication = kerberosAuth
-		
+
 				default:
 					// basic auth.
 					qs = []*survey.Question{
@@ -753,42 +754,6 @@ func newLoginCommand() *cobra.Command {
 			signedUser := client.User
 			fmt.Fprintf(out, "Welcome [%s%s],\ntype 'help' to learn more about the available commands or 'exit' to terminate.\n",
 				signedUser.Name, strings.Join(signedUser.Roles, ", "))
-
-			/*
-				// these all can be changed to two lines, but keep them as they are for now:
-				var (
-					reader       io.Reader
-					streamReader *bufio.Reader
-					termBuf      = new(bytes.Buffer)
-				)
-
-				err := termbox.Init()
-				termOK := true
-				if err != nil {
-					if configManager.config.GetCurrent().Debug {
-						fmt.Fprintf(os.Stderr, "%v\n", err)
-					}
-					termOK = false
-				} else {
-					// termbox.SetOutputMode(termbox.Output256)
-					defer termbox.Close()
-				}
-
-				if termOK { // will be true on all known terminals, including win10.
-					reader = termBuf
-				} else {
-					reader = os.Stdin
-				}
-
-				streamReader = bufio.NewReader(reader)
-
-				var (
-					lineStart = true
-					lineEnd   bool
-
-					history []string
-				)
-			*/
 
 			// read the input pipe, on each read its buffer consumed, so loop 'forever' here.
 			streamReader := bufio.NewReader(os.Stdin)
