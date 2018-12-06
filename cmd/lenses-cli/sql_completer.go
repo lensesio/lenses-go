@@ -30,10 +30,10 @@ func sqlCompleter(d prompt.Document) []prompt.Suggest {
 		return prompt.FilterHasPrefix(optionSuggestions(), d.GetWordBeforeCursor(), true)
 	}
 
-	sql := fmt.Sprintf("%s %s", SqlQuery, d.CurrentLine())
+	sql := fmt.Sprintf("%s%s", SqlQuery, d.CurrentLine())
 	caret := d.CursorPositionCol() + len(SqlQuery)
 	
-	keywords, err := client.ValidateSQL(sql, caret)
+	keywords, err := client.ValidateSQL(strings.Replace(sql, "  ", " ", 0), caret)
 	if err != nil {
 		golog.Error(err)
 		os.Exit(1)
