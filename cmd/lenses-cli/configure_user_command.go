@@ -759,6 +759,8 @@ func newLoginCommand() *cobra.Command {
 			streamReader := bufio.NewReader(os.Stdin)
 			for {
 
+				// add the 'ready to type' signal for the user.
+
 				fmt.Fprint(out, "> ")
 
 				line, err := streamReader.ReadString('\n')
@@ -768,9 +770,6 @@ func newLoginCommand() *cobra.Command {
 
 				// remove any last \r\n.
 				line = strings.TrimRight(line, "\r\n")
-
-				// TODO: here the save line for history thing with UP and DOWN keys.
-				// history = append(history, line)
 
 				// if "exit" then exit now.
 				switch line {
