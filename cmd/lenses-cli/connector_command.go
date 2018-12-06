@@ -134,7 +134,7 @@ func newConnectorsCommand() *cobra.Command {
 		},
 	}
 
-	root.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	root.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	root.Flags().BoolVar(&namesOnly, "names", false, `Print connector names only`)
 	root.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap")
 	root.Flags().BoolVar(&showSupportedOnly, "supported", false, "List all the supported Kafka Connectors instead of the currently deployed")
@@ -195,7 +195,7 @@ func newGetConnectorsPluginsCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 
 	bite.CanPrintJSON(cmd)
 
@@ -262,7 +262,7 @@ func newConnectorGroupCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -279,7 +279,7 @@ func newConnectorGroupCommand() *cobra.Command {
 
 	bite.CanPrintJSON(root)
 
-	root.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	root.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	root.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	// subcommands.
@@ -315,7 +315,7 @@ func newConnectorCreateCommand() *cobra.Command {
 				return err
 			}
 
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": connector.ClusterName, "name": connector.Name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": connector.ClusterName, "name": connector.Name}); err != nil {
 				return err
 			}
 
@@ -337,7 +337,7 @@ func newConnectorCreateCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&connector.ClusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&connector.Name, "name", "", `Connector name`)
 	cmd.Flags().StringVar(&configRaw, "configs", "", `Connector config .e.g."{\"key\": \"value\"}"`) // --config conflicts with the global flag.
 	bite.CanBeSilent(cmd)
@@ -364,7 +364,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 				return err
 			}
 
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": connector.ClusterName, "name": connector.Name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": connector.ClusterName, "name": connector.Name}); err != nil {
 				return err
 			}
 
@@ -406,7 +406,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 		},
 	}
 
-	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&connector.ClusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&connector.Name, "name", "", `Connector name`)
 	cmd.Flags().StringVar(&configRaw, "configs", "", `Connector configs .e.g. "{\"key\": \"value\"}"`)
 
@@ -428,7 +428,7 @@ func newConnectorGetConfigCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -443,7 +443,7 @@ func newConnectorGetConfigCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	bite.CanPrintJSON(cmd)
@@ -461,7 +461,7 @@ func newConnectorGetStatusCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -476,7 +476,7 @@ func newConnectorGetStatusCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name"`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name"`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	bite.CanPrintJSON(cmd)
@@ -494,7 +494,7 @@ func newConnectorPauseCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -524,7 +524,7 @@ func newConnectorResumeCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -554,7 +554,7 @@ func newConnectorRestartCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -566,7 +566,7 @@ func newConnectorRestartCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name"`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name"`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
@@ -583,7 +583,7 @@ func newConnectorGetTasksCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -597,7 +597,7 @@ func newConnectorGetTasksCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	bite.CanPrintJSON(cmd)
@@ -633,7 +633,7 @@ func newConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -651,7 +651,7 @@ func newConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 	cmd.Flags().IntVar(&taskID, "task", 0, "--task=1 The Task ID")
 	cmd.MarkFlagRequired("task")
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	bite.CanPrintJSON(cmd)
@@ -672,7 +672,7 @@ func newConnectorTaskRestartCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -687,7 +687,7 @@ func newConnectorTaskRestartCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&taskID, "task", 0, "--task=1 The Task ID")
 	cmd.MarkFlagRequired("task")
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
@@ -704,7 +704,7 @@ func newConnectorDeleteCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "name": name}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "name": name}); err != nil {
 				return err
 			}
 
@@ -717,7 +717,7 @@ func newConnectorDeleteCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "clustername", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 

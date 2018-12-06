@@ -41,6 +41,7 @@ func newInteractiveCommand() *cobra.Command {
 Docs at https://docs.lenses.io
 Connected to [%s] as [%s], context [%s]
 Use "!" to set output options [!keys|!keysOnly|!stats|!meta|!pretty]
+Crtl+D to exit
 
 `, client.Config.Host, client.User.Name, configManager.config.CurrentContext)
 

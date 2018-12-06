@@ -30,10 +30,10 @@ func sqlCompleter(d prompt.Document) []prompt.Suggest {
 		return prompt.FilterHasPrefix(optionSuggestions(), d.GetWordBeforeCursor(), true)
 	}
 
-	sql := fmt.Sprintf("%s %s", SqlQuery, d.CurrentLine())
+	sql := fmt.Sprintf("%s%s", SqlQuery, d.CurrentLine())
 	caret := d.CursorPositionCol() + len(SqlQuery)
 	
-	keywords, err := client.ValidateSQL(sql, caret)
+	keywords, err := client.ValidateSQL(strings.Replace(sql, "  ", " ", 0), caret)
 	if err != nil {
 		golog.Error(err)
 		os.Exit(1)
@@ -55,7 +55,7 @@ func sqlCompleter(d prompt.Document) []prompt.Suggest {
 func optionSuggestions() []prompt.Suggest {
 	return []prompt.Suggest{
 		{Text: "!keys", Description: "Toggle printing message keys"},
-		{Text: "!keysOnly", Description: "Toggle printing keys only from message, no value"},
+		{Text: "!keys-only", Description: "Toggle printing keys only from message, no value"},
 		{Text: "!live-stream", Description: "Toggle continuous query mode"},
 		{Text: "!meta", Description: "Toggle printing message metadata"},
 		{Text: "!stats", Description: "Toggle printing query stats"},

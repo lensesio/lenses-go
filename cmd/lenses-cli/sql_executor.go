@@ -59,7 +59,7 @@ func sqlExecutor(sql string) {
 			return
 		}
 
-		if trimmed == "!keysOnly" {
+		if trimmed == "!keys-only" {
 			if sqlKeysOnly {
 				sqlKeysOnly = false
 			} else {
@@ -112,7 +112,7 @@ func sqlExecutor(sql string) {
 	finalQ := fmt.Sprintf("%s %s", SqlQuery, sql)
 	if sql != "" {
 		if strings.HasSuffix(finalQ, ";") {
-			validation, err := client.ValidateSQL(finalQ, 0)
+			validation, err := client.ValidateSQL(strings.Replace(finalQ, "  ", " ", 0), 0)
 
 			if err != nil {
 				golog.Error(err)
@@ -129,6 +129,9 @@ func sqlExecutor(sql string) {
 			}
 
 			if lintError {
+				SqlQuery = ""
+				LivePrefixState.LivePrefix = "lenses-sql>"
+				LivePrefixState.IsEnable = true
 				return
 			}
 

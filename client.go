@@ -4034,7 +4034,7 @@ type DataPolicy struct {
 	LastUpdated		string 						`json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
 	Versions		int 						`json:"versions" yaml:"versions" header:"Version,text"`
 	ImpactType		string 						`json:"impactType" yaml:"impactType" header:"ImpactType,text"`
-	Impacts			Impacts 					`json:"impact" yaml:"impact" header:"Impacts,text"`
+	Impacts			Impacts 					`json:"impact" yaml:"impact"`
 	Category		string 						`json:"category" yaml:"category" header:"Category,text"`
 	Fields			[]string 					`json:"fields" yaml:"fields" header:"Fields,text"`
 	Obfuscation 	string					 	`json:"obfuscation" yaml:"obfuscation" header:"Redaction,text"`

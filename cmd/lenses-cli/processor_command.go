@@ -75,7 +75,7 @@ func newGetProcessorsCommand() *cobra.Command {
 
 	// select by name (maybe more than one in CONNECT and KUBERNETES mode) and cluster and namespace or name or cluster or namespace only.
 	cmd.Flags().StringVar(&name, "name", "", "Select by processor name, available only in CONNECT and KUBERNETES mode")
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", "Select by cluster name, available only in CONNECT and KUBERNETES mode")
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", "Select by cluster name, available only in CONNECT and KUBERNETES mode")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Select by namespace, available only in KUBERNETES mode")
 	// example: lenses-cli processors --query="[?ClusterName == 'IN_PROC'].Name | sort(@) | {Processor_Names_IN_PROC: join(', ', @)}"
 	bite.CanPrintJSON(cmd)
@@ -99,7 +99,7 @@ func newProcessorsLogsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"clusterName": clusterName, "namespace": namespace, "podName": podName}); err != nil {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"cluster-name": clusterName, "namespace": namespace, "podName": podName}); err != nil {
 				return err
 			}
 
@@ -119,7 +119,7 @@ func newProcessorsLogsCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", "Select by cluster name, available only in KUBERNETES mode")
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", "Select by cluster name, available only in KUBERNETES mode")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Select by namespace, available only in KUBERNETES mode")
 	cmd.Flags().StringVar(&podName, "podName", "", "Kubernetes pod name to view the logs for")
 	cmd.Flags().BoolVar(&follow, "follow", false, "Tail the log")
@@ -205,7 +205,7 @@ func newProcessorCreateCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&processor.Name, "name", "", "Processor name")
-	cmd.Flags().StringVar(&processor.ClusterName, "clusterName", "", `Cluster to create the processor in`)
+	cmd.Flags().StringVar(&processor.ClusterName, "cluster-name", "", `Cluster to create the processor in`)
 	cmd.Flags().StringVar(&processor.Namespace, "namespace", "", `Namespace to create the processor in`)
 	cmd.Flags().StringVar(&processor.SQL, "sql", "", `Lenses SQL to run .e.g. sql="SET autocreate=true;INSERT INTO topic1 SELECT * FROM topicA"`)
 	cmd.Flags().IntVar(&processor.Runners, "runners", 1, "Number of runners/instance to deploy")

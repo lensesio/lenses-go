@@ -56,13 +56,13 @@ func newACLGroupCommand() *cobra.Command {
 
 	var (
 		childrenRequiredFlags = func() bite.FlagPair {
-			return bite.FlagPair{"resourceType": acl.ResourceType, "resourceName": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}
+			return bite.FlagPair{"resource-type": acl.ResourceType, "resource-name": acl.ResourceName, "principal": acl.Principal, "operation": acl.Operation}
 		}
 	)
 
 	childrenFlagSet := pflag.NewFlagSet("acl", pflag.ExitOnError)
-	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resourceType", "The resource type: Topic, Cluster, Group or TRANSACTIONALID")
-	childrenFlagSet.StringVar(&acl.ResourceName, "resourceName", "", "The name of the resource")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resource-type", "The resource type: Topic, Cluster, Group or TRANSACTIONALID")
+	childrenFlagSet.StringVar(&acl.ResourceName, "resource-name", "", "The name of the resource")
 	childrenFlagSet.StringVar(&acl.Principal, "principal", "", "The name of the principal")
 	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "PermissionType", "Allow or Deny")
 	childrenFlagSet.StringVar(&acl.Host, "acl-host", "", "The acl host, can be empty to apply to all")
@@ -78,7 +78,7 @@ func newCreateOrUpdateACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags f
 		Use:              "set",
 		Aliases:          []string{"create", "update"}, // acl create or acl update or acl set.
 		Short:            "Sets, create or update Access Control Lists",
-		Example:          `acl set --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`,
+		Example:          `acl set --resource-type="Topic" --resource-name="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
 		RunE: bite.Join(
 			bite.FileBind(&acls),
