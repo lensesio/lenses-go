@@ -169,6 +169,18 @@ func (c *Config) CurrentContextExists() bool {
 	return exists
 }
 
+// ContextExists just checks if the `context` exists in the `Contexts` map.
+func (c *Config) ContextExists(name string) bool {
+	_, exists := c.Contexts[name]
+	return exists
+}
+
+// AddContext adds a context to the config
+// Returns true if context is added
+func(c *Config) AddContext(name string, context *ClientConfig) {
+	c.Contexts[name] = context
+}
+
 // RemoveContext deletes a context based on its name/key.
 // It will change if there is an available context to set as current, if can't find then the operation stops.
 // Returns true if found and removed and can change to something valid, otherwise false.
@@ -374,7 +386,7 @@ func TryReadConfigFromFile(filename string, outPtr *Config) (err error) {
 		}
 	}
 
-	return fmt.Errorf("configuration file '%s' does not exist or it is not formatted to a compatible document: JSON, YAML", filename)
+	return fmt.Errorf("configuration file [%s] does not exist or it is not formatted to a compatible document: JSON, YAML", filename)
 }
 
 var configurationPossibleFilenames = []string{

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/kataras/golog"
 	"bufio"
 	"bytes"
 	"crypto/aes"
@@ -18,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/landoop/lenses-go"
-
 	"github.com/kataras/survey"
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
@@ -27,7 +27,7 @@ import (
 func init() {
 	app.AddCommand(newGetConfigurationContextsCommand())
 	app.AddCommand(newConfigurationContextCommand())
-	app.AddCommand(newConfigureCommand())
+	app.AddCommand(newConfigureCommand(""))
 	app.AddCommand(newLoginCommand())
 
 	// remove `logout` command (at least for the moment) rootCmd.AddCommand(newLogoutCommand())
@@ -103,7 +103,7 @@ func printConfigurationContext(cmd *cobra.Command, name string) bool {
 		info += ", current"
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "%s [%s]\n", name, info)
+	fmt.Fprintf(cmd.OutOrStdout(), "[%s] [%s]\n", name, info)
 
 	// buf.WriteTo(cmd.OutOrStdout())
 	fmt.Fprintln(cmd.OutOrStdout(), buf.String())
@@ -117,7 +117,7 @@ func showOptionsForConfigurationContext(cmd *cobra.Command, name string) error {
 	var action string
 
 	if err := survey.AskOne(&survey.Select{
-		Message: fmt.Sprintf("Would you like to skip, edit or delete the '%s' invalid configuration context?", name),
+		Message: fmt.Sprintf("Would you like to skip, edit or delete the [%s] invalid configuration context?", name),
 		Options: []string{"skip", "edit", "delete"},
 	}, &action, nil); err != nil {
 		return err
@@ -194,6 +194,7 @@ func newConfigurationContextCommand() *cobra.Command {
 
 	root.AddCommand(newUpdateConfigurationContextCommand())
 	root.AddCommand(newDeleteConfigurationContextCommand())
+	root.AddCommand(newUseContextCommand())
 
 	return root
 }
@@ -215,18 +216,18 @@ func newDeleteConfigurationContextCommand() *cobra.Command {
 
 			if !deleted {
 				// failed when no found this context or if we can't upgrade to another one.
-				return fmt.Errorf("unable to delete context '%s', at least one more valid context should be present", name)
+				return fmt.Errorf("unable to delete context [%s], at least one more valid context should be present", name)
 			}
 
 			if err := configManager.save(); err != nil {
-				return fmt.Errorf("error while saving the configuration after deletion of the '%s' context: %v", name, err)
+				return fmt.Errorf("error while saving the configuration after deletion of the [%s] context: [%v]", name, err)
 			}
 
-			succMsg := fmt.Sprintf("'%s' context deleted", name)
+			succMsg := fmt.Sprintf("[%s] context deleted", name)
 
 			if removeContextWillChangeContext {
 				newCurrentContext := configManager.config.CurrentContext
-				succMsg = fmt.Sprintf("%s, current context set to '%s'", succMsg, newCurrentContext)
+				succMsg = fmt.Sprintf("[%s], current context set to [%s]", succMsg, newCurrentContext)
 			}
 
 			return bite.PrintInfo(cmd, succMsg)
@@ -243,7 +244,7 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "set",
 		Aliases:       []string{"edit", "update", "create", "add"},
-		Short:         "Edit an existing or add a configuration context, similar to 'configure --context=context_name --reset' but without banner and this one saves the configuration to the default location",
+		Short:         "Edit an existing or add a configuration context e.g. lenses-cli context create my-new-context",
 		Example:       `context edit context_name`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -253,7 +254,7 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 
 			name := args[0]
 
-			configureCmd := newConfigureCommand()
+			configureCmd := newConfigureCommand(name)
 
 			app.CobraCommand.Flag("context").Value.Set(name)
 			configureCmd.Flag("reset").Value.Set("true")
@@ -265,12 +266,12 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 			}
 
 			if isValidConfigurationContext(name) {
-				return bite.PrintInfo(cmd, "%s was successfully validated and saved, it is the current context now", name)
+				return bite.PrintInfo(cmd, "[%s] was successfully validated and saved, it is the current context now", name)
 			}
 
 			retry := true
 			if err := survey.AskOne(&survey.Confirm{
-				Message: fmt.Sprintf("%s is still invalid, do you mind to retry fixing it?", name),
+				Message: fmt.Sprintf("[%s] is invalid, connection failed, do you mind to retry fixing it?", name),
 				Default: true,
 			}, &retry, nil); err != nil {
 				return err
@@ -289,9 +290,37 @@ func newUpdateConfigurationContextCommand() *cobra.Command {
 	return cmd
 }
 
+func newUseContextCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:           "use",
+		Short:         "use a context",
+		Example:       `context use context_name`,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("one argument is required for the context name")
+			}
+
+			name := args[0]
+
+			if configManager.config.ContextExists(name) {
+				configManager.config.SetCurrent(name)
+				configManager.save()
+				bite.PrintInfo(cmd, "Current context set to [%s]", name)
+				return nil
+			} 
+
+			golog.Errorf("Context [%s] not found", name)
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 // Note that configure will never be called if home configuration is already exists, even if `lenses-cli configure`,
 // this is an expected behavior to prevent any actions by mistakes from the user.
-func newConfigureCommand() *cobra.Command {
+func newConfigureCommand(name string) *cobra.Command {
 	var (
 		reset       bool
 		noBanner    bool // if true doesn't print the banner (useful for running inside other commands).
@@ -310,16 +339,17 @@ func newConfigureCommand() *cobra.Command {
 				// So, print our "banner" :)
 				if !noBanner {
 					fmt.Fprintln(cmd.OutOrStdout(), `
-	 ___      _______  __    _  _______  _______  _______ 
-	|   |    |       ||  |  | ||       ||       ||       |
-	|   |    |    ___||   |_| ||  _____||    ___||  _____|
-	|   |    |   |___ |       || |_____ |   |___ | |_____ 
-	|   |___ |    ___||  _    ||_____  ||    ___||_____  |
-	|       ||   |___ | | |   | _____| ||   |___  _____| |
-	|_______||_______||_|  |__||_______||_______||_______|
-					   `)
+    __                                 ________    ____
+   / /   ___  ____  ________  _____   / ____/ /   /  _/
+  / /   / _ \/ __ \/ ___/ _ \/ ___/  / /   / /    / /  
+ / /___/  __/ / / (__  )  __(__  )  / /___/ /____/ /   
+/_____/\___/_/ /_/____/\___/____/   \____/_____/___/   
+Docs at https://docs.lenses.io
+`)
 				}
 
+				// if the current is not the specified one set it to the new
+				configManager.config.SetCurrent(name)
 				currentConfig := configManager.config.GetCurrent()
 
 				var (
@@ -518,6 +548,7 @@ func newConfigureCommand() *cobra.Command {
 					}
 
 					currentConfig.Authentication = kerberosAuth
+		
 				default:
 					// basic auth.
 					qs = []*survey.Question{
@@ -720,7 +751,7 @@ func newLoginCommand() *cobra.Command {
 
 			out := cmd.OutOrStdout()
 			signedUser := client.User
-			fmt.Fprintf(out, "Welcome %s[%s],\ntype 'help' to learn more about the available commands or 'exit' to terminate.\n",
+			fmt.Fprintf(out, "Welcome [%s%s],\ntype 'help' to learn more about the available commands or 'exit' to terminate.\n",
 				signedUser.Name, strings.Join(signedUser.Roles, ", "))
 
 			/*
@@ -855,21 +886,11 @@ func newLoginCommand() *cobra.Command {
 
 				cms := strings.Split(line, " ")
 
-				/* Remember: why we do this "cP"?:
-				   if not then:
-				    processors --machine-friendly --no-pretty
-				    and after
-				    processors
-				    will keep the --machine-friendly --no-pretty flag to true without be able to change it via --no-pretty=false.
-
-				    With the clone solution we still remember the flags(very important) but they can be changed if needed.
-				*/
-
 				// parse the line (as slice of strings) in order to take the command and the flags from it.
 
 				cP, flags := app.FindCommand(cms)
 				if cP == nil {
-					fmt.Fprintln(out, fmt.Sprintf("command form of '%s' not found", line))
+					fmt.Fprintln(out, fmt.Sprintf("command form of [%s] not found", line))
 					continue
 				}
 

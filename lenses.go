@@ -137,7 +137,7 @@ func OpenConnection(cfg ClientConfig, options ...ConnectionOption) (*Client, err
 
 	// i.e `UsingToken`.
 	if clientConfig.Token != "" {
-		golog.Debugf("Connecting using just the token: %s", clientConfig.Token)
+		golog.Debugf("Connecting using just the token: [%s]", clientConfig.Token)
 		// User will be empty but it does its job.
 		return c, nil
 	}
@@ -147,7 +147,7 @@ func OpenConnection(cfg ClientConfig, options ...ConnectionOption) (*Client, err
 	}
 
 	if err := clientConfig.Authentication.Auth(c); err != nil {
-		return nil, fmt.Errorf("client: auth failure: %v", err)
+		return nil, fmt.Errorf("client: auth failure: [%v]", err)
 	}
 
 	if c.User.Token == "" { // this should never happen.
@@ -156,7 +156,7 @@ func OpenConnection(cfg ClientConfig, options ...ConnectionOption) (*Client, err
 
 	if clientConfig.Debug {
 		golog.SetLevel("debug")
-		golog.Debugf("Connected on %s with token: %s.\nUser details: %#+v",
+		golog.Debugf("Connected on [%s] with token: [%s]\nUser details: [%#+v]",
 			c.Config.Host, c.User.Token, c.User)
 	}
 

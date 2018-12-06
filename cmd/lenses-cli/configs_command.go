@@ -33,7 +33,7 @@ func newGetConfigsCommand() *cobra.Command {
 				var value interface{}
 				err := client.GetConfigEntry(&value, configEntryName)
 				if err != nil {
-					return fmt.Errorf("retrieve config value '%s' failed: %v", configEntryName, err)
+					return fmt.Errorf("retrieve config value [%s] failed: [%v]", configEntryName, err)
 				}
 
 				return bite.PrintJSON(cmd, value) // keep json.

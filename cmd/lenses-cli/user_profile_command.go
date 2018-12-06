@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/kataras/golog"
 	"fmt"
 
 	"github.com/landoop/bite"
@@ -14,7 +15,7 @@ func init() {
 func newUserGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "user",
-		Short:            "List information about the authenticated logged user such as the given roles given by the lenses administrator or work with the user's profile",
+		Short:            "List information about the authenticated logged user such as the given roles given by the lenses administrator or manage the user's profile",
 		Example:          "user",
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -50,7 +51,7 @@ func newUserProfileGroupCommand() *cobra.Command {
 
 			if bite.ExpectsFeedback(cmd) && len(profile.Topics)+len(profile.Schemas)+len(profile.Transformers) == 0 {
 				// do not throw error, it's not an error.
-				return bite.PrintInfo(cmd, "Currently, there is no user profile available.")
+				return bite.PrintInfo(cmd, "No user profile available.")
 			}
 
 			return bite.PrintObject(cmd, profile)
@@ -99,11 +100,11 @@ func newCreateUserProfilePropertyValueCommand() *cobra.Command {
 
 			return walkPropertyValueFromArgs(args, func(property, value string) error {
 				if err := client.CreateUserProfilePropertyValue(property, value); err != nil {
-					bite.FriendlyError(cmd, errResourceInternal, "unable to add a user profile value '%s' for property '%s'", value, property)
+					golog.Errorf("Failed to add the user profile value [%s] from property [%s]. [%s]", value, property, err.Error())
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "User profile value: '%s' for property: '%s' added", value, property)
+				return bite.PrintInfo(cmd, "User profile value: [%s] for property: [%s] added", value, property)
 			})
 		},
 	}
@@ -124,11 +125,11 @@ func newDeleteUserProfilePropertyValueCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return walkPropertyValueFromArgs(args, func(property, value string) error {
 				if err := client.DeleteUserProfilePropertyValue(property, value); err != nil {
-					bite.FriendlyError(cmd, errResourceInternal, "unable to remove the user profile value '%s' from property '%s'", value, property)
+					golog.Errorf("Failed to remove the user profile value [%s] from property [%s]. [%s]", value, property, err.Error())
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "User profile value: '%s' from property: '%s' removed", value, property)
+				return bite.PrintInfo(cmd, "User profile value: [%s] from property: [%s] removed", value, property)
 			})
 		},
 	}

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/landoop/lenses-go"
-
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -21,13 +20,26 @@ var (
 	// this is available on after the build state, inside the cli executable - via the "--version" flag.
 	//
 	// Note that this buildTime is not int64, it's type of string.
-	buildTime = fmt.Sprintf("%d", time.Now().Unix())
+	buildTime = fmt.Sprintf("[%d]", time.Now().Unix())
+)
+
+const (
+	sqlPath = "apps/sql"
+	connectorsPath = "apps/connectors"
+
+	aclsPath = "kafka/acls"
+	topicsPath = "kafka/topics"
+	quotasPath = "kafka/quotas"
+
+	schemasPath = "schemas"
+	alertSettingsPath = "alert-settings"
+	policiesPath = "policies"
 )
 
 var (
 	app = &bite.Application{
 		Name:            "lenses-cli",
-		Description:     "Lenses-cli is the command line client for the Landoop's Lenses REST API.",
+		Description:     "Lenses-cli is the command line client for the Lenses REST API.",
 		Version:         lenses.Version,
 		PersistentFlags: setupConfigManager,
 		ShowSpinner:     false,
@@ -69,7 +81,7 @@ func setup(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Fprintln(cmd.OutOrStderr(), "cannot retrieve credentials, please configure below")
-		configureCmd := newConfigureCommand()
+		configureCmd := newConfigureCommand("")
 		// disable any flags passed on the parent command before execute.
 		configureCmd.DisableFlagParsing = true
 		if err = configureCmd.Execute(); err != nil {
@@ -88,7 +100,7 @@ func setup(cmd *cobra.Command, args []string) error {
 			if currentConfig.Host == "" || basicAuth.Username == "" || basicAuth.Password == "" {
 				// return fmt.Errorf("cannot retrieve credentials, please setup the configuration using the '%s' command first", "configure")
 				//
-				if err := newConfigureCommand().Execute(); err != nil {
+				if err := newConfigureCommand("").Execute(); err != nil {
 					return err
 				}
 
@@ -97,11 +109,6 @@ func setup(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		return nil
-	}
-
-	// don't connect to the HTTP REST API when command is "live" (websocket).
-	if cmd.Name() == "live" {
 		return nil
 	}
 

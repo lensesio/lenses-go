@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/landoop/lenses-go"
-
+	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
@@ -157,12 +157,12 @@ func newSchemasGroupCommand() *cobra.Command {
 			// this will block until we finish with the schemas goroutine -> see close(errors) above.
 			for err := range errors {
 				errOL++
-				errBody.WriteString(fmt.Sprintf("%s%d. %v\n", strings.Repeat(" ", 2), errOL, err))
+				errBody.WriteString(fmt.Sprintf("[%s%d]. [%v]\n", strings.Repeat(" ", 2), errOL, err))
 			}
 
 			if errBody.Len() > 0 {
 				if tableMode {
-					return fmt.Errorf("\nErrors raised during the operation:\n%s", errBody.String())
+					return fmt.Errorf("\nErrors raised during the operation:\n[%s]", errBody.String())
 				}
 				return fmt.Errorf(errBody.String())
 			}
@@ -209,11 +209,11 @@ func newUpdateGlobalCompatibilityLevelCommand() *cobra.Command {
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("compatibility value is required")
+				return fmt.Errorf("Compatibility value is required")
 			}
 			lv := args[0]
 			if !lenses.IsValidCompatibilityLevel(lv) {
-				return fmt.Errorf("compatibility value is not valid, use one of those: %s", joinValidCompatibilityLevels(", "))
+				return fmt.Errorf("Compatibility value is not valid, use one of those: [%s]", joinValidCompatibilityLevels(", "))
 			}
 
 			if err := client.UpdateGlobalCompatibilityLevel(lenses.CompatibilityLevel(lv)); err != nil {
@@ -242,14 +242,16 @@ func newSchemaGroupCommand() *cobra.Command {
 
 	root := &cobra.Command{
 		Use:              "schema",
-		Short:            "Work with a particular schema based on its name, get a schema based on the ID or register a new one",
+		Short:            "Manage particular schema based on its name, get a schema based on the ID or register a new one",
 		Example:          `schema --id=1 or schema --name="name" [flags] or schema register --name="name" --avro="..."`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if id > 0 {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "schema with id: %d does not exist", id)
-				return getSchemaByID(cmd, id)
+				if err := getSchemaByID(cmd, id); err != nil {
+					golog.Errorf("Failed to retrieve schema for id [%s]. [%s]", id, err.Error())
+					return err
+				}
 			}
 
 			// from below and after, the name flag is required.
@@ -259,7 +261,7 @@ func newSchemaGroupCommand() *cobra.Command {
 
 			// it's not empty, always, so it's called latest.
 			if versionStringOrInt != "" {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "schema with name: '%s' and version: '%s' does not exist", name, versionStringOrInt)
+				golog.Errorf("Failed to retrieve schema [%s], version [%s]", name, versionStringOrInt)
 				return getSchemaByVersion(cmd, name, versionStringOrInt)
 			}
 
@@ -268,11 +270,11 @@ func newSchemaGroupCommand() *cobra.Command {
 	}
 
 	// get the schema based on its name.
-	root.Flags().StringVar(&name, "name", "", `--name="name" lookup by schema name`)
+	root.Flags().StringVar(&name, "name", "", `Lookup by schema name`)
 	// get the schema based on its id.
-	root.Flags().IntVar(&id, "id", 0, "--id=42 lookup by schema id")
+	root.Flags().IntVar(&id, "id", 0, "Lookup by schema id")
 	// it's not required, the default is "latest", get a schema based on a specific version.
-	root.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "--version=latest or numeric value lookup schema based on a specific  version")
+	root.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "Latest or numeric value lookup schema based on a specific  version")
 	// if true then the schema will be NOT printed with indent.
 	bite.CanPrintJSON(root)
 
@@ -302,10 +304,10 @@ func getSchemaByID(cmd *cobra.Command, id int) error {
 }
 
 // the only valid version string is the "latest"
-// so try to take the number and work with SchemaAtVersion otherwise LatestSchema.
+// so try to take the number and manage SchemaAtVersion otherwise LatestSchema.
 func latestOrInt(name, versionStringOrInt string, str func(versionString string) error, num func(version int) error) error {
 	// the only valid version string is the "latest"
-	// so try to take the number and work with SchemaAtVersion otherwise LatestSchema.
+	// so try to take the number and manage SchemaAtVersion otherwise LatestSchema.
 	if versionStringOrInt != lenses.SchemaLatestVersion {
 		version, err := strconv.Atoi(versionStringOrInt)
 		if err != nil {
@@ -360,15 +362,16 @@ func newRegisterSchemaCommand() *cobra.Command {
 
 			id, err := client.RegisterSchema(schema.Name, schema.AvroSchema)
 			if err != nil {
+				golog.Errorf("Failed to register schema [%s]. [%s]", schema.Name, err.Error())
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Registered schema %s with id %d", schema.Name, id)
+			return bite.PrintInfo(cmd, "Registered schema [%s] with id [%d]", schema.Name, id)
 		},
 	}
 
-	cmd.Flags().StringVar(&schema.Name, "name", "", `--name="name"`)
-	cmd.Flags().StringVar(&schema.AvroSchema, "avro", schema.AvroSchema, "--avro=")
+	cmd.Flags().StringVar(&schema.Name, "name", "", `Schema name`)
+	cmd.Flags().StringVar(&schema.AvroSchema, "avro", schema.AvroSchema, "Avro schema")
 
 	bite.Prepend(cmd, bite.FileBind(&schema))
 	bite.CanBeSilent(cmd)
@@ -391,7 +394,7 @@ func newGetSchemaVersionsCommand() *cobra.Command {
 
 			versions, err := client.GetSubjectVersions(name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "schema with name: '%s` does not exist", name)
+				golog.Errorf("Failed to retrieve schema [%s]. [%s]", name, err.Error())
 				return err
 			}
 
@@ -422,7 +425,7 @@ func newDeleteSchemaCommand() *cobra.Command {
 
 			deletedVersions, err := client.DeleteSubject(name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "schema with name: '%s` does not exist", name)
+				golog.Errorf("Failed to delete schema [%s]. [%s]", name, err.Error())
 				return err
 			}
 
@@ -435,7 +438,7 @@ func newDeleteSchemaCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
+	cmd.Flags().StringVar(&name, "name", "", `Schema name to delete`)
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 
@@ -470,16 +473,16 @@ func newDeleteSchemaVersionCommand() *cobra.Command {
 			})
 
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete the schema with version '%s', schema %s does not exist", versionStringOrInt, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete the schema with version [%s], schema [%s] does not exist", versionStringOrInt, name)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "%d", deletedVersion)
+			return bite.PrintInfo(cmd, "[%d]", deletedVersion)
 		},
 	}
 
-	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
-	cmd.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "--version=latest or numeric value")
+	cmd.Flags().StringVar(&name, "name", "", `Schema name`)
+	cmd.Flags().StringVar(&versionStringOrInt, "version", lenses.SchemaLatestVersion, "Latest or numeric value schema version")
 	bite.CanBeSilent(cmd)
 
 	return cmd
@@ -516,7 +519,7 @@ func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 
 			lv, err := client.GetSubjectCompatibilityLevel(name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve the compatibility level, subject '%s' does not exist", name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve the compatibility level, subject [%s] does not exist", name)
 				return err
 			}
 
@@ -524,7 +527,7 @@ func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 		},
 	}
 
-	rootSub.Flags().StringVar(&name, "name", "", `--name="name"`)
+	rootSub.Flags().StringVar(&name, "name", "", `Schema name`)
 	bite.CanBeSilent(rootSub)
 
 	rootSub.AddCommand(newUpdateSchemaCompatibilityLevelCommand())
@@ -551,19 +554,19 @@ func newUpdateSchemaCompatibilityLevelCommand() *cobra.Command {
 
 			lv := args[0]
 			if !lenses.IsValidCompatibilityLevel(lv) {
-				return fmt.Errorf("compatibility value is not valid, use one of those %s", joinValidCompatibilityLevels(", "))
+				return fmt.Errorf("compatibility value is not valid, use one of those [%s]", joinValidCompatibilityLevels(", "))
 			}
 
 			if err := client.UpdateSubjectCompatibilityLevel(name, lenses.CompatibilityLevel(lv)); err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to change the compatibility level of the schema, schema '%s' does not exist", name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to change the compatibility level of the schema, schema [%s] does not exist", name)
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Compatibility level for %s updated", name)
+			return bite.PrintInfo(cmd, "Compatibility level for [%s] updated", name)
 		},
 	}
 
-	cmd.Flags().StringVar(&name, "name", "", `--name="name"`)
+	cmd.Flags().StringVar(&name, "name", "", `Schema name`)
 	bite.CanBeSilent(cmd)
 
 	return cmd
