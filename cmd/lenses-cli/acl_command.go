@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/landoop/lenses-go"
 	"sort"
-
+	
+	"github.com/landoop/lenses-go"
+	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -20,13 +21,14 @@ func init() {
 func newGetACLsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "acls",
-		Short:            "Print the list of the available Apache Kafka Access Control Lists",
+		Short:            "Print the list of the available Kafka Access Control Lists",
 		Example:          "acls",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// if the API changes: bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "no authorizer is configured on the broker")
 			acls, err := client.GetACLs()
 			if err != nil {
+				golog.Errorf("Failed to retrieve acls. [%s]", err.Error())
 				return err
 			}
 
@@ -47,7 +49,7 @@ func newGetACLsCommand() *cobra.Command {
 func newACLGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "acl",
-		Short:            "Work with an Apache Kafka Access Control List",
+		Short:            "Manage Access Control List",
 		Example:          "acl -h",
 		TraverseChildren: true,
 	}
@@ -59,12 +61,12 @@ func newACLGroupCommand() *cobra.Command {
 	)
 
 	childrenFlagSet := pflag.NewFlagSet("acl", pflag.ExitOnError)
-	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resourceType", "the resource type: Topic, Cluster, Group or TRANSACTIONALID")
-	childrenFlagSet.StringVar(&acl.ResourceName, "resourceName", "", "the name of the resource")
-	childrenFlagSet.StringVar(&acl.Principal, "principal", "", "the name of the principal")
-	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "permissionType", "Allow or Deny")
-	childrenFlagSet.StringVar(&acl.Host, "acl-host", "", "the acl host, can be empty to apply to all")
-	childrenFlagSet.Var(bite.NewFlagVar(&acl.Operation), "operation", "the allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resourceType", "The resource type: Topic, Cluster, Group or TRANSACTIONALID")
+	childrenFlagSet.StringVar(&acl.ResourceName, "resourceName", "", "The name of the resource")
+	childrenFlagSet.StringVar(&acl.Principal, "principal", "", "The name of the principal")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "PermissionType", "Allow or Deny")
+	childrenFlagSet.StringVar(&acl.Host, "acl-host", "", "The acl host, can be empty to apply to all")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.Operation), "operation", "The allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
 
 	root.AddCommand(newCreateOrUpdateACLCommand(childrenFlagSet, childrenRequiredFlags))
 	root.AddCommand(newDeleteACLCommand(childrenFlagSet, childrenRequiredFlags))
@@ -75,7 +77,7 @@ func newCreateOrUpdateACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags f
 	cmd := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"}, // acl create or acl update or acl set.
-		Short:            "Sets, create or update, an Apache Kafka Access Control List",
+		Short:            "Sets, create or update Access Control Lists",
 		Example:          `acl set --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
 		RunE: bite.Join(
@@ -86,6 +88,7 @@ func newCreateOrUpdateACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags f
 				if len(acls) > 0 {
 					for _, acl := range acls {
 						if err := client.CreateOrUpdateACL(acl); err != nil {
+							golog.Errorf("Failed to create acl. [%s]", err.Error())
 							return err
 						}
 						bite.PrintInfo(cmd, "ACL created")
@@ -95,7 +98,6 @@ func newCreateOrUpdateACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags f
 
 				return bite.PrintInfo(cmd, "ACL created")
 
-				
 			}),
 	}
 
@@ -108,7 +110,7 @@ func newCreateOrUpdateACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags f
 func newDeleteACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags func() bite.FlagPair) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
-		Short:            "Delete an Apache Kafka Access Control List",
+		Short:            "Delete an Access Control List",
 		Example:          `acl delete ./acl_to_be_deleted.json or .yml or acl delete --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
 		RunE: bite.Join(
@@ -116,7 +118,7 @@ func newDeleteACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags func() bi
 			bite.RequireFlags(requiredFlags),
 			func(cmd *cobra.Command, args []string) error {
 				if err := client.DeleteACL(acl); err != nil {
-					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, acl does not exist")
+					golog.Errorf("Failed to delete acl. [%s]", err.Error())
 					return err
 				}
 

@@ -102,7 +102,7 @@ type ResourceError struct {
 
 // String returns the detailed cause of the error.
 func (err ResourceError) String() string {
-	return fmt.Sprintf("client: (%s: %s) failed with status code %d:\n%s",
+	return fmt.Sprintf("client: [%s: %s] failed with status code [%d]:\n[%s]",
 		err.Method, err.URI, err.StatusCode, err.Body)
 }
 
@@ -275,7 +275,7 @@ func (c *Client) acquireResponseBodyStream(resp *http.Response) (io.ReadCloser, 
 	if encoding := resp.Header.Get(contentEncodingHeaderKey); encoding == gzipEncodingHeaderValue {
 		reader, err = gzip.NewReader(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("client: failed to read gzip compressed content, trace: %v", err)
+			return nil, fmt.Errorf("client: failed to read gzip compressed content, trace: [%v]", err)
 		}
 		// we wrap the gzipReader and the underline response reader
 		// so a call of .Close() can close both of them with the correct order when finish reading, the caller decides.
@@ -362,7 +362,7 @@ func (c *Client) ReadResponseBody(resp *http.Response) ([]byte, error) {
 		}
 
 		// print both body and error, because both of them may be formated by the `readResponseBody`'s caller.
-		golog.Debugf("Client#Do.resp:\n\tbody: %s\n\tstatus code: %d\n\terror: %v", rawBodyString, resp.StatusCode, err)
+		golog.Debugf("Client#Do.resp:\n\tbody: %s\n\tstatus code: %d\n\terror: [%v]", rawBodyString, resp.StatusCode, err)
 	}
 
 	// return the body.
@@ -381,7 +381,7 @@ func (c *Client) ReadJSON(resp *http.Response, valuePtr interface{}) error {
 	err = json.Unmarshal(b, valuePtr)
 	if c.Config.Debug {
 		if syntaxErr, ok := err.(*json.SyntaxError); ok {
-			golog.Errorf("Client#ReadJSON: syntax error at offset %d: %s", syntaxErr.Offset, syntaxErr.Error())
+			golog.Errorf("Client#ReadJSON: syntax error at offset [%d]: [%s]", syntaxErr.Offset, syntaxErr.Error())
 		}
 	}
 	return err
@@ -590,7 +590,7 @@ func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
 	config := make(map[string]interface{})
 	err := c.getBoxConfig(&config)
 	if err != nil || len(config) == 0 {
-		return fmt.Errorf("%s: cannot be extracted: unable to retrieve the config: %v", keys, err)
+		return fmt.Errorf("[%s]: cannot be extracted: unable to retrieve the config: [%v]", keys, err)
 	}
 
 	// support many tries.
@@ -600,7 +600,7 @@ func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
 			if isLast := len(keys)-1 == i; !isLast {
 				continue
 			}
-			return fmt.Errorf("%s: couldn't find the corresponding key from config", key)
+			return fmt.Errorf("[%s]: couldn't find the corresponding key from config", key)
 		}
 
 		// config key found, now exit on the first failure.
@@ -609,7 +609,7 @@ func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
 			// safe cast to string.
 			strValue, ok := raw.(string)
 			if !ok {
-				return fmt.Errorf("%s: %v not type of string", key, raw)
+				return fmt.Errorf("[%s]: [%v] not type of string", key, raw)
 			}
 
 			if len(strValue) == 0 {
@@ -625,7 +625,7 @@ func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
 			// safe cast to int.
 			intValue, ok := raw.(int)
 			if !ok {
-				return fmt.Errorf("%s: %v not type of int", key, raw)
+				return fmt.Errorf("[%s]: [%v] not type of int", key, raw)
 			}
 			// if the outPtr is a raw int, then set it as int.
 			*intPtr = intValue
@@ -646,7 +646,7 @@ func (c *Client) GetConfigEntry(outPtr interface{}, keys ...string) error {
 			return nil
 		}
 		if err = json.Unmarshal(b, outPtr); err != nil {
-			return fmt.Errorf("%s: json unarshal of: '%s': %v", key, string(b), err)
+			return fmt.Errorf("[%s]: json unarshal of: [%s]: [%v]", key, string(b), err)
 		}
 
 		return nil
@@ -722,94 +722,6 @@ func (c *Client) ValidateLSQL(sql string) (v LSQLValidation, err error) {
 	return
 }
 
-type (
-	// LSQLRecord and LSQLStop and LSQLOffset and LSQLError and optional LSQLStats are the structures that various LSQL information
-	// are stored by the SSE client-side, see `LSQL` for more.
-	LSQLRecord struct {
-		Timestamp int64  `json:"timestamp"`
-		Partition int    `json:"partition"`
-		Key       string `json:"key"`
-		Offset    int    `json:"offset"`
-		Topic     string `json:"topic"`
-		Value     string `json:"value"` // represents a json object, in raw string.
-	}
-
-	// LSQLStop the form of the stop record data that LSQL call returns once.
-	LSQLStop struct {
-		// If false `max.time` was reached.
-		IsTimeRemaining bool `json:"isTimeRemaining" header:"Time Remaining"`
-		// If true there was no more data on the topic and `max.zero.polls` was reached.
-		IsTopicEnd bool `json:"isTopicEnd" header:"End"`
-		// If true the query has been stopped by admin  (Cancel query equivalence).
-		IsStopped bool `json:"isStopped" header:"Stopped"`
-		// Number of records read from Kafka.
-		TotalRecords int `json:"totalRecords" header:"Total /"`
-		// Number of records not matching the filter.
-		SkippedRecords int `json:"skippedRecords" header:"Skipped Records"`
-		// Max number of records to pull (driven by LIMIT X,
-		// if LIMIT is not present it gets the default config in LENSES).
-		RecordsLimit int `json:"recordsLimit" header:"Records Limit"`
-		// Total size in bytes read from Kafka.
-		TotalSizeRead int64 `json:"totalSizeRead" header:"Total Size Read"`
-		// Total size in bytes (Kafka size) for the records.
-		Size int64 `json:"size" header:"Size"`
-		// The topic offsets.
-		// If query parameter `&offsets=true` is not present it won't pull the details.
-		Offsets []LSQLOffset `json:"offsets" header:"Offsets,count"`
-	}
-
-	// LSQLOffset the form of the offset record data that LSQL call returns once.
-	LSQLOffset struct {
-		Partition int   `json:"partition" header:"Partition"`
-		Min       int64 `json:"min" header:"Min"`
-		Max       int64 `json:"max" header:"Max"`
-	}
-
-	// LSQLError the form of the error record data that LSQL call returns once.
-	LSQLError struct {
-		FromLine   int    `json:"fromLine"`
-		ToLine     int    `json:"toLine"`
-		FromColumn int    `json:"fromColumn"`
-		ToColumn   int    `json:"toColumn"`
-		Message    string `json:"error"`
-	}
-
-	// LSQLStats the form of the stats record data that LSQL call returns.
-	LSQLStats struct {
-		// Number of records read from Kafka so far.
-		TotalRecords int `json:"totalRecords"`
-		// Number of records not matching the filter.
-		RecordsSkipped int `json:"recordsSkipped"`
-		// Max number of records to pull (driven by LIMIT X,
-		// if LIMIT is not present it gets the default config in LENSES).
-		RecordsLimit int `json:"recordsLimit"`
-		// Data read so far in bytes.
-		TotalBytes int64 `json:"totalBytes"`
-		// Max data allowed in bytes  (driven by `max.bytes`= X,
-		// if is not present it gets the default config in LENSES).
-		MaxSize int64 `json:"maxSize"`
-		// CurrentSize represents the data length accepted so far in bytes (these are records passing the filter).
-		CurrentSize int64 `json:"currentSize"`
-	}
-
-	// LSQLRecordHandler and LSQLStopHandler and LSQLStopErrorHandler and optionally LSQLStatsHandler
-	// describe type of functions that accepts LSQLRecord, LSQLStop, LSQLError and LSQLStats respectfully, and return an error if error not nil then client stops reading from SSE.
-	// It's used by the `LSQL` function.
-	LSQLRecordHandler func(LSQLRecord) error
-	// LSQLStopHandler describes the form of the function that should be registered to accept stop record data from the LSQL call once.
-	LSQLStopHandler func(LSQLStop) error
-	// LSQLStopErrorHandler describes the form of the function that should be registered to accept error record data from the LSQL call once.
-	LSQLStopErrorHandler func(LSQLError) error
-	// LSQLStatsHandler describes the form of the function that should be registered to accept stats record data from the LSQL call.
-	LSQLStatsHandler func(LSQLStats) error
-)
-
-func (err LSQLError) Error() string {
-	return err.Message
-}
-
-const lsqlPath = "api/sql/data?sql="
-
 var dataPrefix = []byte("data")
 
 // 0- heartbeat. payload is just: "0"
@@ -818,179 +730,6 @@ var dataPrefix = []byte("data")
 // 3- represents an error . it also represents the end (previousely it was 2)
 // 4- represents the stats record (previousely it was 3)
 var shiftN = len(dataPrefix) + 1 // data:0message, i.e [len(dataPrefix)] == ':' so +1 == '0'.
-
-const (
-	heartBeatPayloadType = '0'
-	recordPayloadType    = '1'
-	stopPayloadType      = '2'
-	errPayloadType       = '3'
-	statsPayloadType     = '4'
-)
-
-// LSQL runs a lenses query and fires the necessary handlers given by the caller.
-// Example:
-// err := client.LSQL("SELECT * FROM reddit_posts LIMIT 50", true, 2 * time.Second, recordHandler, stopHandler, stopErrHandler, statsHandler)
-func (c *Client) LSQL(
-	sql string, withOffsets bool, statsEvery time.Duration,
-	recordHandler LSQLRecordHandler,
-	stopHandler LSQLStopHandler,
-	stopErrHandler LSQLStopErrorHandler,
-	statsHandler LSQLStatsHandler) error {
-
-	if sql == "" {
-		return errSQLEmpty
-	}
-
-	withStop := stopHandler != nil
-
-	statsEverySeconds := int(statsEvery.Seconds())
-	withStats := statsHandler != nil && statsEverySeconds > 1
-
-	path := lsqlPath + url.QueryEscape(sql)
-	// no need to use the url package for these, remember: we have already the ? on the `lsqlPath`.
-	if withOffsets {
-		path += "&offsets=true"
-	}
-
-	if withStats {
-		path += fmt.Sprintf("&stats=%d", statsEverySeconds)
-	}
-
-	// it's sse, so accept text/event-stream and stream reading the response body, no
-	// external libraries needed, it is fairly simple.
-	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil, func(r *http.Request) error {
-		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
-		return nil
-	}, schemaAPIOption)
-
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	reader, err := c.acquireResponseBodyStream(resp)
-
-	if err != nil {
-		return err
-	}
-
-	streamReader := bufio.NewReader(reader)
-
-	for {
-		line, err := streamReader.ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				return nil // we read until the the end, exit with no error here.
-			}
-			return err // exit on first failure.
-		}
-
-		// if on debug mode just read the lines and continue, it wil make easier for third-party developers to watch the response.
-		if c.Config.Debug {
-			golog.Debugf("%s", string(line))
-			//continue
-		}
-
-		if len(line) < shiftN+1 { // even more +1 for the actual event.
-			// almost empty or totally invalid line,
-			// empty message maybe,
-			// we don't care, we ignore them at any way.
-			continue
-		}
-
-		if !bytes.HasPrefix(line, dataPrefix) {
-			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
-		}
-
-		messageType := line[shiftN] // we need the [0] here.
-		message := line[shiftN+1:]  // we need everything after the '0' here , so shiftN+1.
-
-		switch messageType {
-		case heartBeatPayloadType:
-			break // ignore.
-		case recordPayloadType:
-			record := LSQLRecord{}
-
-			if err = json.Unmarshal(message, &record); err != nil {
-				// exit on first error here as well.
-				return err
-			}
-
-			if err = recordHandler(record); err != nil {
-				return err
-			}
-
-			break
-		case stopPayloadType:
-			if !withStop {
-				return nil
-			}
-
-			stopMessage := LSQLStop{}
-			if err = json.Unmarshal(message, &stopMessage); err != nil {
-				return err
-			}
-
-			// And STOP.
-			return stopHandler(stopMessage)
-		case errPayloadType:
-			errMessage := LSQLError{}
-			if err = json.Unmarshal(message, &errMessage); err != nil {
-				return err
-			}
-
-			// And STOP.
-			return stopErrHandler(errMessage)
-		case statsPayloadType:
-			// here we don't necessarily need to check
-			// for the existence of the stats handler
-			// because the server sends those stats only
-			// if the query param exists and it exists if the stats handler != nil,
-			// and we did that check already.
-			// BUT we make that check here too to prevent any future panics if back-end change.
-			if !withStats {
-				break
-			}
-
-			statsMessage := LSQLStats{}
-			if err = json.Unmarshal(message, &statsMessage); err != nil {
-				return err
-			}
-
-			if err = statsHandler(statsMessage); err != nil {
-				return err
-			}
-
-			break
-		default:
-			return fmt.Errorf("client: sse: unknown event received: %s", string(line))
-		}
-	}
-}
-
-// LSQLWait same as `LSQL` but waits until stop or error to return the query's results records, the stats and the stop information.
-func (c *Client) LSQLWait(sql string, withOffsets bool, statsEvery time.Duration) (records []LSQLRecord, stats LSQLStats, stop LSQLStop, err error) {
-	c.LSQL(sql, withOffsets, statsEvery,
-		func(r LSQLRecord) error {
-			records = append(records, r)
-			return nil
-		},
-		func(s LSQLStop) error {
-			stop = s
-			return nil
-		},
-		func(e LSQLError) error {
-			err = e
-			return nil
-		},
-		func(s LSQLStats) error {
-			stats = s
-			return nil
-		},
-	)
-
-	return
-}
 
 const queriesPath = "api/sql/queries"
 
@@ -1030,7 +769,7 @@ func (c *Client) CancelQuery(id int64) (bool, error) {
 
 // Topics API
 //
-// Follow the instructions on http://lenses.stream/dev/lenses-apis/rest-api/index.html#topic-api and read
+// Follow the instructions on https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#topic-api and read
 // the call comments for a deeper understanding.
 
 // TopicConfigs describes the topics configs, use for topic creation, update topic configs and etc.
@@ -1226,7 +965,7 @@ type TopicConfig struct {
 }
 
 var errRequired = func(field string) error {
-	return fmt.Errorf("client: %s is required", field)
+	return fmt.Errorf("client: [%s] is required", field)
 }
 
 const topicsPath = "api/topics"
@@ -1281,12 +1020,12 @@ type (
 	// TopicMetadata describes the data received from the `GetTopicsMetadata`
 	// and the payload to send on the `CreateTopicMetadata`.
 	TopicMetadata struct {
-		TopicName string `json:"topicName" yaml:"TopicName" header:"Topic"`
-		KeyType   string `json:"keyType,omitempty" yaml:"KeyType" header:"Key /,NULL"`
-		ValueType string `json:"valueType,omitempty" yaml:"ValueType" header:"Value Type,NULL"`
+		TopicName string `json:"topicName" yaml:"topicName" header:"Topic"`
+		KeyType   string `json:"keyType,omitempty" yaml:"KkyType" header:"Key /,NULL"`
+		ValueType string `json:"valueType,omitempty" yaml:"valueType" header:"Value Type,NULL"`
 
-		ValueSchemaRaw string `json:"valueSchema,omitempty" yaml:"ValueSchema,omitempty"` // for response read.
-		KeySchemaRaw   string `json:"keySchema,omitempty" yaml:"KeySchema,omitempty"`     // for response read.
+		ValueSchemaRaw string `json:"valueSchema,omitempty" yaml:"valueSchema,omitempty"` // for response read.
+		KeySchemaRaw   string `json:"keySchema,omitempty" yaml:"keySchema,omitempty"`     // for response read.
 	}
 
 	/*
@@ -1396,10 +1135,10 @@ func (c *Client) DeleteTopicMetadata(topicName string) error {
 
 // CreateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
 type CreateTopicPayload struct {
-	TopicName   string `json:"topicName" yaml:"Name"`
-	Replication int    `json:"replication" yaml:"Replication"`
-	Partitions  int    `json:"partitions" yaml:"Partitions"`
-	Configs     KV     `json:"configs" yaml:"Configs"`
+	TopicName   string `json:"topicName" yaml:"name"`
+	Replication int    `json:"replication" yaml:"replication"`
+	Partitions  int    `json:"partitions" yaml:"partitions"`
+	Configs     KV     `json:"configs" yaml:"configs"`
 }
 
 // CreateTopic creates a topic.
@@ -1409,7 +1148,7 @@ type CreateTopicPayload struct {
 // partitions, int.
 // configs, topic key - value.
 //
-// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#create-topic
+// Read more at: https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#create-topic
 func (c *Client) CreateTopic(topicName string, replication, partitions int, configs KV) error {
 	if topicName == "" {
 		return errRequired("topicName")
@@ -1423,6 +1162,7 @@ func (c *Client) CreateTopic(topicName string, replication, partitions int, conf
 	}
 
 	send, err := json.Marshal(payload)
+
 	if err != nil {
 		return err
 	}
@@ -1443,7 +1183,7 @@ const (
 // DeleteTopic deletes a topic.
 // It accepts the topicName, a required, not empty string.
 //
-// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#delete-topic
+// Read more at: https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#delete-topic
 func (c *Client) DeleteTopic(topicName string) error {
 	if topicName == "" {
 		return errRequired("topicName")
@@ -1482,27 +1222,38 @@ func (c *Client) DeleteTopicRecords(topicName string, fromPartition int, toOffse
 	return resp.Body.Close()
 }
 
-const updateTopicConfigPath = topicsPath + "/config/%s"
+const updateTopicConfigPath = "api/configs/topics/%s"
 
-// UpdateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
-type UpdateTopicPayload struct {
-	Name    string `json:"name,omitempty" yaml:"Name"` // empty for request send, filled for cli.
-	Configs []KV   `json:"configs,omitempty" yaml:"Configs"`
+// KeyVal contains the data configs to send for a topic update.
+type KeyVal struct {
+	Key   string `json:"key" yaml:"key"`
+	Value string `json:"value" yaml:"value"`
+}
+
+type UpdateConfigs struct {
+	Configs []KeyVal `json:"configs"  yaml:"configs"`
 }
 
 // UpdateTopic updates a topic's configuration.
 // topicName, string.
 // configsSlice, array of topic config key-values.
 //
-// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#update-topic-configuration
+// Read more at: https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#update-topic-configuration
 func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	if topicName == "" {
 		return errRequired("topicName")
 	}
 
-	payload := UpdateTopicPayload{Configs: configsSlice}
+	var kvs []KeyVal
 
-	send, err := json.Marshal(payload)
+	for _, c := range configsSlice {
+		for k, v := range c {
+			kvs = append(kvs, KeyVal{Key: k, Value: v.(string)})
+		}
+	}
+
+	send, err := json.Marshal(UpdateConfigs{kvs})
+
 	if err != nil {
 		return err
 	}
@@ -1529,26 +1280,19 @@ type Topic struct {
 	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
 	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
 	Timestamp            int64              `json:"timestamp"`
-	Config               []KV               `json:"config" header:"Configs,count"`
+	Configs              []KV               `json:"config" header:"Configs,count"`
 	ConsumersGroup       []ConsumersGroup   `json:"consumers"`
 	MessagesPerPartition []PartitionMessage `json:"messagesPerPartition"`
 	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
 }
 
-type TopicAsRequest struct {
-	TopicName            string             `json:"topicName" yaml:"topicName" header:"Name"`
-	Partitions           int                `json:"partitions" yaml:"partitions" header:"Part"`
-	Replication          int                `json:"replication" yaml:"replication" header:"Repl"`
-	Config               []KV               `json:"config" yaml:"config" header:"Configs,count"`
-}
-
 // GetTopicAsRequest takes a topic returned from Lenses and transforms to a request
-func (topic *Topic) GetTopicAsRequest(config []KV) TopicAsRequest {
-	return TopicAsRequest{
-		TopicName: topic.TopicName,
-		Partitions: topic.Partitions,
+func (topic *Topic) GetTopicAsRequest(config KV) CreateTopicPayload {
+	return CreateTopicPayload{
+		TopicName:   topic.TopicName,
+		Partitions:  topic.Partitions,
 		Replication: topic.Replication,
-		Config: config,
+		Configs:     config,
 	}
 }
 
@@ -1618,7 +1362,7 @@ type PartitionMessage struct {
 
 // GetTopic returns a topic's information, a `lenses.Topic` value.
 //
-// Read more at: http://lenses.stream/dev/lenses-apis/rest-api/index.html#get-topic-information
+// Read more at: https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#get-topic-information
 func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 	if topicName == "" {
 		err = errRequired("topicName")
@@ -1642,22 +1386,22 @@ const processorsPath = "api/streams"
 
 // CreateProcessorPayload holds the data to be sent from `CreateProcessor`.
 type CreateProcessorPayload struct {
-	Name        string `json:"name"` // required
-	SQL         string `json:"sql"`   // required
-	Runners     int    `json:"runners"`
-	ClusterName string `json:"clusterName"`
-	Namespace   string `json:"namespace"`
-	Pipeline    string `json:"pipeline"` // defaults to Name if not set.
+	Name        string `json:"name" yaml:"name"` // required
+	SQL         string `json:"sql" yaml:"sql"`  // required
+	Runners     int    `json:"runners" yaml:"runners"`
+	ClusterName string `json:"clusterName" yaml:"clusterName"`
+	Namespace   string `json:"namespace" yaml:"namespace"`
+	Pipeline    string `json:"pipeline" yaml:"pipeline"` // defaults to Name if not set.
 }
 
 func (p *ProcessorStream) ProcessorAsRequest() CreateProcessorPayload {
 	return CreateProcessorPayload{
-		Name: p.Name,
-		SQL: p.SQL,
-		Runners: p.Runners,
+		Name:        p.Name,
+		SQL:         p.SQL,
+		Runners:     p.Runners,
 		ClusterName: p.ClusterName,
-		Namespace: p.Namespace,
-		Pipeline: p.Pipeline,
+		Namespace:   p.Namespace,
+		Pipeline:    p.Pipeline,
 	}
 }
 
@@ -1704,7 +1448,7 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 type (
 	//ProcessorRequests describes the requests required to create the current processors
 	ProcessorRequests struct {
-		Targets []ProcessorTarget `json:"targets"`
+		Targets []ProcessorTarget        `json:"targets"`
 		Streams []CreateProcessorPayload `json:"streams"`
 	}
 
@@ -1725,13 +1469,13 @@ type (
 	// ProcessorStream describes the processor stream,
 	// see `ProcessorResult`.
 	ProcessorStream struct {
-		ID              string `json:"id"` // header:"ID,text"`
+		ID              string `json:"id" header:"ID,text"`
 		Name            string `json:"name" header:"Name"`
 		DeploymentState string `json:"deploymentState" header:"State"`
 		Runners         int    `json:"runners" header:"Runners"`
 		User            string `json:"user" header:"Created By"`
 		StartTimestamp  int64  `json:"startTs" header:"Started at,timestamp(ms|02 Jan 2006 15:04)"`
-		StopTimestamp   int64  `json:"stopTs,omitempty"` // header:"Stopped,timestamp(ms|02 Jan 2006 15:04),No"`
+		StopTimestamp   int64  `json:"stopTs,omitempty" header:"Stopped,timestamp(ms|02 Jan 2006 15:04),No"`
 		Uptime          int64  `json:"uptime" header:"Up time,unixduration"`
 
 		Namespace   string `json:"namespace" header:"Namespace"`
@@ -1777,6 +1521,22 @@ func (c *Client) GetProcessors() (ProcessorsResult, error) {
 	return res, nil
 }
 
+func (c *Client) GetProcessor(processorID string) (ProcessorStream, error) {
+	var res ProcessorStream
+
+	path := fmt.Sprintf(processorPath, processorID)
+	resp, err := c.Do(http.MethodGet, path, "", nil)
+	if err != nil {
+		return res, err
+	}
+
+	if err = c.ReadJSON(resp, &res); err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
 // LookupProcessorIdentifier is not a direct API call, although it fires requests to get the result.
 // It's a helper which can be used as an input argument of the `DeleteProcessor` and `PauseProcessor` and `ResumeProcessor` and `UpdateProcessorRunners` functions.
 //
@@ -1794,6 +1554,10 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 
 	identifier := name
 
+	if mode == ExecutionModeInProcess {
+		clusterName = "IN_PROC"
+	}
+
 	if mode == ExecutionModeConnect || mode == ExecutionModeInProcess {
 		if id != "" {
 			identifier = id
@@ -1805,9 +1569,7 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 			}
 
 			for _, processor := range result.Streams {
-				if processor.Name == name {
-					// Just an information:
-					// if mode is IN_PROC, then the below processor.ID is: the pipeline prefix followed by `_` as well.
+				if processor.Name == name && processor.ClusterName == clusterName {
 					identifier = processor.ID
 					break
 				}
@@ -1908,7 +1670,7 @@ func (c *Client) DeleteProcessor(processorNameOrID string) error {
 
 //
 // Connector API
-// http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
+// https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#connector-api
 //
 
 // ConnectorConfig the configuration parameters
@@ -1942,19 +1704,11 @@ type Connector struct {
 	Tasks []ConnectorTaskReadOnly `json:"tasks,omitempty" header:"Tasks,count"`
 }
 
-// ConnectorAsRequest contains the connector's information as a request
-type ConnectorAsRequest struct {
-	// Name of the created (or received) connector.
-	ClusterName string `json:"clusterName,omitempty" header:"Cluster"` // internal use only, not set by response.
-
-	// Config parameters for the connector
-	Config ConnectorConfig `json:"config,omitempty" header:"Configs,count"`
-}
-
-func (connector *Connector) ConnectorAsRequest()  ConnectorAsRequest{
-	return ConnectorAsRequest{
-		ClusterName: connector.ClusterName,
-		Config: connector.Config,
+func (connector *Connector) ConnectorAsRequest() CreateUpdateConnectorPayload {
+	return CreateUpdateConnectorPayload{
+		ClusterName: 	connector.ClusterName,
+		Name: 			connector.Name,
+		Config:      	connector.Config,
 	}
 }
 
@@ -1962,7 +1716,7 @@ const connectorsPath = "api/proxy-connect/%s/connectors"
 
 // GetConnectors returns a list of active connectors names as list of strings.
 //
-// Visit http://lenses.stream/dev/lenses-apis/rest-api/index.html#connector-api
+// Visit https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#connector-api
 func (c *Client) GetConnectors(clusterName string) (names []string, err error) {
 	if clusterName == "" {
 		err = errRequired("clusterName")
@@ -1984,9 +1738,9 @@ func (c *Client) GetConnectors(clusterName string) (names []string, err error) {
 
 // CreateUpdateConnectorPayload can be used to hold the data for creating or updating a connector.
 type CreateUpdateConnectorPayload struct {
-	ClusterName string          `yaml:"ClusterName"`
-	Name        string          `yaml:"Name"`
-	Config      ConnectorConfig `yaml:"Config"`
+	ClusterName string          `yaml:"clusterName"`
+	Name        string          `yaml:"name"`
+	Config      ConnectorConfig `yaml:"config"`
 }
 
 // ApplyAndValidateName applies some rules to make sure that the connector's data are setup correctly.
@@ -2000,7 +1754,7 @@ func (c *CreateUpdateConnectorPayload) ApplyAndValidateName() error {
 			}
 
 			if c.Name != "" && configName != c.Name {
-				return fmt.Errorf(`config["name"] '%s' and name '%s' do not match`, configName, c.Name)
+				return fmt.Errorf(`config["name"] [%s] and name [%s] do not match`, configName, c.Name)
 			}
 
 			if c.Name == "" {
@@ -2512,11 +2266,27 @@ func (c *Client) GetSchema(subjectID int) (string, error) {
 type Schema struct {
 	ID int `json:"id,omitempty" yaml:"ID,omitempty" header:"ID,text"`
 	// Name is the name of the schema is registered under.
-	Name string `json:"subject,omitempty" yaml:"Name" header:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
+	Name string `json:"subject,omitempty" yaml:"name" header:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
 	// Version of the returned schema.
 	Version int `json:"version" header:"Version"`
 	// AvroSchema is the Avro schema string.
-	AvroSchema string `json:"schema" yaml:"AvroSchema"`
+	AvroSchema string `json:"schema" yaml:"avroSchema"`
+}
+
+type SchemaAsRequest struct {
+	// Name is the name of the schema is registered under.
+	Name string `json:"subject,omitempty" yaml:"name" header:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
+
+	// AvroSchema is the Avro schema string.
+	AvroSchema string `json:"schema" yaml:"avroSchema"`
+}
+
+// GetSchemaAsRequest returns the schema as a request for import into another instance
+func (c *Client) GetSchemaAsRequest(schema Schema) SchemaAsRequest {
+	return SchemaAsRequest{
+		Name:       schema.Name,
+		AvroSchema: schema.AvroSchema,
+	}
 }
 
 // JSONAvroSchema converts and returns the json form of the "avroSchema" as []byte.
@@ -2539,13 +2309,13 @@ func checkSchemaVersionID(versionID interface{}) error {
 
 	if verStr, ok := versionID.(string); ok {
 		if verStr != SchemaLatestVersion {
-			return fmt.Errorf("client: %v string is not a valid value for the versionID input parameter [versionID == \"latest\"]", versionID)
+			return fmt.Errorf("client: [%v] string is not a valid value for the versionID input parameter [versionID == \"latest\"]", versionID)
 		}
 	}
 
 	if verInt, ok := versionID.(int); ok {
 		if verInt <= 0 || verInt > 2^31-1 { // it's the max of int32, math.MaxInt32 already but do that check.
-			return fmt.Errorf("client: %v integer is not a valid value for the versionID input parameter [ versionID > 0 && versionID <= 2^31-1]", versionID)
+			return fmt.Errorf("client: [%v] integer is not a valid value for the versionID input parameter [ versionID > 0 && versionID <= 2^31-1]", versionID)
 		}
 	}
 
@@ -2990,12 +2760,12 @@ const (
 
 // ACL is the type which defines a single Apache Access Control List.
 type ACL struct {
-	ResourceName   string            `json:"resourceName" yaml:"ResourceName" header:"Name"`           // required.
-	ResourceType   ACLResourceType   `json:"resourceType" yaml:"ResourceType" header:"Type"`           // required.
-	Principal      string            `json:"principal" yaml:"Principal" header:"Principal"`            // required.
-	PermissionType ACLPermissionType `json:"permissionType" yaml:"PermissionType" header:"Permission"` // required.
-	Host           string            `json:"host" yaml:"Host" header:"Host"`                           // required.
-	Operation      ACLOperation      `json:"operation" yaml:"Operation" header:"Operation"`            // required.
+	ResourceName   string            `json:"resourceName" yaml:"resourceName" header:"Name"`           // required.
+	ResourceType   ACLResourceType   `json:"resourceType" yaml:"resourceType" header:"Type"`           // required.
+	Principal      string            `json:"principal" yaml:"principal" header:"Principal"`            // required.
+	PermissionType ACLPermissionType `json:"permissionType" yaml:"permissionType" header:"Permission"` // required.
+	Host           string            `json:"host" yaml:"host" header:"Host"`                           // required.
+	Operation      ACLOperation      `json:"operation" yaml:"operation" header:"Operation"`            // required.
 }
 
 // Validate force validates the acl's resource type, permission type and operation.
@@ -3015,10 +2785,10 @@ func (acl *ACL) Validate() error {
 		validOps := ACLOperations[acl.ResourceType]
 		errMsg := ""
 		if validOps == nil {
-			errMsg = fmt.Sprintf("invalid resource type. Valid resource types are: '%s', '%s', '%s' or '%s'",
+			errMsg = fmt.Sprintf("invalid resource type. Valid resource types are: [%s], [%s], [%s] or [%s]",
 				ACLResourceTopic, ACLResourceGroup, ACLResourceCluster, ACLResourceTransactionalID)
 		} else {
-			errMsg = fmt.Sprintf("invalid operation for resource type: '%s'. The valid operations for this type are: %s", acl.ResourceType, validOps)
+			errMsg = fmt.Sprintf("invalid operation for resource type: [%s]. The valid operations for this type are: [%s]", acl.ResourceType, validOps)
 		}
 
 		return fmt.Errorf(errMsg)
@@ -3135,19 +2905,19 @@ type (
 	Quota struct {
 		// Entityname is the Kafka client id for "CLIENT"
 		// and "CLIENTS" and user name for "USER", "USER" and "USERCLIENT", the `QuotaEntityXXX`.
-		EntityName string `json:"entityName" yaml:"EntityName" header:"Name"`
+		EntityName string `json:"entityName" yaml:"entityName" header:"Name"`
 		// EntityType can be either `QuotaEntityClient`, `QuotaEntityClients`,
 		// `QuotaEntityClientsDefault`, `QuotaEntityUser`, `QuotaEntityUsers`, `QuotaEntityUserClient`
 		// or `QuotaEntityUsersDefault`.
-		EnityType QuotaEntityType `json:"entityType" yaml:"EntityType" header:"Type"`
+		EntityType QuotaEntityType `json:"entityType" yaml:"entityType" header:"Type"`
 		// Child is optional and only present for entityType `QuotaEntityUserClient` and is the client id.
 		Child string `json:"child,omitempty" yaml:"Child"` // header:"Child"`
 		// Properties  is a map of the quota constraints, the `QuotaConfig`.
-		Properties QuotaConfig `json:"properties" yaml:"Properties" header:"inline"`
+		Properties QuotaConfig `json:"properties" yaml:"properties" header:"inline"`
 		// URL is the url from this quota in Lenses.
 		URL string `json:"url" yaml:"URL"`
 
-		IsAuthorized bool `json:"isAuthorized" yaml:"IsAuthorized"`
+		IsAuthorized bool `json:"isAuthorized" yaml:"isAuthorized"`
 	}
 
 	// QuotaConfig is a typed struct which defines the
@@ -3155,18 +2925,57 @@ type (
 	QuotaConfig struct {
 		// header note:
 		// if "number" and no default value, then it will add "0", we use the empty space between commas to tell that the default value is space.
-		ProducerByteRate  string `json:"producer_byte_rate" yaml:"ProducerByteRate" header:"Produce/sec, ,number"`
-		ConsumerByteRate  string `json:"consumer_byte_rate" yaml:"ConsumerByteRate" header:"Consume/sec, ,number"`
-		RequestPercentage string `json:"request_percentage" yaml:"RequestPercentage" header:"Request Percentage, ,number"`
+		ProducerByteRate  string `json:"producer_byte_rate" yaml:"producerByteRate" header:"Produce/sec, ,number"`
+		ConsumerByteRate  string `json:"consumer_byte_rate" yaml:"consumerByteRate" header:"Consume/sec, ,number"`
+		RequestPercentage string `json:"request_percentage" yaml:"requestPercentage" header:"Request Percentage, ,number"`
 	}
 )
 
-func (q *Quota) GetQuotaAsRequest() QuotaConfig {
-	return QuotaConfig{
-		ProducerByteRate: q.Properties.ProducerByteRate,
-		ConsumerByteRate: q.Properties.ConsumerByteRate,
-		RequestPercentage: q.Properties.RequestPercentage,
+type CreateQuotaPayload struct {
+	QuotaType string      `yaml:"type" json:"type"`
+	Config    QuotaConfig `yaml:"config" json:"config"`
+	// for specific user and/or client.
+	User string `yaml:"user" json:"user"`
+	// if "all" or "*" then means all clients.
+	// Minor note On quota clients set/create/update the Config and Client field are used only.
+	ClientID string `yaml:"client" json:"client"`
+}
 
+func (q *Quota) GetQuotaAsRequest() CreateQuotaPayload {
+	var user, clientID string
+
+	// per user
+	if q.EntityType == QuotaEntityUser || q.EntityType == QuotaEntityUsersDefault {
+		user = q.EntityName
+	}
+
+	// user client pair
+	if q.EntityType == QuotaEntityUserClient {
+		user = q.EntityName
+		clientID = q.Child
+	}
+
+	if q.EntityType == QuotaEntityUsers {
+		user = "*"
+	}
+
+	if q.EntityType == QuotaEntityClient || q.EntityType == QuotaEntityClients {
+		clientID = q.EntityName
+	}
+
+	if q.EntityType == QuotaEntityClientsDefault {
+		clientID = "*"
+	}
+
+	return CreateQuotaPayload{
+		QuotaType: string(q.EntityType),
+		User:      user,
+		ClientID:  clientID,
+		Config: QuotaConfig{
+			ProducerByteRate:  q.Properties.ProducerByteRate,
+			ConsumerByteRate:  q.Properties.ConsumerByteRate,
+			RequestPercentage: q.Properties.RequestPercentage,
+		},
 	}
 }
 
@@ -3188,7 +2997,7 @@ func (c *Client) GetQuotas() ([]Quota, error) {
 const quotasPathAllUsers = quotasPath + "/users"
 
 // CreateOrUpdateQuotaForAllUsers sets the default quota for all users.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+// Read more at: https://docs.lenses.io/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForAllUsers(config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -3228,7 +3037,7 @@ func marshalQuotaConfigPropertiesToBeRemoved(propertiesToRemove []string) ([]byt
 }
 
 // DeleteQuotaForAllUsers deletes the default for all users.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+// Read more at: https://docs.lenses.io/using-lenses/user-guide/quotas.html.
 //
 // if "propertiesToRemove" is not passed or empty then the client will send all the available keys to be removed, see `DefaultQuotaConfigPropertiesToRemove` for more.
 func (c *Client) DeleteQuotaForAllUsers(propertiesToRemove ...string) error {
@@ -3249,7 +3058,7 @@ func (c *Client) DeleteQuotaForAllUsers(propertiesToRemove ...string) error {
 const quotasPathUser = quotasPathAllUsers + "/%s"
 
 // CreateOrUpdateQuotaForUser sets a quota for a user.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+// Read more at: https://docs.lenses.io/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForUser(user string, config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -3286,7 +3095,7 @@ func (c *Client) DeleteQuotaForUser(user string, propertiesToRemove ...string) e
 const quotasPathUserAllClients = quotasPathUser + "/clients"
 
 // CreateOrUpdateQuotaForUserAllClients sets a quota for a user for all clients.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+// Read more at: https://docs.lenses.io/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForUserAllClients(user string, config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -3324,7 +3133,7 @@ func (c *Client) DeleteQuotaForUserAllClients(user string, propertiesToRemove ..
 const quotasPathUserClient = quotasPathUserAllClients + "/%s"
 
 // CreateOrUpdateQuotaForUserClient sets the quota for a user/client pair.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+// Read more at: https://docs.lenses.io/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForUserClient(user, clientID string, config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -3362,7 +3171,7 @@ func (c *Client) DeleteQuotaForUserClient(user, clientID string, propertiesToRem
 const quotasPathAllClients = quotasPath + "/clients"
 
 // CreateOrUpdateQuotaForAllClients sets the default quota for all clients.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+// Read more at: https://docs.lenses.io/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForAllClients(config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -3398,7 +3207,7 @@ func (c *Client) DeleteQuotaForAllClients(propertiesToRemove ...string) error {
 const quotasPathClient = quotasPathAllClients + "/%s"
 
 // CreateOrUpdateQuotaForClient sets the quota for a specific client.
-// Read more at: http://lenses.stream/using-lenses/user-guide/quotas.html.
+// Read more at: https://docs.lenses.io/using-lenses/user-guide/quotas.html.
 func (c *Client) CreateOrUpdateQuotaForClient(clientID string, config QuotaConfig) error {
 	send, err := json.Marshal(config)
 	if err != nil {
@@ -3455,8 +3264,8 @@ type (
 
 	// AlertSettingsCategoryMap describes the type of `AlertSetting`'s Categories.
 	AlertSettingsCategoryMap struct {
-		Infrastructure []AlertSetting `json:"Infrastructure" header:"Infrastructure"`
-		Consumers      []AlertSetting `json:"Consumers" header:"Consumers"`
+		Infrastructure []AlertSetting `json:"infrastructure" header:"Infrastructure"`
+		Consumers      []AlertSetting `json:"consumers" header:"Consumers"`
 	}
 )
 
@@ -3532,34 +3341,34 @@ type (
 	// Alert is the request payload that is used to register an Alert via `RegisterAlert` and the response that client retrieves from the `GetAlerts`.
 	Alert struct {
 		// AlertID  is a unique identifier for the setting corresponding to this alert. See the available ids via `GetAlertSettings`.
-		AlertID int `json:"alertId" yaml:"AlertID" header:"ID,text"`
+		AlertID int `json:"alertId" yaml:"alertID" header:"ID,text"`
 
 		// Labels field is a list of key-value pairs. It must contain a non empty `Severity` value.
-		Labels AlertLabels `json:"labels" yaml:"Labels" header:"inline"`
+		Labels AlertLabels `json:"labels" yaml:"labels" header:"inline"`
 		// Annotations is a list of key-value pairs. It contains the summary, source, and docs fields.
-		Annotations AlertAnnotations `json:"annotations" yaml:"Annotations"` // header:"inline"`
+		Annotations AlertAnnotations `json:"annotations" yaml:"annotations"` // header:"inline"`
 		// GeneratorURL is a unique URL identifying the creator of this alert.
 		// It matches AlertManager requirements for providing this field.
-		GeneratorURL string `json:"generatorURL" yaml:"GeneratorURL"` // header:"Gen URL"`
+		GeneratorURL string `json:"generatorURL" yaml:"generatorURL"` // header:"Gen URL"`
 
 		// StartsAt is the time as string, in ISO format, for when the alert starts
-		StartsAt string `json:"startsAt" yaml:"StartsAt" header:"Start,date"`
+		StartsAt string `json:"startsAt" yaml:"startsAt" header:"Start,date"`
 		// EndsAt is the time as string the alert ended at.
-		EndsAt string `json:"endsAt" yaml:"EndsAt" header:"End,date"`
+		EndsAt string `json:"endsAt" yaml:"endsAt" header:"End,date"`
 	}
 
 	// AlertLabels labels for the `Alert`, at least Severity should be filled.
 	AlertLabels struct {
-		Category string `json:"category,omitempty" yaml:"Category,omitempty" header:"Category"`
-		Severity string `json:"severity" yaml:"Severity,omitempty" header:"Severity"`
-		Instance string `json:"instance,omitempty" yaml:"Instance,omitempty" header:"Instance"`
+		Category string `json:"category,omitempty" yaml:"category,omitempty" header:"Category"`
+		Severity string `json:"severity" yaml:"severity,omitempty" header:"Severity"`
+		Instance string `json:"instance,omitempty" yaml:"instance,omitempty" header:"Instance"`
 	}
 
 	// AlertAnnotations annotations for the `Alert`, at least Summary should be filled.
 	AlertAnnotations struct {
-		Summary string `json:"summary" yaml:"Summary" header:"Summary"`
-		Source  string `json:"source,omitempty" yaml:"Source,omitempty" header:"Source,empty"`
-		Docs    string `json:"docs,omitempty" yaml:"Docs,omitempty" header:"Docs,empty"`
+		Summary string `json:"summary" yaml:"summary" header:"Summary"`
+		Source  string `json:"source,omitempty" yaml:"source,omitempty" header:"Source,empty"`
+		Docs    string `json:"docs,omitempty" yaml:"docs,omitempty" header:"Docs,empty"`
 	}
 )
 
@@ -3660,7 +3469,7 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 		}
 
 		if !bytes.HasPrefix(line, dataPrefix) {
-			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
+			return fmt.Errorf("client: see: fail to read the event, the incoming message has no [%s] prefix", string(dataPrefix))
 		}
 
 		message := line[shiftN:] // we need everything after the 'data:'.
@@ -3785,9 +3594,9 @@ func (c *Client) GetProcessorsLogs(clusterName, ns, podName string, follow bool,
 
 // BrokerConfig describes the kafka broker's configurations.
 type BrokerConfig struct {
-	LogCleanerThreads int             `json:"log.cleaner.threads" yaml:"LogCleanerThreads" header:"Log Cleaner Threads"`
-	CompressionType   CompressionType `json:"compression.type" yaml:"CompressionType" header:"Compression Type"`
-	AdvertisedPort    int             `json:"advertised.port" yaml:"AdvertisedPort" header:"Advertised Port"`
+	LogCleanerThreads int             `json:"log.cleaner.threads" yaml:"logCleanerThreads" header:"Log Cleaner Threads"`
+	CompressionType   CompressionType `json:"compression.type" yaml:"compressionType" header:"Compression Type"`
+	AdvertisedPort    int             `json:"advertised.port" yaml:"advertisedPort" header:"Advertised Port"`
 }
 
 const (
@@ -3921,11 +3730,11 @@ const (
 
 // AuditEntry describes a lenses Audit Entry, used for audit logs API.
 type AuditEntry struct {
-	Type      AuditEntryType    `json:"type" yaml:"Type" header:"Type"`
-	Change    AuditEntryChange  `json:"change" yaml:"Change" header:"Change"`
-	UserID    string            `json:"userId" yaml:"User" header:"User         "` /* make it a little bigger than expected, it looks slightly better for this field*/
-	Timestamp int64             `json:"timestamp" yaml:"Timestamp" header:"Date,timestamp(ms|utc|02 Jan 2006 15:04)"`
-	Content   map[string]string `json:"content" yaml:"Content" header:"Content"`
+	Type      AuditEntryType    `json:"type" yaml:"type" header:"Type"`
+	Change    AuditEntryChange  `json:"change" yaml:"change" header:"Change"`
+	UserID    string            `json:"userId" yaml:"user" header:"User         "` /* make it a little bigger than expected, it looks slightly better for this field*/
+	Timestamp int64             `json:"timestamp" yaml:"timestamp" header:"Date,timestamp(ms|utc|02 Jan 2006 15:04)"`
+	Content   map[string]string `json:"content" yaml:"content" header:"Content"`
 }
 
 const auditPath = "api/audit"
@@ -3989,7 +3798,7 @@ func (c *Client) GetAuditEntriesLive(handler AuditEntryHandler) error {
 		}
 
 		if !bytes.HasPrefix(line, dataPrefix) {
-			return fmt.Errorf("client: see: fail to read the event, the incoming message has no %s prefix", string(dataPrefix))
+			return fmt.Errorf("client: see: fail to read the event, the incoming message has no [%s] prefix", string(dataPrefix))
 		}
 
 		message := line[shiftN:] // we need everything after the 'data:'.
@@ -4143,14 +3952,14 @@ const (
 )
 
 type TopicExtract struct {
-	Parents		[]string `json:"parents" yaml:"parents" header:"Parents"`
-	Decendants	[]string `json:"descendants" yaml:"descendants" header:"descendants"`
+	Parents    []string `json:"parents" yaml:"parents" header:"Parents"`
+	Decendants []string `json:"descendants" yaml:"descendants" header:"descendants"`
 }
 
 func (c *Client) GetTopicExtract(id string) ([]TopicExtract, error) {
 	var topics []TopicExtract
 
-	resp, err := c.Do(http.MethodGet, topicExtractPath + id, "", nil)
+	resp, err := c.Do(http.MethodGet, topicExtractPath+id, "", nil)
 	if err != nil {
 		return topics, err
 	}
@@ -4158,4 +3967,297 @@ func (c *Client) GetTopicExtract(id string) ([]TopicExtract, error) {
 	err = c.ReadJSON(resp, &topics)
 	return topics, err
 }
- 
+
+const (
+	sqlValidationPath = "/api/v1/sql/presentation"
+)
+
+type SQLValidationRequest struct {
+	SQL   string `json:"sql"`
+	Caret int    `json:"caret"`
+}
+
+type ValidationLints struct {
+	Start int    `json:"start"`
+	End   int    `json:"end"`
+	Text  string `json:"text"`
+	Type  string `json:"type"`
+}
+type Suggestions struct {
+	Display string `json:"display"`
+	Text    string `json:"text"`
+}
+
+type SQLValidationResponse struct {
+	Input       string            `json:"input"`
+	Caret       int               `json:"caret"`
+	Lints       []ValidationLints `json:"lints"`
+	Highlights  []ValidationLints `json:"highlights"`
+	Suggestions []Suggestions     `json:"suggestions"`
+}
+
+func (c *Client) ValidateSQL(sql string, caret int) (SQLValidationResponse, error) {
+
+	var response SQLValidationResponse
+
+	payload := SQLValidationRequest{SQL: sql, Caret: caret}
+	send, err := json.Marshal(payload)
+
+	if err != nil {
+		return response, err
+	}
+
+	resp, err := c.Do(http.MethodPost, sqlValidationPath, contentTypeJSON, send)
+	if err != nil {
+		return response, err
+	}
+
+	err = c.ReadJSON(resp, &response)
+	return response, err
+}
+
+
+const ( 
+	policyPath = "/api/protection/policy"
+)
+
+type Impacts struct {
+	Topics 		[]string	`json:"topics" yaml:"topics"`
+	Processors 	[]string	`json:"processors" yaml:"processors"`
+	Connectors 	[]string	`json:"connectors" yaml:"connectors"`
+	Apps 		[]string	`json:"apps" yaml:"apps"`
+}
+
+type DataPolicy struct {
+	ID          	string 						`json:"id" yaml:"id" header:"ID,text"`
+	Name			string 						`json:"name" yaml:"name" header:"Name,text"`
+	LastUpdated		string 						`json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
+	Versions		int 						`json:"versions" yaml:"versions" header:"Version,text"`
+	ImpactType		string 						`json:"impactType" yaml:"impactType" header:"ImpactType,text"`
+	Impacts			Impacts 					`json:"impact" yaml:"impact" header:"Impacts,text"`
+	Category		string 						`json:"category" yaml:"category" header:"Category,text"`
+	Fields			[]string 					`json:"fields" yaml:"fields" header:"Fields,text"`
+	Obfuscation 	string					 	`json:"obfuscation" yaml:"obfuscation" header:"Redaction,text"`
+	LastUpdatedUser	string 						`json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
+}
+
+type DataPolicyTablePrint struct {
+	ID          	string 						`json:"id" yaml:"id" header:"ID"`
+	Name			string 						`json:"name" yaml:"name" header:"Name"`
+	LastUpdated		string 						`json:"lastUpdated" yaml:"lastUpdated" header:"Last update"`
+	Versions		int 						`json:"versions" yaml:"versions" header:"Version"`
+	ImpactType		string				 		`json:"impactType" yaml:"impactType" header:"ImpactType"`
+	Category		string 						`json:"category" yaml:"category" header:"Category"`
+	Fields			[]string 					`json:"fields" yaml:"fields" header:"Fields"`
+	Obfuscation 	string					 	`json:"obfuscation" yaml:"obfuscation" header:"Redaction"`
+	LastUpdatedUser	string 						`json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By"`
+	Topics 		    []string					`json:"topics" yaml:"topics" header:"Topics"`
+	Processors      []string					`json:"processors" yaml:"processors" header:"Processors"`
+	Connectors      []string					`json:"connectors" yaml:"connectors" header:"Connectors"`
+	Apps      		[]string					`json:"apps" yaml:"apps" header:"Apps"`
+}
+
+type DataPolicyFields struct {
+	Fields 	map[string][]string `json:"fields" yaml:"fields"`
+}
+
+type DataObfuscationType struct {
+	RedactionType	string `json:"type" yaml:"type" header:"Type"`
+}
+
+type DataImpactType struct {
+	ImpactType	string `json:"type" yaml:"type" header:"Type"`
+}
+
+type DataPolicyRequest struct {
+	Name 		string 						`json:"name" yaml:"name"`
+	Category 	string						`json:"category" yaml:"category"`
+	ImpactType 	string						`json:"impactType" yaml:"impactType"`
+	Obfuscation	string						`json:"obfuscation" yaml:"obfuscation"`
+	Fields	 	[]string					`json:"fields" yaml:"fields"`
+}
+
+type DataPolicyUpdateRequest struct {
+	ID			string						`json:"id" yaml:"id"`
+	Name 		string 						`json:"name" yaml:"name"`
+	Category 	string						`json:"category" yaml:"category"`
+	ImpactType 	string						`json:"impactType" yaml:"impactType"`
+	Obfuscation	string						`json:"obfuscation" yaml:"obfuscation"`
+	Fields	 	[]string					`json:"fields" yaml:"fields"`
+}
+
+func (c *Client) PolicyAsRequest(p DataPolicy) DataPolicyRequest {
+	return DataPolicyRequest{
+		Name: 			p.Name,
+		Category: 		p.Category,
+		ImpactType: 	p.ImpactType,
+		Obfuscation:	p.Obfuscation,
+		Fields:			p.Fields,
+	}
+}
+
+func (c *Client) PolicyForPrint(p DataPolicy) DataPolicyTablePrint {
+	return DataPolicyTablePrint{
+		ID:					p.ID,
+		Name: 				p.Name,
+		LastUpdated:		p.LastUpdated,
+		LastUpdatedUser: 	p.LastUpdatedUser,
+		Versions:			p.Versions,
+		Category: 			p.Category,
+		ImpactType: 		p.ImpactType,
+		Obfuscation:		p.Obfuscation,
+		Fields:				p.Fields,
+		Topics:				p.Impacts.Topics,
+		Processors: 		p.Impacts.Processors,
+		Connectors:			p.Impacts.Connectors,
+		Apps:				p.Impacts.Apps,
+	}
+}
+
+func (c *Client) GetPolicies() ([]DataPolicy, error) {
+
+	var response []DataPolicy
+
+	resp, err := c.Do(http.MethodGet, policyPath, "", nil)
+	if err != nil {
+		return response, err
+	}
+
+	if err = c.ReadJSON(resp, &response); err != nil {
+		return response, err
+	}
+
+	return response, nil
+}
+
+func (c *Client) GetPolicy(id string) (DataPolicy, error) {
+	var response DataPolicy
+
+	path := fmt.Sprintf("%s/%s", policyPath, id)
+
+	resp, err := c.Do(http.MethodGet, path, "", nil)
+	if err != nil {
+		return response, err
+	}
+
+	if err = c.ReadJSON(resp, &response); err != nil {
+		return response, err
+	}
+
+	return response, nil
+}
+
+func (c *Client) GetPolicyCategory() ([]string, error) {
+	var response []string
+
+
+	resp, err := c.Do(http.MethodGet, "/api/protection/static/category", "", nil)
+	if err != nil {
+		return response, err
+	}
+
+	if err = c.ReadJSON(resp, &response); err != nil {
+		return response, err
+	}
+
+	return response, nil
+}
+
+func (c *Client) GetPolicyObfuscation() ([]DataObfuscationType, error) {
+	var response []string
+	var redactions []DataObfuscationType
+
+
+	resp, err := c.Do(http.MethodGet, "/api/protection/static/obfuscation", "", nil)
+	if err != nil {
+		return redactions, err
+	}
+
+	if err = c.ReadJSON(resp, &response); err != nil {
+		return redactions, err
+	}
+
+	for _, r := range response {
+		redactions = append(redactions, DataObfuscationType{RedactionType : r})
+	}
+
+	return redactions, nil
+}
+
+func (c *Client) GetPolicyImpacts() ([]DataImpactType, error) {
+	var response []string
+	var impactTypes []DataImpactType
+
+
+	resp, err := c.Do(http.MethodGet, "/api/protection/static/impacts", "", nil)
+	if err != nil {
+		return impactTypes, err
+	}
+
+	if err = c.ReadJSON(resp, &response); err != nil {
+		return impactTypes, err
+	}
+
+	for _, r := range response {
+		impactTypes = append(impactTypes, DataImpactType{ImpactType : r})
+	}
+
+	return impactTypes, nil
+}
+
+func (c *Client) GetPolicyFields() (DataPolicyFields, error) {
+	var response DataPolicyFields
+
+
+	resp, err := c.Do(http.MethodGet, "/api/protection/static/table/fields", "", nil)
+	if err != nil {
+		return response, err
+	}
+
+	if err = c.ReadJSON(resp, &response); err != nil {
+		return response, err
+	}
+
+	return response, nil
+}
+
+func (c *Client) CreatePolicy(policy DataPolicyRequest) error {
+
+	send, err := json.Marshal(policy)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.Do(http.MethodPost, policyPath, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+func (c *Client) UpdatePolicy(policy DataPolicyUpdateRequest) error {
+
+	path := fmt.Sprintf("%s/%s", policyPath, policy.ID)
+
+	send, err := json.Marshal(policy)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, send)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+func (c *Client) DeletePolicy(id string) error {
+	path := fmt.Sprintf("%s/%s", policyPath, id)
+	resp, err := c.Do(http.MethodDelete, path, "", nil)
+	if err != nil {
+		return err
+	}
+	return resp.Body.Close()
+}

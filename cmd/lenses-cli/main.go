@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/landoop/lenses-go"
-
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -22,6 +21,19 @@ var (
 	//
 	// Note that this buildTime is not int64, it's type of string.
 	buildTime = fmt.Sprintf("[%d]", time.Now().Unix())
+)
+
+const (
+	sqlPath = "apps/sql"
+	connectorsPath = "apps/connectors"
+
+	aclsPath = "kafka/acls"
+	topicsPath = "kafka/topics"
+	quotasPath = "kafka/quotas"
+
+	schemasPath = "schemas"
+	alertSettingsPath = "alert-settings"
+	policiesPath = "policies"
 )
 
 var (

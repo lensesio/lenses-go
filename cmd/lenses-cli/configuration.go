@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/landoop/lenses-go"
-
 	"github.com/joho/godotenv"
 	"github.com/spf13/pflag"
 )
@@ -73,30 +72,30 @@ func newConfigurationManager(set *pflag.FlagSet) *configurationManager {
 		},
 	}
 
-	set.StringVar(&m.currentContext, "context", "", "--context=dev load specific environment, embedded configuration based on the configuration's 'Contexts'")
+	set.StringVar(&m.currentContext, "context", "", "Load specific environment, embedded configuration based on the configuration's 'Contexts'")
 
-	set.StringVar(&m.host, "host", "", "--host=https://example.com")
+	set.StringVar(&m.host, "host", "", "Lenses host")
 	// basic auth.
 
 	// if --kerberos-conf set and not other kerberos-* flag set,
 	// then kerberos with password method is selected based on the --user and --pass flags,
 	// otherwise basic auth.
-	set.StringVar(&m.user, "user", "", "--user=MyUser")
-	set.StringVar(&m.pass, "pass", "", "--pass=MyPassword")
-	set.StringVar(&m.kerberosConf, "kerberos-conf", "", "--kerberos-conf=krb5.conf")
+	set.StringVar(&m.user, "user", "", "User")
+	set.StringVar(&m.pass, "pass", "", "Password")
+	set.StringVar(&m.kerberosConf, "kerberos-conf", "", "krb5.conf")
 	// if --kerberos-realm not set but --kerberos-config does then auth using kerberos with the default realm, otherwise using that realm.
-	set.StringVar(&m.kerberosRealm, "kerberos-realm", "", "--kerberos-realm=kerberos.realm")
+	set.StringVar(&m.kerberosRealm, "kerberos-realm", "", "Kerberos realm")
 	// if --kerberos-keytab & --kerberos-conf set then auth using kerberos keytab file.
-	set.StringVar(&m.kerberosKeytab, "kerberos-keytab", "", "--kerberos-keytab=/tmp/krb5-my-keytab.txt")
+	set.StringVar(&m.kerberosKeytab, "kerberos-keytab", "", "KeyTab file")
 	// if --kerberos-ccache & --kerberos-conf set then auth from kerberos ccache file.
-	set.StringVar(&m.kerberosCCache, "kerberos-ccache", "", "--kerberos-ccache=/tmp/krb5-ccache.txt")
+	set.StringVar(&m.kerberosCCache, "kerberos-ccache", "", "Kerberos keytab file")
 
-	set.StringVar(&m.timeout, "timeout", "", "--timeout=30s timeout for the connection establishment")
-	set.BoolVar(&m.insecure, "insecure", false, "--insecure=true")
-	set.StringVar(&m.token, "token", "", "--token=DSAUH321S%423#32$321ZXN")
-	set.BoolVar(&m.debug, "debug", false, "print some information that are necessary for debugging")
+	set.StringVar(&m.timeout, "timeout", "", "Timeout for the connection establishment")
+	set.BoolVar(&m.insecure, "insecure", false, "All insecure http requests")
+	set.StringVar(&m.token, "token", "", "Lenses auth token")
+	set.BoolVar(&m.debug, "debug", false, "Print some information that are necessary for debugging")
 
-	set.StringVar(&m.filepath, "config", "", "load or save the host, user, pass and debug fields from or to a configuration file (yaml or json)")
+	set.StringVar(&m.filepath, "config", "", "Load or save the host, user, pass and debug fields from or to a configuration file (yaml or json)")
 	return m
 }
 

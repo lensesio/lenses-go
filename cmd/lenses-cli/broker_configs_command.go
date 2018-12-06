@@ -1,12 +1,12 @@
 package main
 
 import (
+	"github.com/kataras/golog"
 	"encoding/json"
 	"fmt"
 	"strings"
-
+	
 	"github.com/landoop/lenses-go"
-
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +23,7 @@ func newDynamicClusterConfigsGroupCommand() *cobra.Command {
 		// and no cluster "static" configs,
 		// so the only thing it will print is the dynamic updated configs for all brokers for a kafka cluster.
 		Use:              "cluster",
-		Short:            "Work with the dynamic updated configurations for a kafka cluster",
+		Short:            "Manage the dynamic updated configurations for a kafka cluster",
 		Example:          `cluster configs`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -77,7 +77,7 @@ func newSetDynamicClusterConfigsCommand() *cobra.Command {
 			if err := bite.TryReadFile(configsRaw, &configs); err != nil {
 				// from flag as json.
 				if err = json.Unmarshal([]byte(configsRaw), &configs); err != nil {
-					return fmt.Errorf("unable to unmarshal the configs: [%v]. Try using a yaml or json file instead", err)
+					return fmt.Errorf("Unable to unmarshal the configs: [%v]. Try using a yaml or json file instead", err)
 				}
 			}
 
@@ -90,7 +90,7 @@ func newSetDynamicClusterConfigsCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&configsRaw, "configs", "", `--configs="{\"log.cleaner.threads\": 2, \"compression.type\": \"snappy\"}`)
+	cmd.Flags().StringVar(&configsRaw, "configs", "", `Broker configs .e.g. "{\"log.cleaner.threads\": 2, \"compression.type\": \"snappy\"}`)
 	cmd.MarkFlagRequired("configs")
 
 	bite.CanBeSilent(cmd)
@@ -107,15 +107,14 @@ func newDeleteDynamicClusterConfigsCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, keysToBeReseted []string) error {
 			if len(keysToBeReseted) == 0 {
-				return bite.PrintInfo(cmd, "keys are required, pass the config's keys to be removed/reset to their default through command's arguments separated by space")
+				return bite.PrintInfo(cmd, "Keys are required, pass the config's keys to be removed/reset to their default through command's arguments separated by space")
 			}
 
-			bite.FriendlyError(cmd, errResourceInternal, "failed to retrieve cluster configurations")
 			keysStr := strings.Join(keysToBeReseted, ", ")
-			bite.FriendlyError(cmd, errResourceNotGoodMessage, "unknown keys where provided: [%s]", keysStr)
 
 			err := client.DeleteDynamicClusterConfigs(keysToBeReseted...)
 			if err != nil {
+				golog.Errorf("Failed to retrieve cluster configurations. [%s]", err.Error())
 				return err
 			}
 
@@ -130,7 +129,7 @@ func newDeleteDynamicClusterConfigsCommand() *cobra.Command {
 func newDynamicBrokerConfigsGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "broker",
-		Short:            "Work with broker configurations",
+		Short:            "Manage broker configurations",
 		Example:          `broker configs --broker=brokerID`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -150,11 +149,10 @@ func newGetDynamicBrokerConfigsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bite.FriendlyError(cmd, errResourceInternal, "could not retrieve configurations for broker: [%d]", brokerID)
-			bite.FriendlyError(cmd, errResourceNotFoundMessage, "could not retrieve broker: [%d]", brokerID)
 
 			configs, err := client.GetDynamicBrokerConfigs(brokerID)
 			if err != nil {
+				golog.Errorf("Failed to retrieve configurations for broker: [%d]. [%s]", brokerID, err.Error())
 				return err
 			}
 
@@ -162,7 +160,7 @@ func newGetDynamicBrokerConfigsCommand() *cobra.Command {
 		},
 	}
 
-	rootSub.Flags().IntVar(&brokerID, "broker", 0, "--broker=42")
+	rootSub.Flags().IntVar(&brokerID, "broker", 0, "Broker ID")
 	rootSub.MarkFlagRequired("broker")
 
 	rootSub.AddCommand(newSetDynamicBrokerConfigsCommand())
@@ -185,8 +183,7 @@ func newSetDynamicBrokerConfigsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bite.FriendlyError(cmd, errResourceInternal, "failed to retrieve broker configurations", brokerID)
-			bite.FriendlyError(cmd, errResourceNotGoodMessage, "unknown configurations where provided: %#+v", configs)
+
 
 			if err := bite.TryReadFile(configsRaw, &configs); err != nil {
 				// from flag as json.
@@ -197,6 +194,7 @@ func newSetDynamicBrokerConfigsCommand() *cobra.Command {
 
 			err := client.UpdateDynamicBrokerConfigs(brokerID, configs)
 			if err != nil {
+				golog.Errorf("Failed to update broker configurations. [%s]", brokerID, err.Error())
 				return err
 			}
 
@@ -207,7 +205,7 @@ func newSetDynamicBrokerConfigsCommand() *cobra.Command {
 	cmd.Flags().IntVar(&brokerID, "broker", 0, "--broker=brokerID")
 	cmd.MarkFlagRequired("broker")
 
-	cmd.Flags().StringVar(&configsRaw, "configs", "", `--configs="{\"log.cleaner.threads\": 2, \"compression.type\": \"snappy\"}`)
+	cmd.Flags().StringVar(&configsRaw, "configs", "", `Broker configs .e.g. "{\"log.cleaner.threads\": 2, \"compression.type\": \"snappy\"}`)
 	cmd.MarkFlagRequired("configs")
 
 	bite.CanBeSilent(cmd)
@@ -229,12 +227,11 @@ func newDeleteDynamicBrokerConfigsCommand() *cobra.Command {
 				return bite.PrintInfo(cmd, "keys are required, pass the config's keys to be removed/reset to their default values through command's arguments separated by space")
 			}
 
-			bite.FriendlyError(cmd, errResourceInternal, "could not retrieve configurations for broker: [%d]", brokerID)
 			keysStr := strings.Join(keysToBeReset, ", ")
-			bite.FriendlyError(cmd, errResourceNotGoodMessage, "unknown keys where provided: [%s]", keysStr)
 
 			err := client.DeleteDynamicBrokerConfigs(brokerID, keysToBeReset...)
 			if err != nil {
+				golog.Errorf("Failed to delete broker configurations. [%s]", brokerID, err.Error())
 				return err
 			}
 
@@ -242,7 +239,7 @@ func newDeleteDynamicBrokerConfigsCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&brokerID, "broker", 0, "--broker=brokerID")
+	cmd.Flags().IntVar(&brokerID, "broker", 0, "Broker ID")
 	cmd.MarkFlagRequired("broker")
 
 	bite.CanBeSilent(cmd)

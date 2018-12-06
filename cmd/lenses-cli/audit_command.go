@@ -3,9 +3,8 @@ package main
 import (
 	"strings"
 	"fmt"
-
+	
 	"github.com/landoop/lenses-go"
-
 	"github.com/landoop/bite"
 	"github.com/landoop/tableprinter"
 	"github.com/spf13/cobra"
@@ -75,8 +74,8 @@ func newGetAuditEntriesCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&sse, "live", false, "--live")
-	cmd.Flags().BoolVar(&tableOnlyWithContent, "with-content", false, "--with-content add a table column to display the raw json content of the event action")
+	cmd.Flags().BoolVar(&sse, "live", false, "Subscribe to live audit feeds")
+	cmd.Flags().BoolVar(&tableOnlyWithContent, "with-content", false, "Add a table column to display the raw json content of the event action")
 
 	bite.CanPrintJSON(cmd)
 

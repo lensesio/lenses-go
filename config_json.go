@@ -32,7 +32,7 @@ func ConfigMarshalJSON(c Config) ([]byte, error) {
 		n++
 		b, err := ClientConfigMarshalJSON(*v)
 		if err != nil {
-			return nil, fmt.Errorf("json write: error writing the context '%s': %v", contextKey, err)
+			return nil, fmt.Errorf("json write: error writing the context [%s]: [%v]", contextKey, err)
 		}
 
 		result.WriteString(fmt.Sprintf(`"%s":`, contextKey))
@@ -62,7 +62,7 @@ func ConfigUnmarshalJSON(b []byte, c *Config) error {
 	for key, value := range keys {
 		if key == currentContextKeyJSON {
 			if err := json.Unmarshal(value, &c.CurrentContext); err != nil {
-				return fmt.Errorf("json: current context unmarshal: %v", err)
+				return fmt.Errorf("json: current context unmarshal: [%v]", err)
 			}
 			continue
 		}
@@ -74,7 +74,7 @@ func ConfigUnmarshalJSON(b []byte, c *Config) error {
 
 			bb, err := value.MarshalJSON()
 			if err != nil {
-				return fmt.Errorf("json: context unmarshal: %v", err)
+				return fmt.Errorf("json: context unmarshal: [%v]", err)
 			}
 
 			if len(bb) == 0 {
@@ -279,7 +279,7 @@ func kerberosAuthenticationUnmarshalJSON(b []byte, auth *KerberosAuthentication)
 			}
 			auth.Method = method
 		default:
-			return fmt.Errorf("json: unexpected key: %s", key)
+			return fmt.Errorf("json: unexpected key: [%s]", key)
 		}
 	}
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	//"io/ioutil"
 	"net"
 	"os"
 	"os/signal"
@@ -13,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/landoop/lenses-go"
-
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 	"github.com/kataras/golog"
@@ -181,9 +179,7 @@ func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool,
 			}
 		}
 
-		err := bite.PrintJSON(cmd, data)
-
-		if err != nil {
+		if err := bite.PrintJSON(cmd, data); err != nil {
 			golog.Error(err)
 			return err
 		}

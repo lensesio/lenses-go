@@ -1,9 +1,10 @@
 package main
 
 import (
+	"github.com/kataras/golog"
 	"strings"
-	"github.com/landoop/lenses-go"
 
+	"github.com/landoop/lenses-go"
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
@@ -37,7 +38,7 @@ func newGetQuotasCommand() *cobra.Command {
 func newQuotaGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "quota",
-		Short:            "Work with particular a quota, create a new quota or update and delete an existing one",
+		Short:            "Manage a quota, create a new quota or update and delete an existing one",
 		Example:          `quota users set [--quota-user=""] [--quota-client=""] --quota-config="{\"producer_byte_rate\": \"100000\",\"consumer_byte_rate\": \"200000\",\"request_percentage\": \"75\"}"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -49,8 +50,6 @@ func newQuotaGroupCommand() *cobra.Command {
 	return root
 }
 
-
-
 func newQuotaUsersSubGroupCommand() *cobra.Command {
 	var (
 		configRaw string
@@ -60,7 +59,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 
 	rootSub := &cobra.Command{
 		Use:              "users",
-		Short:            "Work with users quotas",
+		Short:            "Manage users quotas",
 		Example:          "quota users",
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -77,13 +76,12 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 
 			if len(quotas) > 0 {
 				for _, quota := range quotas {
-					err := createQuotaForUsers(cmd, quota)
+					err := CreateQuotaForUsers(cmd, quota)
 					if err != nil {
 						return err
 					}
 				}
 
-				
 				return nil
 			}
 
@@ -91,18 +89,19 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				return err
 			}
 
-			err := createQuotaForUsers(cmd, quota)
+			err := CreateQuotaForUsers(cmd, quota)
 			if err != nil {
+				golog.Errorf("Failed to create quota for user [%s], client [%s]. [%s]", quota.User, quota.ClientID, err.Error())
 				return err
 			}
-					
+
 			return bite.PrintInfo(cmd, "Default user quota created/updated")
 		},
 	}
 
-	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
-	setCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
-	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `Quota config .e.g. "{\"key\": \"value\"}"`)
+	setCommand.Flags().StringVar(&quota.User, "quota-user", "", "Quota user")
+	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "Quota client")
 
 	bite.CanBeSilent(setCommand)
 	bite.Prepend(setCommand, bite.FileBind(&quotas, bite.ElseBind(func() error { return bite.TryReadFile(configRaw, &quota.Config) })))
@@ -139,7 +138,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 					}
 
 					if err := client.DeleteQuotaForUserClient(user, clientID, args...); err != nil {
-						bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to [%s], quota for user: [%s] and client: [%s] does not exist", actionMsg, user, clientID)
+						golog.Errorf("Failed to delete quota for user [%s], client [%s]. [%s]", quota.User, quota.ClientID, err.Error())
 						return err
 					}
 
@@ -147,7 +146,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 				}
 
 				if err := client.DeleteQuotaForUser(user, args...); err != nil {
-					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to [%s], quota for user: [%s] does not exist", actionMsg, user)
+					golog.Errorf("Failed to delete quota for user [%s], client [%s]. [%s]", quota.User, quota.ClientID, err.Error())
 					return err
 				}
 
@@ -155,6 +154,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 			}
 
 			if err := client.DeleteQuotaForAllUsers(args...); err != nil {
+				golog.Errorf("Failed to create quota for all users. [%s]", err.Error())
 				return err
 			}
 
@@ -162,8 +162,8 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 		},
 	}
 
-	deleteCommand.Flags().StringVar(&quota.User, "quota-user", "", "--quota-user=")
-	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	deleteCommand.Flags().StringVar(&quota.User, "quota-user", "", "Quota user")
+	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "Quota client")
 	bite.CanBeSilent(deleteCommand)
 
 	rootSub.AddCommand(deleteCommand)
@@ -175,12 +175,12 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 	var (
 		configRaw string
 		quota     lenses.CreateQuotaPayload
-		quotas 	  []lenses.CreateQuotaPayload
+		quotas    []lenses.CreateQuotaPayload
 	)
 
 	rootSub := &cobra.Command{
 		Use:              "clients",
-		Short:            "Work with clients quotas",
+		Short:            "Manage clients quotas",
 		Example:          "quota clients",
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -197,22 +197,23 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 
 			if len(quotas) > 0 {
 				for _, quota := range quotas {
-					err := createQuotaForClients(cmd, quota)
+					err := CreateQuotaForClients(cmd, quota)
 					if err != nil {
 						return err
 					}
 				}
 				return nil
-				
+
 			}
 
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"quota-config": configRaw}); err != nil {
 				return err
 			}
 
-			err := createQuotaForClients(cmd, quota)
+			err := CreateQuotaForClients(cmd, quota)
 
 			if err != nil {
+				golog.Errorf("Failed to create quota for client [%s]. [%s]", quota.ClientID, err.Error())
 				return err
 			}
 
@@ -220,8 +221,8 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		},
 	}
 
-	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `--quota-config="{\"key\": \"value\"}"`)
-	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	setCommand.Flags().StringVar(&configRaw, "quota-config", "", `Quota config .e.g. "{\"key\": \"value\"}"`)
+	setCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "Quota client")
 	bite.CanBeSilent(setCommand)
 	bite.Prepend(setCommand, bite.FileBind(&quotas, bite.ElseBind(func() error { return bite.TryReadFile(configRaw, &quota.Config) })))
 
@@ -245,7 +246,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 
 			if id := quota.ClientID; id != "" && id != "all" && id != "*" {
 				if err := client.DeleteQuotaForClient(id, args...); err != nil {
-					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to [%s], quota for client: [%s] does not exist", actionMsg, id)
+					golog.Errorf("Failed to delete quota for client [%s]. [%s]", quota.ClientID, err.Error())
 					return err
 				}
 
@@ -253,6 +254,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 			}
 
 			if err := client.DeleteQuotaForAllClients(args...); err != nil {
+				golog.Errorf("Failed to delete quota for all clients. [%s]", err.Error())
 				return err
 			}
 
@@ -260,7 +262,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 		},
 	}
 
-	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "--quota-client=")
+	deleteCommand.Flags().StringVar(&quota.ClientID, "quota-client", "", "Quota client")
 	bite.CanBeSilent(deleteCommand)
 
 	rootSub.AddCommand(deleteCommand)
@@ -268,7 +270,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 	return rootSub
 }
 
-func createQuotaForClients(cmd *cobra.Command, quota lenses.CreateQuotaPayload) error {
+func CreateQuotaForClients(cmd *cobra.Command, quota lenses.CreateQuotaPayload) error {
 	if id := quota.ClientID; id != "" && id != "all" && id != "*" && strings.HasPrefix(quota.QuotaType, "CLIENT") {
 		if err := client.CreateOrUpdateQuotaForClient(quota.ClientID, quota.Config); err != nil {
 			return err
@@ -281,7 +283,7 @@ func createQuotaForClients(cmd *cobra.Command, quota lenses.CreateQuotaPayload) 
 	return err
 }
 
-func createQuotaForUsers(cmd *cobra.Command, quota lenses.CreateQuotaPayload) error {
+func CreateQuotaForUsers(cmd *cobra.Command, quota lenses.CreateQuotaPayload) error {
 	if quota.User != "" && strings.HasPrefix(quota.QuotaType, "USER") {
 		if clientID := quota.ClientID; clientID != "" {
 			if clientID == "all" || clientID == "*" {

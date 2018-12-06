@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/landoop/lenses-go"
-
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"

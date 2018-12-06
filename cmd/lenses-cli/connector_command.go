@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/landoop/lenses-go"
-
+	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +31,7 @@ func newConnectorsCommand() *cobra.Command {
 		Use:              "connectors",
 		Short:            "List of active connectors' names",
 		Aliases:          []string{"connect"},
-		Example:          `connectors [--supported] or connectors --clusterName="cluster_name" or --clusterName="*"`,
+		Example:          `connectors [--supported] or connectors --cluster-name="cluster_name" or --cluster-name="*"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -39,6 +39,7 @@ func newConnectorsCommand() *cobra.Command {
 			if showSupportedOnly {
 				connectorsInfo, err := client.GetSupportedConnectors()
 				if err != nil {
+					golog.Errorf("Failed to find connector pugins. [%s]", err.Error())
 					return err
 				}
 
@@ -85,7 +86,7 @@ func newConnectorsCommand() *cobra.Command {
 			} else {
 				names, err := client.GetConnectors(clusterName)
 				if err != nil {
-					bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve connectors, cluster with name [%s] does not exist", clusterName)
+					golog.Errorf("Failed to find connectors in cluster [%s]. [%s]",  clusterName,  err.Error())
 					return err
 				}
 
@@ -112,7 +113,7 @@ func newConnectorsCommand() *cobra.Command {
 			}
 
 			// if json output requested, create a json object which is the group of cluster:[]connectors and print as json.
-			
+
 			// if table mode view, select all connectors as a list,
 			// do not make the group "visual" based on cluster name here (still they are grouped).
 			var connectors []lenses.Connector
@@ -133,10 +134,10 @@ func newConnectorsCommand() *cobra.Command {
 		},
 	}
 
-	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
-	root.Flags().BoolVar(&namesOnly, "names", false, `--names`)
+	root.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	root.Flags().BoolVar(&namesOnly, "names", false, `Print connector names only`)
 	root.Flags().BoolVar(&unwrap, "unwrap", false, "--unwrap")
-	root.Flags().BoolVar(&showSupportedOnly, "supported", false, "--supported to list all the supported Kafka Connectors instead of the currently deployed")
+	root.Flags().BoolVar(&showSupportedOnly, "supported", false, "List all the supported Kafka Connectors instead of the currently deployed")
 
 	bite.CanPrintJSON(root)
 
@@ -155,7 +156,7 @@ func newGetConnectorsPluginsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "plugins",
 		Short:         "List of available connectors' plugins",
-		Example:       `connectors plugins --clusterName="cluster_name"`,
+		Example:       `connectors plugins --cluster-name="cluster_name"`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var plugins []lenses.ConnectorPlugin
@@ -164,12 +165,14 @@ func newGetConnectorsPluginsCommand() *cobra.Command {
 				// if * then no clusterName given, fetch the plugins from all known clusters and print them.
 				clusters, err := client.GetConnectClusters()
 				if err != nil {
+					golog.Errorf("Failed to connect clusters. [%s]", err.Error())
 					return err
 				}
 
 				for _, cluster := range clusters {
 					clusterPlugins, err := client.GetConnectorPlugins(cluster.Name)
 					if err != nil {
+						golog.Errorf("Failed to find connector pugins. [%s]", err.Error())
 						return err
 					}
 					plugins = append(plugins, clusterPlugins...)
@@ -192,7 +195,7 @@ func newGetConnectorsPluginsCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
 
 	bite.CanPrintJSON(cmd)
 
@@ -213,6 +216,7 @@ func newGetConnectorsClustersCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusters, err := client.GetConnectClusters()
 			if err != nil {
+				golog.Errorf("Failed to connect clusters. [%s]", err.Error())
 				return err
 			}
 
@@ -241,8 +245,8 @@ func newGetConnectorsClustersCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&namesOnly, "names", false, `--names`)
-	cmd.Flags().BoolVar(&noNewLine, "no-newline", false, "--remove line breakers between string output, if --names is passed")
+	cmd.Flags().BoolVar(&namesOnly, "names", false, `Print connector names only`)
+	cmd.Flags().BoolVar(&noNewLine, "no-newline", false, "Remove line breakers between string output, if --names is passed")
 	bite.CanPrintJSON(cmd)
 
 	return cmd
@@ -254,7 +258,7 @@ func newConnectorGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "connector",
 		Short:            "Get information about a particular connector based on its name",
-		Example:          `connector --clusterName="cluster_name" --name="connector_name"`,
+		Example:          `connector --cluster-name="cluster_name" --name="connector_name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -264,7 +268,7 @@ func newConnectorGroupCommand() *cobra.Command {
 
 			connector, err := client.GetConnector(clusterName, name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "connector [%s:%s] does not exist", clusterName, name)
+				golog.Errorf("Failed to find connector [%s] in cluster [%s]. [%s]", name, clusterName, err.Error())
 				return err
 			}
 
@@ -275,8 +279,8 @@ func newConnectorGroupCommand() *cobra.Command {
 
 	bite.CanPrintJSON(root)
 
-	root.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	root.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	root.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	root.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	// subcommands.
 	root.AddCommand(newConnectorCreateCommand())
@@ -303,7 +307,7 @@ func newConnectorCreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Create a new connector",
-		Example:          `connector create --clusterName="cluster_name" --name="connector_name" --configs="{\"key\": \"value\"}" or connector create ./connector.yml`,
+		Example:          `connector create --cluster-name="cluster_name" --name="connector_name" --configs="{\"key\": \"value\"}" or connector create ./connector.yml`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -319,7 +323,7 @@ func newConnectorCreateCommand() *cobra.Command {
 				if err := bite.TryReadFile(configRaw, &connector.Config); err != nil {
 					// from flag as json.
 					if err = json.Unmarshal([]byte(configRaw), &connector.Config); err != nil {
-						return fmt.Errorf("unable to unmarshal the config: [%v]", err)
+						return fmt.Errorf("Unable to unmarshal the config: [%v]", err)
 					}
 				}
 			}
@@ -333,9 +337,9 @@ func newConnectorCreateCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
-	cmd.Flags().StringVar(&configRaw, "configs", "", `--configs="{\"key\": \"value\"}"`) // --config conflicts with the global flag.
+	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&connector.Name, "name", "", `Connector name`)
+	cmd.Flags().StringVar(&configRaw, "configs", "", `Connector config .e.g."{\"key\": \"value\"}"`) // --config conflicts with the global flag.
 	bite.CanBeSilent(cmd)
 
 	bite.ShouldTryLoadFile(cmd, &connector)
@@ -352,7 +356,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 	cmd := &cobra.Command{
 		Use:              "update",
 		Short:            "Update a connector's configuration",
-		Example:          `connector update --clusterName="cluster_name" --name="connector_name" --configs="{\"key\": \"value\"}" or connector update ./connector.yml`,
+		Example:          `connector update --cluster-name="cluster_name" --name="connector_name" --configs="{\"key\": \"value\"}" or connector update ./connector.yml`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -368,7 +372,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 				if err := bite.TryReadFile(configRaw, &connector.Config); err != nil {
 					// from flag as json.
 					if err = json.Unmarshal([]byte(configRaw), &connector.Config); err != nil {
-						return fmt.Errorf("unable to unmarshal the config: [%v]", err)
+						return fmt.Errorf("Unable to unmarshal the config: [%v]", err)
 					}
 				}
 			}
@@ -382,7 +386,7 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 
 			if existingConnector.Config != nil {
 				if existingNameValue := existingConnector.Config["name"]; existingNameValue != connector.Name {
-					return fmt.Errorf(`connector config["name"] [%s] does not match with the existing one [%s]`, connector.Name, existingNameValue)
+					return fmt.Errorf(`Connector config["name"] [%s] does not match with the existing one [%s]`, connector.Name, existingNameValue)
 				}
 			}
 
@@ -402,9 +406,9 @@ func newConnectorUpdateCommand() *cobra.Command { // almost the same as `newConn
 		},
 	}
 
-	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&connector.Name, "name", "", `--name="connector_name"`)
-	cmd.Flags().StringVar(&configRaw, "configs", "", `--configs="{\"key\": \"value\"}"`)
+	cmd.Flags().StringVar(&connector.ClusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&connector.Name, "name", "", `Connector name`)
+	cmd.Flags().StringVar(&configRaw, "configs", "", `Connector configs .e.g. "{\"key\": \"value\"}"`)
 
 	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
@@ -420,7 +424,7 @@ func newConnectorGetConfigCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "config",
 		Short:            "Get connector config",
-		Example:          `connector config --clusterName="cluster_name" --name="connector_name"`,
+		Example:          `connector config --cluster-name="cluster_name" --name="connector_name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -430,7 +434,7 @@ func newConnectorGetConfigCommand() *cobra.Command {
 
 			cfg, err := client.GetConnectorConfig(clusterName, name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve config, connector [%s:%s] does not exist", clusterName, name)
+				golog.Errorf("Failed to retrieve connector config for [%s] in cluster [%s]. [%s]", name, clusterName, err.Error())
 				return err
 			}
 
@@ -439,8 +443,8 @@ func newConnectorGetConfigCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	bite.CanPrintJSON(cmd)
 
@@ -453,7 +457,7 @@ func newConnectorGetStatusCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "status",
 		Short:            "Get connector status",
-		Example:          `connector status --clusterName="cluster_name" --name="connector_name"`,
+		Example:          `connector status --cluster-name="cluster_name" --name="connector_name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -463,7 +467,7 @@ func newConnectorGetStatusCommand() *cobra.Command {
 
 			cs, err := client.GetConnectorStatus(clusterName, name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve status, connector [%s:%s] does not exist", clusterName, name)
+				golog.Errorf("Failed to retrieve connector status for [%s] in cluster [%s]. [%s]", name, clusterName, err.Error())
 				return err
 			}
 
@@ -472,8 +476,8 @@ func newConnectorGetStatusCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name"`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	bite.CanPrintJSON(cmd)
 
@@ -486,7 +490,7 @@ func newConnectorPauseCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "pause",
 		Short:            "Pause a connector",
-		Example:          `connector pause --clusterName="cluster_name" --name="connector_name"`,
+		Example:          `connector pause --cluster-name="cluster_name" --name="connector_name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -495,8 +499,7 @@ func newConnectorPauseCommand() *cobra.Command {
 			}
 
 			if err := client.PauseConnector(clusterName, name); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart connector [%s:%s] due the required permissions", clusterName, name)
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to pause, connector [%s:%s] does not exist", clusterName, name)
+				golog.Errorf("Failed to pause connector [%s] in cluster [%s]. [%s]", name, clusterName, err.Error())
 				return err
 			}
 
@@ -504,8 +507,8 @@ func newConnectorPauseCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
 	return cmd
@@ -517,7 +520,7 @@ func newConnectorResumeCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "resume",
 		Short:            "Resume a paused connector",
-		Example:          `connector resume --clusterName="cluster_name" --name="connector_name"`,
+		Example:          `connector resume --cluster-name="cluster_name" --name="connector_name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -526,8 +529,7 @@ func newConnectorResumeCommand() *cobra.Command {
 			}
 
 			if err := client.ResumeConnector(clusterName, name); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to resume connector [%s:%s] due the required permissions", clusterName, name)
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to resume, connector [%s:%s] does not exist", clusterName, name)
+				golog.Errorf("Failed to resume connector [%s] in cluster [%s]. [%s]", name, clusterName, err.Error())
 				return err
 			}
 
@@ -535,8 +537,8 @@ func newConnectorResumeCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
 	return cmd
@@ -548,7 +550,7 @@ func newConnectorRestartCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "restart",
 		Short:            "Restart a connector",
-		Example:          `connector restart --clusterName="cluster_name" --name="connector_name"`,
+		Example:          `connector restart --cluster-name="cluster_name" --name="connector_name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -557,17 +559,15 @@ func newConnectorRestartCommand() *cobra.Command {
 			}
 
 			if err := client.RestartConnector(clusterName, name); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart connector [%s:%s] due the required permissions", clusterName, name)
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to restart, connector [%s:%s] does not exist", clusterName, name)
-				return err
+				golog.Errorf("Failed to restart connector [%s] in cluster [%s]. [%s]", name, clusterName, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "Connector [%s:%s] restarted", clusterName, name)
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name"`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
 	return cmd
@@ -579,7 +579,7 @@ func newConnectorGetTasksCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "tasks",
 		Short:            "List of connector tasks",
-		Example:          `connector tasks --clusterName="cluster_name" --name="connector_name"`,
+		Example:          `connector tasks --cluster-name="cluster_name" --name="connector_name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -589,17 +589,16 @@ func newConnectorGetTasksCommand() *cobra.Command {
 
 			tasksMap, err := client.GetConnectorTasks(clusterName, name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve tasks, connector [%s:%s] does not exist", clusterName, name)
+				golog.Errorf("Failed to retrieve task status for connector [%s] in cluster [%s]. [%s]", name, clusterName, err.Error())
 				return err
 			}
 
-			// return printJSON(cmd, tasksMap)
 			return bite.PrintObject(cmd, tasksMap)
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	bite.CanPrintJSON(cmd)
 
@@ -609,8 +608,8 @@ func newConnectorGetTasksCommand() *cobra.Command {
 func newConnectorTaskGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "task",
-		Short:            "Work with a particular connector task, see connector task --help for details",
-		Example:          `connector task status --clusterName="cluster_name" --name="connector_name" --task=1`,
+		Short:            "Manage particular connector task, see connector task --help for details",
+		Example:          `connector task status --cluster-name="cluster_name" --name="connector_name" --task=1`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 	}
@@ -630,7 +629,7 @@ func newConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "status",
 		Short:            "Get current status of a task",
-		Example:          `connector task status --clusterName="cluster_name" --name="connector_name" --task=1`,
+		Example:          `connector task status --cluster-name="cluster_name" --name="connector_name" --task=1`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -640,7 +639,7 @@ func newConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 
 			cst, err := client.GetConnectorTaskStatus(clusterName, name, taskID)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "task does not exist")
+				golog.Errorf("Failed to retrieve task [%d] for connector [%s] in cluster [%s]. [%s]", taskID, name, clusterName, err.Error())
 				return err
 			}
 
@@ -652,8 +651,8 @@ func newConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 	cmd.Flags().IntVar(&taskID, "task", 0, "--task=1 The Task ID")
 	cmd.MarkFlagRequired("task")
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 
 	bite.CanPrintJSON(cmd)
 
@@ -669,7 +668,7 @@ func newConnectorTaskRestartCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "restart",
 		Short:            "Restart a connector task",
-		Example:          `connector task restart --clusterName="cluster_name" --name="connector_name" --task=1`,
+		Example:          `connector task restart --cluster-name="cluster_name" --name="connector_name" --task=1`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -678,8 +677,7 @@ func newConnectorTaskRestartCommand() *cobra.Command {
 			}
 
 			if err := client.RestartConnectorTask(clusterName, name, taskID); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to restart the task due the required permissions")
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "task does not exist")
+				golog.Errorf("Failed to restart task [%d] connector [%s] in cluster [%s]. [%s]", taskID, name, clusterName, err.Error())
 				return err
 			}
 
@@ -689,8 +687,8 @@ func newConnectorTaskRestartCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&taskID, "task", 0, "--task=1 The Task ID")
 	cmd.MarkFlagRequired("task")
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
 	return cmd
@@ -702,7 +700,7 @@ func newConnectorDeleteCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete a running connector",
-		Example:          `connector delete --clusterName="" --name="connector_name"`,
+		Example:          `connector delete --cluster-name="" --name="connector_name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -711,8 +709,7 @@ func newConnectorDeleteCommand() *cobra.Command {
 			}
 
 			if err := client.DeleteConnector(clusterName, name); err != nil {
-				// bite.FriendlyError(cmd, errResourceNotAccessibleMessage, "unable to delete connector [%s:%s], the action requires 'Write' permissions", clusterName, name)
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete, connector [%s:%s] does not exist", clusterName, name)
+				golog.Errorf("Failed to delete connector [%s] in cluster [%s]. [%s]", name, clusterName, err.Error())
 				return err
 			}
 
@@ -720,8 +717,8 @@ func newConnectorDeleteCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `--clusterName="cluster_name"`)
-	cmd.Flags().StringVar(&name, "name", "", `--name="connector_name"`)
+	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
 	return cmd

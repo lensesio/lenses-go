@@ -40,7 +40,7 @@ func newInteractiveCommand() *cobra.Command {
 /_____/\___/_/ /_/____/\___/____/   \____/_____/___/   
 Docs at https://docs.lenses.io
 Connected to [%s] as [%s], context [%s]
-Use "!" to set output options
+Use "!" to set output options [!keys|!keysOnly|!stats|!meta|!pretty]
 
 `, client.Config.Host, client.User.Name, configManager.config.CurrentContext)
 

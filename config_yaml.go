@@ -31,7 +31,7 @@ func ConfigMarshalYAML(c Config) ([]byte, error) {
 		n++
 		b, err := ClientConfigMarshalYAML(*clientConfig)
 		if err != nil {
-			return nil, fmt.Errorf("yaml write: error writing the context [%s]: %v", contextKey, err)
+			return nil, fmt.Errorf("yaml write: error writing the context [%s]: [%v]", contextKey, err)
 		}
 
 		result.WriteString(fmt.Sprintf("  %s:\n", contextKey))
@@ -280,7 +280,7 @@ func kerberosAuthenticationUnmarshalYAML(b []byte, auth *KerberosAuthentication)
 	for _, item := range tree {
 		key, ok := item.Key.(string)
 		if !ok {
-			return fmt.Errorf("yaml: expected '%v' key to be string", item.Key)
+			return fmt.Errorf("yaml: expected [%v] key to be string", item.Key)
 		}
 
 		if key == kerberosConfFileKeyYAML {
