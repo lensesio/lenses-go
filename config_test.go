@@ -54,7 +54,7 @@ var (
 func makeTestFile(t *testing.T, filename string) (*os.File, func()) {
 	f, err := ioutil.TempFile("", filename)
 	if err != nil {
-		t.Fatalf("error creating the temp file: %v", err)
+		t.Fatalf("error creating the temp file: [%v]", err)
 	}
 
 	teardown := func() {
@@ -73,11 +73,11 @@ func testConfigurationFile(t *testing.T, filename, contents string, reader func(
 
 	var got Config
 	if err := reader(f.Name(), &got); err != nil {
-		t.Fatalf("[%s] while reading contents: '%s': %v,", t.Name(), contents, err)
+		t.Fatalf("[%s] while reading contents: [%s]: [%v],", t.Name(), contents, err)
 	}
 
 	if !reflect.DeepEqual(got, expected) {
-		t.Fatalf("[%s] error reading configuration from file: '%s'\nexpected:\n%#v\nbut got:\n%#v", t.Name(), f.Name(), expected, got)
+		t.Fatalf("[%s] error reading configuration from file: [%s]\nexpected:\n%#v\nbut got:\n%#v", t.Name(), f.Name(), expected, got)
 		if testDebug {
 			t.Fatalf(" \ncontents of the file:\n%s", contents)
 		}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -14,23 +15,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kataras/golog"
-	uuid "github.com/satori/go.uuid"
-)
-
-// RequestType is the corresponding action/message type for the request sent to the back-end server.
-type RequestType string
-
-const (
-	// SubscribeRequest is the "SUBSCRIBE" action type sent to the back-end server.
-	SubscribeRequest RequestType = "SUBSCRIBE"
-	// UnsubscribeRequest is the "UNSUBSCRIBE" action type sent to the back-end server.
-	UnsubscribeRequest RequestType = "UNSUBSCRIBE"
-	// PublishRequest is the "PUBLISH" action type sent to the back-end server.
-	PublishRequest RequestType = "PUBLISH"
-	// CommitRequest is the "COMMIT" action type sent to the back-end server.
-	CommitRequest RequestType = "COMMIT"
-	// LoginRequest is the "LOGIN" action type sent to the back-end server.
-	LoginRequest RequestType = "LOGIN"
 )
 
 // ResponseType is the corresponding message type for the response came from the back-end server to the client.
@@ -44,37 +28,32 @@ const (
 	ErrorResponse ResponseType = "ERROR"
 	// InvalidRequestResponse is the "INVALIDREQUEST" receive message type.
 	InvalidRequestResponse ResponseType = "INVALIDREQUEST"
-	// KafkaMessageResponse is the "KAFKAMSG" receive message type.
-	KafkaMessageResponse ResponseType = "KAFKAMSG"
+	// RecordMessageResponse is the "RECORD" receive message type.
+	RecordMessageResponse ResponseType = "RECORD"
 	// HeartbeatResponse is the "HEARTBEAT" receive message type.
 	HeartbeatResponse ResponseType = "HEARTBEAT"
 	// SuccessResponse is the "SUCCESS" receive message type.
 	SuccessResponse ResponseType = "SUCCESS"
+	// StatsResponse in the "STATS" receive message type
+	StatsResponse ResponseType = "STATS"
+	// EndResponse is the "END" receive message type for browsing
+	EndResponse ResponseType = "END"
 )
 
 type (
-	// LiveRequest contains the necessary information that
-	// the back-end websocket server waits to be sent by the websocket client.
-	LiveRequest struct {
-		// Type describes the action the back end will take in response to the request.
-		// The available values are: "LOGIN", "SUBSCRIBE", "UNSUBSCRIBE",
-		// "PUBLISH" and "COMMIT". The Go type is `RequestType`.
-		Type RequestType `json:"type"`
+	MetaData struct {
+		Timestamp int `json:"timestamp"`
+		KeySize   int `json:"__keysize"`
+		ValueSize int `json:"__valuesize"`
+		Partition int `json:"partition"`
+		Offset    int `json:"offset"`
+	}
 
-		// CorrelationID is the unique identifier in order for the client to link the response
-		// with the request made.
-		CorrelationID int64 `json:"correlationId"`
-
-		// Content contains the Json content of the actual request.
-		// The content is strictly related to the type described shortly.
-		Content string `json:"content"`
-
-		// AuthToken is the unique token identifying the user making the request.
-		// This token can only be obtained once the LOGIN request type has completed successfully.
-		//
-		// It's created automatically by the internal implementation,
-		// on the `LivePublisher#Publish` which is used inside the `LiveListeners`.
-		AuthToken string `json:"authToken"`
+	Data struct {
+		Key      json.RawMessage `json:"key"`
+		Value    json.RawMessage `json:"value"`
+		Metadata MetaData        `json:"metadata"`
+		RowNum   int             `json:"rownum"`
 	}
 
 	// LiveResponse contains the necessary information that
@@ -82,16 +61,11 @@ type (
 	LiveResponse struct {
 		// Type describes what response content the client has
 		// received. Available values are: "ERROR",
-		// "INVALIDREQUEST", "KAFKAMSG", "HEARTBEAT" and "SUCCESS". The Go type is `ResponseType`.
 		Type ResponseType `json:"type"`
-
-		// CorrelationID is the unique identifier the client has provided in |
-		// the request associated with the response.
-		CorrelationID int64 `json:"correlationId"`
 
 		// Content contains the actual response content.
 		// Each response type has its own content layout.
-		Content json.RawMessage `json:"content"`
+		Data Data `json:"data"`
 	}
 )
 
@@ -104,11 +78,12 @@ type (
 	//
 	// See `OpenLiveConnection` for more.
 	LiveConfiguration struct {
-		Host     string `json:"host" yaml:"Host" toml:"Host"`
-		User     string `json:"user" yaml:"User" toml:"User"`
-		Password string `json:"password" yaml:"Password" toml:"Password"`
-		ClientID string `json:"clientId,omitempty" yaml:"ClientID" toml:"ClientID"`
-		Debug    bool   `json:"debug" yaml:"Debug" toml:"Debug"`
+		Host  string `json:"host"`
+		Token string `json:"token"`
+		Debug bool   `json:"debug"`
+		SQL   string `json:"sql"`
+		Live  bool   `json:"live"`
+		Stats int    `json:"stats"`
 		// ws-specific settings, optionally.
 
 		// HandshakeTimeout specifies the duration for the handshake to complete.
@@ -174,20 +149,24 @@ func OpenLiveConnection(config LiveConfiguration) (*LiveConnection, error) {
 		golog.SetLevel("debug")
 	}
 
-	if config.ClientID == "" {
-		config.ClientID = uuid.Must(uuid.NewV4()).String()
-	}
-
 	if config.HandshakeTimeout == 0 {
 		config.HandshakeTimeout = 45 * time.Second
 	}
 
 	config.Host = strings.Replace(config.Host, "https://", "wss://", 1)
-	config.Host = strings.Replace(config.Host, "http://", "ws://", 1)
+	config.Host = strings.Replace(config.Host, "https://", "ws://", 1)
+
+	//ws://localhost:24015/api/ws/v1/sql/execute?sql=
+	query := url.QueryEscape(config.SQL)
+	endpoint := fmt.Sprintf("%s/api/ws/v1/sql/execute?sql=%s&token=%s", config.Host, query, config.Token)
+
+	if config.Live {
+		endpoint = fmt.Sprintf("%s/api/ws/v1/sql/execute?sql=%s&token=%s&live=true", config.Host, query, config.Token)
+	}
 
 	c := &LiveConnection{
 		config:      config,
-		endpoint:    fmt.Sprintf("%s/api/kafka/ws/%s", config.Host, config.ClientID),
+		endpoint:    endpoint,
 		receiveStop: make(chan struct{}),
 		listeners:   make(map[ResponseType][]LiveListener),
 		errors:      make(chan error),
@@ -197,7 +176,7 @@ func OpenLiveConnection(config LiveConfiguration) (*LiveConnection, error) {
 }
 
 func (c *LiveConnection) start() error {
-	// first connect, handshake with the websocket server for upgradation.
+	// first connect, handshake with the websocket server for upgrade.
 	dialer := websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: c.config.HandshakeTimeout,
@@ -208,37 +187,14 @@ func (c *LiveConnection) start() error {
 	conn, _, err := dialer.Dial(c.endpoint, nil)
 
 	if err != nil {
-		err = fmt.Errorf("connect failure for '%s': %v", c.config.Host, err)
+		err = fmt.Errorf("connect failure for [%s]: %v", c.config.Host, err)
 		golog.Debug(err)
 		return err
 	}
 	// set the websocket connection.
 	c.conn = conn
 
-	// register the internal listener in order to check
-	// for the login and set the generated authentication token
-	// which should be used to send messages to the websocket server.
-	c.OnSuccess(func(_ LivePublisher, resp LiveResponse) error {
-		if resp.CorrelationID == 1 {
-			// the login, otherwise it sends the topic name for example after the subscribe.
-			err := json.Unmarshal(resp.Content, &c.authToken)
-			if err == nil {
-				golog.Debugf("login succeed, auth token: %s", c.authToken)
-			}
-			return err
-		}
-		return nil
-	})
-
 	go c.readLoop()
-
-	// then login.
-	if err := c.login(); err != nil {
-		err = fmt.Errorf("login failure: %v", err)
-		golog.Debug(err)
-		return err
-	}
-
 	return nil
 }
 
@@ -254,29 +210,6 @@ func (c *LiveConnection) Wait(interruptSignal <-chan os.Signal) error {
 // 	User     string `json:"user"`
 // 	Password string `json:"password"`
 // }
-
-func makeLoginContent(user, password string) string {
-	// u := userPayload{
-	// 	User:     c.config.User,
-	// 	Password: c.config.Password,
-	// }
-	// content, _ := json.Marshal(u)
-	// return string(content)
-	//
-	// Or just make a simple json string,
-	// the server will accept it as it's.
-	return fmt.Sprintf(`{"user": "%s", "password": "%s"}`, user, password)
-}
-
-func (c *LiveConnection) login() error {
-	req := LiveRequest{
-		Type:          LoginRequest,
-		CorrelationID: 1,
-		Content:       makeLoginContent(c.config.User, c.config.Password),
-	}
-
-	return c.conn.WriteJSON(req)
-}
 
 // Err can be used to receive the errors coming from the communication,
 // the listeners' errors are sending to that channel too.
@@ -294,22 +227,22 @@ func (c *LiveConnection) readLoop() {
 	for {
 		select {
 		case <-c.receiveStop:
-			// golog.Debugf("stop receiving by signal")
+			golog.Debugf("stop receiving by signal")
 			return
 		default:
 			resp := LiveResponse{}
 			if err := c.conn.ReadJSON(&resp); err != nil {
 				if _, is := err.(*net.OpError); is {
-					// send it as it's and do not exit, caller may want to check if should work with that error or just ignore it.
+					// send it as it's and do not exit, caller may want to check if should manage that error or just ignore it.
 					// caused by manual interruption(ctrl/cmd+c) or real network issue(this is why we continue after the error here).
 					c.sendErr(err)
 					continue
 				}
-				c.sendErr(fmt.Errorf("live: read json: %v", err))
+				c.sendErr(fmt.Errorf("live: read json: [%v]", err))
 				continue
 			}
 
-			golog.Debugf("read: %#+v", resp)
+			golog.Debugf("read: [%#+v]", resp)
 
 			// fire.
 			c.mu.RLock()
@@ -318,7 +251,7 @@ func (c *LiveConnection) readLoop() {
 
 			if ok {
 				for _, cb := range callbacks {
-					if err := cb(c, resp); err != nil {
+					if err := cb(resp); err != nil {
 						// return err // break and exit the loop on first failure.
 						c.sendErr(err) // don't break, just add the error.
 					}
@@ -330,34 +263,12 @@ func (c *LiveConnection) readLoop() {
 
 // --- Events handles incoming messages with style. ---
 
-// LivePublisher is the interface which
-// the `LiveConnection` implements, it is used on
-// `LiveListeners` to send requests to the websocket server.
-type LivePublisher interface {
-	Publish(RequestType, int64, string) error
-}
-
-// Publish sends a `LiveRequest` based on the input arguments
-// as JSON data to the websocket server.
-func (c *LiveConnection) Publish(typ RequestType, correlationID int64, content string) error {
-	req := LiveRequest{
-		AuthToken:     c.authToken,
-		Type:          typ,
-		CorrelationID: correlationID,
-		Content:       content,
-	}
-
-	golog.Debugf("publish: %#+v", req)
-
-	return c.conn.WriteJSON(req)
-}
-
 // LiveListener is the declaration for the subscriber, the subscriber
-// is just a callback which fiers whenever a websocket message
+// is just a callback which fires whenever a websocket message
 // with a particular `ResponseType` was sent by the websocket server.
 //
 // See `On` too.
-type LiveListener func(LivePublisher, LiveResponse) error
+type LiveListener func(LiveResponse) error
 
 // On adds a listener, a websocket message subscriber based on the given "typ" `ResponseType`.
 // Use the `WildcardResponse` to subscribe to all message types.
@@ -365,9 +276,11 @@ func (c *LiveConnection) On(typ ResponseType, cb LiveListener) {
 	if typ == WildcardResponse {
 		c.OnError(cb)
 		c.OnInvalidRequest(cb)
-		c.OnKafkaMessage(cb)
+		c.OnRecordMessage(cb)
 		c.OnHeartbeat(cb)
 		c.OnSuccess(cb)
+		c.OnStats(cb)
+		c.OnEnd(cb)
 		return
 	}
 
@@ -382,14 +295,20 @@ func (c *LiveConnection) OnError(cb LiveListener) { c.On(ErrorResponse, cb) }
 // OnInvalidRequest adds a listener, a websocket message subscriber based on the "INVALIDREQUEST" `ResponseType`.
 func (c *LiveConnection) OnInvalidRequest(cb LiveListener) { c.On(InvalidRequestResponse, cb) }
 
-// OnKafkaMessage adds a listener, a websocket message subscriber based on the "KAFKAMSG" `ResponseType`.
-func (c *LiveConnection) OnKafkaMessage(cb LiveListener) { c.On(KafkaMessageResponse, cb) }
+// OnKafkaMessage adds a listener, a websocket message subscriber based on the "RECORD" `ResponseType`.
+func (c *LiveConnection) OnRecordMessage(cb LiveListener) { c.On(RecordMessageResponse, cb) }
 
 // OnHeartbeat adds a listener, a websocket message subscriber based on the "HEARTBEAT" `ResponseType`.
 func (c *LiveConnection) OnHeartbeat(cb LiveListener) { c.On(HeartbeatResponse, cb) }
 
 // OnSuccess adds a listener, a websocket message subscriber based on the "SUCCESS" `ResponseType`.
 func (c *LiveConnection) OnSuccess(cb LiveListener) { c.On(SuccessResponse, cb) }
+
+// OnStats adds a listener, a websocket message subscriber based on the "STATS" `ResponseType`.
+func (c *LiveConnection) OnStats(cb LiveListener) { c.On(StatsResponse, cb) }
+
+// OnEnd adds a listener, a websocket message subscriber based on the "END" `ResponseType`.
+func (c *LiveConnection) OnEnd(cb LiveListener) { c.On(EndResponse, cb) }
 
 // Close closes the underline websocket connection
 // and stops receiving any new message from the websocket server.

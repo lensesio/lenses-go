@@ -2,9 +2,9 @@ package main
 
 import (
 	"time"
-
+	
 	"github.com/landoop/lenses-go"
-
+	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"
 )
@@ -34,15 +34,16 @@ func newGetAlertsCommand() *cobra.Command {
 
 			alerts, err := client.GetAlerts()
 			if err != nil {
+				golog.Errorf("Failed to retrieve alerts. [%s]", err.Error())
 				return err
 			}
 
-			// return printJSON(cmd, alerts)
+			//return bite.PrintJSON(cmd, alerts)
 			return bite.PrintObject(cmd, alerts)
 		},
 	}
 
-	cmd.Flags().BoolVar(&sse, "live", false, "--live Enables real-time push alert notifications")
+	cmd.Flags().BoolVar(&sse, "live", false, "Enables real-time push alert notifications")
 
 	bite.CanPrintJSON(cmd)
 
@@ -52,7 +53,7 @@ func newGetAlertsCommand() *cobra.Command {
 func newAlertGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "alert",
-		Short:            "Work with alerts",
+		Short:            "Manage alerts",
 		Example:          "alert",
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -87,23 +88,24 @@ func newRegisterAlertCommand() *cobra.Command {
 
 			err := client.RegisterAlert(alert)
 			if err != nil {
+				golog.Errorf("Failed to register alert. [%s]", err.Error())
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Alert with ID %d registered", alert.AlertID)
+			return bite.PrintInfo(cmd, "Alert with ID [%d] registered", alert.AlertID)
 		},
 	}
 
-	cmd.Flags().IntVar(&alert.AlertID, "alert", 0, "--alert=1000")
-	cmd.Flags().StringVar(&alert.StartsAt, "startsAt", "", `--startsAt="2018-03-27T21:23:23.634+02:00"`)
-	cmd.Flags().StringVar(&alert.EndsAt, "endsAt", "", `--endsAt=""`)
-	cmd.Flags().StringVar(&alert.Labels.Category, "category", "", `--category="Infrastructure"`)
-	cmd.Flags().StringVar(&alert.Labels.Severity, "severity", "", `--severity="HIGH"`)
-	cmd.Flags().StringVar(&alert.Labels.Instance, "instance", "", `--instance="instance101"`)
-	cmd.Flags().StringVar(&alert.Annotations.Docs, "docs", "", `--docs=""`)
-	cmd.Flags().StringVar(&alert.Annotations.Source, "source", "", `--source=""`)
-	cmd.Flags().StringVar(&alert.Annotations.Summary, "summary", "", `--summary="Broken on 1 is down"`)
-	cmd.Flags().StringVar(&alert.GeneratorURL, "generator", "", `--generator="http://lenses" is a unique URL identifying the creator of this alert. It matches AlertManager requirements for providing this field`)
+	cmd.Flags().IntVar(&alert.AlertID, "alert", 0, "Alert ID to register")
+	cmd.Flags().StringVar(&alert.StartsAt, "startsAt", "", `Alert start time .e.g. "2018-03-27T21:23:23.634+02:00"`)
+	cmd.Flags().StringVar(&alert.EndsAt, "endsAt", "", `Alert end time"`)
+	cmd.Flags().StringVar(&alert.Labels.Category, "category", "", `Category .e.g. "Infrastructure"`)
+	cmd.Flags().StringVar(&alert.Labels.Severity, "severity", "", `Severity .e.g. "HIGH"`)
+	cmd.Flags().StringVar(&alert.Labels.Instance, "instance", "", `Instance .e.g. "instance101"`)
+	cmd.Flags().StringVar(&alert.Annotations.Docs, "docs", "", `Documentation text`)
+	cmd.Flags().StringVar(&alert.Annotations.Source, "source", "", `Source of the alert`)
+	cmd.Flags().StringVar(&alert.Annotations.Summary, "summary", "", `Alert summary`)
+	cmd.Flags().StringVar(&alert.GeneratorURL, "generator", "", `Unique URL identifying the creator of this alert. It matches AlertManager requirements for providing this field`)
 
 	bite.Prepend(cmd, bite.FileBind(&alert))
 
@@ -148,18 +150,18 @@ func newAlertSettingGroupCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bite.FriendlyError(cmd, errResourceNotFoundMessage, "alert setting with id %d does not exist", id)
 
 			if mustEnable {
 				if err := client.EnableAlertSetting(id); err != nil {
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "Alert setting %d enabled", id)
+				return bite.PrintInfo(cmd, "Alert setting [%d] enabled", id)
 			}
 
 			settings, err := client.GetAlertSetting(id)
 			if err != nil {
+				golog.Errorf("Failed to retrieve alert [%d]. [%s]", id, err.Error())
 				return err
 			}
 
@@ -194,7 +196,7 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conds, err := client.GetAlertSettingConditions(alertID)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve conditions, alert setting with id %d does not exist", alertID)
+				golog.Errorf("Failed to retrieve alert setting conditions for [%d]. [%s]", alertID, err.Error())
 				return err
 			}
 
@@ -215,7 +217,7 @@ func newGetAlertSettingConditionsCommand() *cobra.Command {
 func newAlertSettingConditionGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "condition",
-		Short:            "Work with an alert setting's condition",
+		Short:            "Manage alert setting's condition",
 		Example:          `alert setting condition delete --alert=1001 --condition="28bbad2b-69bb-4c01-8e37-28e2e7083aa9"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -227,41 +229,62 @@ func newAlertSettingConditionGroupCommand() *cobra.Command {
 	return rootSub
 }
 
-type alertSettingConditionPayload struct {
-	AlertID   int    `json:"alert" yaml:"Alert"`
-	Condition string `json:"condition" yaml:"Condition"`
+type AlertSettingConditionPayloads struct {
+	AlertID    int      `json:"alert" yaml:"alert"`
+	Conditions []string `json:"conditions" yaml:"conditions"`
+}
+
+type AlertSettingConditionPayload struct {
+	AlertID   int    `json:"alert" yaml:"alert"`
+	Condition string `json:"condition" yaml:"condition"`
 }
 
 func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
-	var cond alertSettingConditionPayload
+	var conds AlertSettingConditionPayloads
+	var cond AlertSettingConditionPayload
 
 	cmd := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
-		Short:            "Create or Update an alert setting's condition",
-		Example:          `alert setting condition set --alert=1001 --condition="lag >= 100000 on group group and topic topicA" or alert setting condition set ./alert_cond.yml`,
+		Short:            "Create or Update an alert setting's condition or load from file",
+		Example:          `alert setting condition set --alert=1001 --condition="lag >= 100000or alert setting condition set ./alert_cond.yml`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if len(conds.Conditions) > 0 {
+				alertID := conds.AlertID
+				for _, condition := range conds.Conditions {
+					err := client.CreateOrUpdateAlertSettingCondition(alertID, condition)
+					if err != nil {
+						golog.Errorf("Failed to creating/updating alert setting condition [%d]. [%s]", condition, err.Error())
+						return err
+					}
+					bite.PrintInfo(cmd, "Condition [%s] added", condition)
+				}
+				return nil
+			}
+
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
 				return err
 			}
 
 			err := client.CreateOrUpdateAlertSettingCondition(cond.AlertID, cond.Condition)
 			if err != nil {
+				golog.Errorf("Failed to creating/updating alert setting condition [%d]. [%s]", cond.Condition, err.Error())
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Condition for alert setting %d updated", cond.AlertID)
+			return bite.PrintInfo(cmd, "Condition [%s] added", cond.Condition)
 		},
 	}
 
-	cmd.Flags().IntVar(&cond.AlertID, "alert", 0, "--alert=1001")
-	cmd.Flags().StringVar(&cond.Condition, "condition", "", `--condition="lag >= 100000 on group group and topic topicA"`)
+	cmd.Flags().IntVar(&cond.AlertID, "alert", 0, "Alert ID")
+	cmd.Flags().StringVar(&cond.Condition, "condition", "", `Alert condition .e.g. "lag >= 100000 on group group and topic topicA"`)
 
 	bite.CanBeSilent(cmd)
 
-	bite.Prepend(cmd, bite.FileBind(&cond))
+	bite.Prepend(cmd, bite.FileBind(&conds))
 
 	return cmd
 }
@@ -281,17 +304,17 @@ func newDeleteAlertSettingConditionCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := client.DeleteAlertSettingCondition(alertID, conditionUUID)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete condition, alert setting with id %d or condition with UUID '%s' does not exist", alertID, conditionUUID)
+				golog.Errorf("Failed to deleting alert setting condition [%s]. [%s]", conditionUUID, err.Error())
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Condition '%s' for alert setting %d deleted", conditionUUID, alertID)
+			return bite.PrintInfo(cmd, "Condition [%s] for alert setting [%d] deleted", conditionUUID, alertID)
 		},
 	}
 
-	cmd.Flags().IntVar(&alertID, "alert", 0, "--alert=1001")
+	cmd.Flags().IntVar(&alertID, "alert", 0, "Alert ID")
 	cmd.MarkFlagRequired("alert")
-	cmd.Flags().StringVar(&conditionUUID, "condition", "", `--condition="28bbad2b-69bb-4c01-8e37-28e2e7083aa9"`)
+	cmd.Flags().StringVar(&conditionUUID, "condition", "", `Alert condition uuid .e.g. "28bbad2b-69bb-4c01-8e37-28e2e7083aa9"`)
 	cmd.MarkFlagRequired("condition")
 	bite.CanBeSilent(cmd)
 

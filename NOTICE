@@ -9,3 +9,4 @@ cobra            : Apache 2.0          - https://github.com/spf13/cobra
 yaml             : Apache 2.0          - https://github.com/go-yaml/yaml
 godotenv         : MIT                 - https://github.com/joho/godotenv
 gokrb5           : Apache 2.0          - https://github.com/jcmturner/gokrb5
+go-prompt        : MIT                 - https://github.com/c-bata/go-prompt
