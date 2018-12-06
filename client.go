@@ -379,6 +379,7 @@ func (c *Client) ReadJSON(resp *http.Response, valuePtr interface{}) error {
 	}
 
 	err = json.Unmarshal(b, valuePtr)
+
 	if c.Config.Debug {
 		if syntaxErr, ok := err.(*json.SyntaxError); ok {
 			golog.Errorf("Client#ReadJSON: syntax error at offset [%d]: [%s]", syntaxErr.Offset, syntaxErr.Error())
@@ -1387,7 +1388,7 @@ const processorsPath = "api/streams"
 // CreateProcessorPayload holds the data to be sent from `CreateProcessor`.
 type CreateProcessorPayload struct {
 	Name        string `json:"name" yaml:"name"` // required
-	SQL         string `json:"sql" yaml:"sql"`  // required
+	SQL         string `json:"sql" yaml:"sql"`   // required
 	Runners     int    `json:"runners" yaml:"runners"`
 	ClusterName string `json:"clusterName" yaml:"clusterName"`
 	Namespace   string `json:"namespace" yaml:"namespace"`
@@ -1706,9 +1707,9 @@ type Connector struct {
 
 func (connector *Connector) ConnectorAsRequest() CreateUpdateConnectorPayload {
 	return CreateUpdateConnectorPayload{
-		ClusterName: 	connector.ClusterName,
-		Name: 			connector.Name,
-		Config:      	connector.Config,
+		ClusterName: connector.ClusterName,
+		Name:        connector.Name,
+		Config:      connector.Config,
 	}
 }
 
@@ -4016,101 +4017,106 @@ func (c *Client) ValidateSQL(sql string, caret int) (SQLValidationResponse, erro
 	return response, err
 }
 
-
-const ( 
+const (
 	policyPath = "/api/protection/policy"
 )
 
 type Impacts struct {
-	Topics 		[]string	`json:"topics" yaml:"topics"`
-	Processors 	[]string	`json:"processors" yaml:"processors"`
-	Connectors 	[]string	`json:"connectors" yaml:"connectors"`
-	Apps 		[]string	`json:"apps" yaml:"apps"`
+	Topics     []string         `json:"topics" yaml:"topics"`
+	Processors []ImpactsDetails `json:"processors" yaml:"processors"`
+	Connectors []ImpactsDetails `json:"connectors" yaml:"connectors"`
+	Apps       []ImpactsDetails `json:"apps" yaml:"apps"`
+}
+
+type ImpactsDetails struct {
+	Id   string `json:"id" yaml:"id"`
+	Name string `json:"name" yaml:"name"`
+	Type string `json:"type" yaml:"type"`
 }
 
 type DataPolicy struct {
-	ID          	string 						`json:"id" yaml:"id" header:"ID,text"`
-	Name			string 						`json:"name" yaml:"name" header:"Name,text"`
-	LastUpdated		string 						`json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
-	Versions		int 						`json:"versions" yaml:"versions" header:"Version,text"`
-	ImpactType		string 						`json:"impactType" yaml:"impactType" header:"ImpactType,text"`
-	Impacts			Impacts 					`json:"impact" yaml:"impact"`
-	Category		string 						`json:"category" yaml:"category" header:"Category,text"`
-	Fields			[]string 					`json:"fields" yaml:"fields" header:"Fields,text"`
-	Obfuscation 	string					 	`json:"obfuscation" yaml:"obfuscation" header:"Redaction,text"`
-	LastUpdatedUser	string 						`json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
+	ID              string   `json:"id" yaml:"id" header:"ID,text"`
+	Name            string   `json:"name" yaml:"name" header:"Name,text"`
+	LastUpdated     string   `json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
+	Versions        int      `json:"versions" yaml:"versions" header:"Version,text"`
+	ImpactType      string   `json:"impactType" yaml:"impactType" header:"ImpactType,text"`
+	Impacts         Impacts  `json:"impact" yaml:"impact" header:"Impacts,text"`
+	Category        string   `json:"category" yaml:"category" header:"Category,text"`
+	Fields          []string `json:"fields" yaml:"fields" header:"Fields,text"`
+	Obfuscation     string   `json:"obfuscation" yaml:"obfuscation" header:"Redaction,text"`
+	LastUpdatedUser string   `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
 }
 
 type DataPolicyTablePrint struct {
-	ID          	string 						`json:"id" yaml:"id" header:"ID"`
-	Name			string 						`json:"name" yaml:"name" header:"Name"`
-	LastUpdated		string 						`json:"lastUpdated" yaml:"lastUpdated" header:"Last update"`
-	Versions		int 						`json:"versions" yaml:"versions" header:"Version"`
-	ImpactType		string				 		`json:"impactType" yaml:"impactType" header:"ImpactType"`
-	Category		string 						`json:"category" yaml:"category" header:"Category"`
-	Fields			[]string 					`json:"fields" yaml:"fields" header:"Fields"`
-	Obfuscation 	string					 	`json:"obfuscation" yaml:"obfuscation" header:"Redaction"`
-	LastUpdatedUser	string 						`json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By"`
-	Topics 		    []string					`json:"topics" yaml:"topics" header:"Topics"`
-	Processors      []string					`json:"processors" yaml:"processors" header:"Processors"`
-	Connectors      []string					`json:"connectors" yaml:"connectors" header:"Connectors"`
-	Apps      		[]string					`json:"apps" yaml:"apps" header:"Apps"`
+	ID              string           `json:"id" yaml:"id" header:"ID"`
+	Name            string           `json:"name" yaml:"name" header:"Name"`
+	LastUpdated     string           `json:"lastUpdated" yaml:"lastUpdated" header:"Last update"`
+	Versions        int              `json:"versions" yaml:"versions" header:"Version"`
+	ImpactType      string           `json:"impactType" yaml:"impactType" header:"ImpactType"`
+	Category        string           `json:"category" yaml:"category" header:"Category"`
+	Fields          []string         `json:"fields" yaml:"fields" header:"Fields"`
+	Obfuscation     string           `json:"obfuscation" yaml:"obfuscation" header:"Redaction"`
+	LastUpdatedUser string           `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By"`
+	Topics          []string         `json:"topics" yaml:"topics" header:"Topics"`
+	Processors      []ImpactsDetails `json:"processors" yaml:"processors" header:"Processors"`
+	Connectors      []ImpactsDetails `json:"connectors,omitempty" yaml:"connectors" header:"Connectors"`
+	Apps            []ImpactsDetails `json:"apps" yaml:"apps" header:"Apps"`
 }
 
 type DataPolicyFields struct {
-	Fields 	map[string][]string `json:"fields" yaml:"fields"`
+	Fields map[string][]string `json:"fields" yaml:"fields"`
 }
 
 type DataObfuscationType struct {
-	RedactionType	string `json:"type" yaml:"type" header:"Type"`
+	RedactionType string `json:"type" yaml:"type" header:"Type"`
 }
 
 type DataImpactType struct {
-	ImpactType	string `json:"type" yaml:"type" header:"Type"`
+	ImpactType string `json:"type" yaml:"type" header:"Type"`
 }
 
 type DataPolicyRequest struct {
-	Name 		string 						`json:"name" yaml:"name"`
-	Category 	string						`json:"category" yaml:"category"`
-	ImpactType 	string						`json:"impactType" yaml:"impactType"`
-	Obfuscation	string						`json:"obfuscation" yaml:"obfuscation"`
-	Fields	 	[]string					`json:"fields" yaml:"fields"`
+	Name        string   `json:"name" yaml:"name"`
+	Category    string   `json:"category" yaml:"category"`
+	ImpactType  string   `json:"impactType" yaml:"impactType"`
+	Obfuscation string   `json:"obfuscation" yaml:"obfuscation"`
+	Fields      []string `json:"fields" yaml:"fields"`
 }
 
 type DataPolicyUpdateRequest struct {
-	ID			string						`json:"id" yaml:"id"`
-	Name 		string 						`json:"name" yaml:"name"`
-	Category 	string						`json:"category" yaml:"category"`
-	ImpactType 	string						`json:"impactType" yaml:"impactType"`
-	Obfuscation	string						`json:"obfuscation" yaml:"obfuscation"`
-	Fields	 	[]string					`json:"fields" yaml:"fields"`
+	ID          string   `json:"id" yaml:"id"`
+	Name        string   `json:"name" yaml:"name"`
+	Category    string   `json:"category" yaml:"category"`
+	ImpactType  string   `json:"impactType" yaml:"impactType"`
+	Obfuscation string   `json:"obfuscation" yaml:"obfuscation"`
+	Fields      []string `json:"fields" yaml:"fields"`
 }
 
 func (c *Client) PolicyAsRequest(p DataPolicy) DataPolicyRequest {
 	return DataPolicyRequest{
-		Name: 			p.Name,
-		Category: 		p.Category,
-		ImpactType: 	p.ImpactType,
-		Obfuscation:	p.Obfuscation,
-		Fields:			p.Fields,
+		Name:        p.Name,
+		Category:    p.Category,
+		ImpactType:  p.ImpactType,
+		Obfuscation: p.Obfuscation,
+		Fields:      p.Fields,
 	}
 }
 
 func (c *Client) PolicyForPrint(p DataPolicy) DataPolicyTablePrint {
 	return DataPolicyTablePrint{
-		ID:					p.ID,
-		Name: 				p.Name,
-		LastUpdated:		p.LastUpdated,
-		LastUpdatedUser: 	p.LastUpdatedUser,
-		Versions:			p.Versions,
-		Category: 			p.Category,
-		ImpactType: 		p.ImpactType,
-		Obfuscation:		p.Obfuscation,
-		Fields:				p.Fields,
-		Topics:				p.Impacts.Topics,
-		Processors: 		p.Impacts.Processors,
-		Connectors:			p.Impacts.Connectors,
-		Apps:				p.Impacts.Apps,
+		ID:              p.ID,
+		Name:            p.Name,
+		LastUpdated:     p.LastUpdated,
+		LastUpdatedUser: p.LastUpdatedUser,
+		Versions:        p.Versions,
+		Category:        p.Category,
+		ImpactType:      p.ImpactType,
+		Obfuscation:     p.Obfuscation,
+		Fields:          p.Fields,
+		Topics:          p.Impacts.Topics,
+		Processors:      p.Impacts.Processors,
+		Connectors:      p.Impacts.Connectors,
+		Apps:            p.Impacts.Apps,
 	}
 }
 
@@ -4150,7 +4156,6 @@ func (c *Client) GetPolicy(id string) (DataPolicy, error) {
 func (c *Client) GetPolicyCategory() ([]string, error) {
 	var response []string
 
-
 	resp, err := c.Do(http.MethodGet, "/api/protection/static/category", "", nil)
 	if err != nil {
 		return response, err
@@ -4167,7 +4172,6 @@ func (c *Client) GetPolicyObfuscation() ([]DataObfuscationType, error) {
 	var response []string
 	var redactions []DataObfuscationType
 
-
 	resp, err := c.Do(http.MethodGet, "/api/protection/static/obfuscation", "", nil)
 	if err != nil {
 		return redactions, err
@@ -4178,7 +4182,7 @@ func (c *Client) GetPolicyObfuscation() ([]DataObfuscationType, error) {
 	}
 
 	for _, r := range response {
-		redactions = append(redactions, DataObfuscationType{RedactionType : r})
+		redactions = append(redactions, DataObfuscationType{RedactionType: r})
 	}
 
 	return redactions, nil
@@ -4187,7 +4191,6 @@ func (c *Client) GetPolicyObfuscation() ([]DataObfuscationType, error) {
 func (c *Client) GetPolicyImpacts() ([]DataImpactType, error) {
 	var response []string
 	var impactTypes []DataImpactType
-
 
 	resp, err := c.Do(http.MethodGet, "/api/protection/static/impacts", "", nil)
 	if err != nil {
@@ -4199,7 +4202,7 @@ func (c *Client) GetPolicyImpacts() ([]DataImpactType, error) {
 	}
 
 	for _, r := range response {
-		impactTypes = append(impactTypes, DataImpactType{ImpactType : r})
+		impactTypes = append(impactTypes, DataImpactType{ImpactType: r})
 	}
 
 	return impactTypes, nil
@@ -4207,7 +4210,6 @@ func (c *Client) GetPolicyImpacts() ([]DataImpactType, error) {
 
 func (c *Client) GetPolicyFields() (DataPolicyFields, error) {
 	var response DataPolicyFields
-
 
 	resp, err := c.Do(http.MethodGet, "/api/protection/static/table/fields", "", nil)
 	if err != nil {

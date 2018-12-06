@@ -3,9 +3,9 @@ package main
 import (
 	"strings"
 
-	"github.com/landoop/lenses-go"
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ func newGetPoliciesCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
- 			
+
 			result, err := client.GetPolicies()
 			if err != nil {
 				return err
@@ -38,7 +38,7 @@ func newGetPoliciesCommand() *cobra.Command {
 			}
 
 			if name != "" {
-				golog.Errorf("Failed to retrieve policy [%s]. [%s]",name, err.Error())
+				golog.Errorf("Failed to retrieve policy [%s]. [%s]", name, err.Error())
 				return err
 			}
 
@@ -56,9 +56,9 @@ func newGetPoliciesCommand() *cobra.Command {
 func newPolicyGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:              "policy",
-		Short:            "Manage a policy",
-		Example:          `
+		Use:   "policy",
+		Short: "Manage a policy",
+		Example: `
 policy create --name my-policy --category my-category --impact HIGH --redaction First-1 --fields myfield1,myfield2
 policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --fields myfield1,myfield2
 policy delete --id 1
@@ -87,9 +87,8 @@ func newViewPolicyCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			policies, err := client.GetPolicies()
 
-			policies, err := client.GetPolicies(); 
-			
 			if err != nil {
 				golog.Errorf("Failed to retrieve policies. [%s]", err.Error())
 				return err
@@ -126,15 +125,15 @@ func newCreatePolicyCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			flags := bite.FlagPair{
-						"name": policy.Name,
-						"category": policy.Category,
-						"redaction": policy.Obfuscation,
-						"impact": policy.ImpactType,
-						"fields": fields,
-					}
+				"name":      policy.Name,
+				"category":  policy.Category,
+				"redaction": policy.Obfuscation,
+				"impact":    policy.ImpactType,
+				"fields":    fields,
+			}
 
 			if err := bite.CheckRequiredFlags(cmd, flags); err != nil {
-					return err
+				return err
 			}
 
 			policy.Fields = strings.Split(fields, ",")
@@ -164,24 +163,24 @@ func newUpdatePolicyCommand() *cobra.Command {
 	var fields string
 
 	cmd := &cobra.Command{
-		Use:              "update",
-		Short:            "Update a policy",
-		Example:          `policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --fields myfield1,myfield2		`,
+		Use:   "update",
+		Short: "Update a policy",
+		Example: `policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --fields myfield1,myfield2		`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			flags := bite.FlagPair{
-						"id":  policy.ID,
-						"name": policy.Name,
-						"category": policy.Category,
-						"redaction": policy.Obfuscation,
-						"impact": policy.ImpactType,
-						"fields": fields,
-					}
+				"id":        policy.ID,
+				"name":      policy.Name,
+				"category":  policy.Category,
+				"redaction": policy.Obfuscation,
+				"impact":    policy.ImpactType,
+				"fields":    fields,
+			}
 
 			if err := bite.CheckRequiredFlags(cmd, flags); err != nil {
-					return err
+				return err
 			}
 
 			policy.Fields = strings.Split(fields, ",")
@@ -218,10 +217,9 @@ func newDeletePolicyCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"id":  id,}); err != nil {
-					return err
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"id": id}); err != nil {
+				return err
 			}
-
 
 			if err := client.DeletePolicy(id); err != nil {
 				golog.Errorf("Failed to delete policy [%s]. [%s]", id, err.Error())
@@ -239,7 +237,7 @@ func newDeletePolicyCommand() *cobra.Command {
 }
 
 func newGetPoliciesObfuscationCommand() *cobra.Command {
-	
+
 	cmd := &cobra.Command{
 		Use:              "redactions",
 		Short:            "List available redactions",
@@ -248,9 +246,8 @@ func newGetPoliciesObfuscationCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-		
 			r, err := client.GetPolicyObfuscation()
-			
+
 			if err != nil {
 				return err
 			}
@@ -274,9 +271,8 @@ func newGetPoliciesImpactTypesCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-		
 			r, err := client.GetPolicyImpacts()
-			
+
 			if err != nil {
 				return err
 			}
@@ -289,4 +285,3 @@ func newGetPoliciesImpactTypesCommand() *cobra.Command {
 	bite.CanBeSilent(cmd)
 	return cmd
 }
-
