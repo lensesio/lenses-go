@@ -1,13 +1,15 @@
-package main 
+// +build shell
+
+package main
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/landoop/lenses-go"
 	"github.com/c-bata/go-prompt"
 	"github.com/kataras/golog"
+	"github.com/landoop/lenses-go"
 )
 
 func checkValidation(validation lenses.SQLValidationResponse) bool {
@@ -32,7 +34,7 @@ func sqlCompleter(d prompt.Document) []prompt.Suggest {
 
 	sql := fmt.Sprintf("%s%s", SqlQuery, d.CurrentLine())
 	caret := d.CursorPositionCol() + len(SqlQuery)
-	
+
 	keywords, err := client.ValidateSQL(strings.Replace(sql, "  ", " ", 0), caret)
 	if err != nil {
 		golog.Error(err)
@@ -46,7 +48,7 @@ func sqlCompleter(d prompt.Document) []prompt.Suggest {
 	var suggestions []prompt.Suggest
 
 	for _, s := range keywords.Suggestions {
-		suggestions = append(suggestions, prompt.Suggest{Text: s.Display, Description: s.Text} )
+		suggestions = append(suggestions, prompt.Suggest{Text: s.Display, Description: s.Text})
 	}
 
 	return prompt.FilterHasPrefix(suggestions, d.GetWordBeforeCursor(), true)

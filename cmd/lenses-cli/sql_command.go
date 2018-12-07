@@ -1,3 +1,5 @@
+// +build shell
+
 package main
 
 import (
@@ -11,10 +13,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/landoop/lenses-go"
-	"github.com/landoop/bite"
-	"github.com/spf13/cobra"
 	"github.com/kataras/golog"
+	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
+	"github.com/spf13/cobra"
 )
 
 var sqlLiveStream, sqlStats, sqlKeys, sqlKeysOnly, sqlMeta bool
@@ -22,27 +24,26 @@ var gCmd *cobra.Command
 
 type (
 	responseWithKeysWithMeta struct {
-		Key json.RawMessage `json:"key"`
-		Value json.RawMessage `json:"value"`
+		Key      json.RawMessage `json:"key"`
+		Value    json.RawMessage `json:"value"`
 		Metadata lenses.MetaData `json:"metadata"`
 	}
 
 	responseWithKeys struct {
-		Key json.RawMessage `json:"key"`
+		Key   json.RawMessage `json:"key"`
 		Value json.RawMessage `json:"value"`
 	}
 
 	responseWithMeta struct {
-		Value json.RawMessage `json:"value"`
+		Value    json.RawMessage `json:"value"`
 		Metadata lenses.MetaData `json:"metadata"`
 	}
 
 	responseWithKeysWithMetaOnly struct {
-		Key json.RawMessage `json:"key"`
+		Key      json.RawMessage `json:"key"`
 		Metadata lenses.MetaData `json:"metadata"`
 	}
 )
-
 
 func init() {
 	app.AddCommand(newLiveLSQLCommand())
@@ -81,14 +82,14 @@ func readAndQuoteQueries(args []string) ([]string, error) {
 
 func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool, liveStream bool, stats bool) error {
 	currentConfig := configManager.config.GetCurrent()
-			
+
 	conn, err := lenses.OpenLiveConnection(lenses.LiveConfiguration{
-		Token:	client.Config.Token,
-		Host:   currentConfig.Host,
-		Debug:  currentConfig.Debug,
-		SQL:	sql,
-		Live:	liveStream,
-		Stats:  2,
+		Token: client.Config.Token,
+		Host:  currentConfig.Host,
+		Debug: currentConfig.Debug,
+		SQL:   sql,
+		Live:  liveStream,
+		Stats: 2,
 	})
 
 	if err != nil {
@@ -133,15 +134,15 @@ func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool,
 	}
 
 	// first subscribe to any incoming kafka messages (as result of the lsql publish).
-	conn.OnRecordMessage(func(resp lenses.LiveResponse) error {	
+	conn.OnRecordMessage(func(resp lenses.LiveResponse) error {
 
 		var data interface{}
-		
-		if (keysOnly) {
+
+		if keysOnly {
 			// keys and metadata only
 			if meta {
 				data = responseWithKeysWithMetaOnly{
-					Key: resp.Data.Key,
+					Key:      resp.Data.Key,
 					Metadata: resp.Data.Metadata,
 				}
 			} else {
@@ -156,7 +157,7 @@ func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool,
 			// data and metadata
 			if !keys && meta {
 				data = responseWithMeta{
-					Value: resp.Data.Value,
+					Value:    resp.Data.Value,
 					Metadata: resp.Data.Metadata,
 				}
 			}
@@ -164,7 +165,7 @@ func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool,
 			// keys and data
 			if keys && !meta {
 				data = responseWithKeys{
-					Key: resp.Data.Key,
+					Key:   resp.Data.Key,
 					Value: resp.Data.Value,
 				}
 			}
@@ -172,8 +173,8 @@ func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool,
 			// keys, data and metadata
 			if keys && meta {
 				data = responseWithKeysWithMeta{
-					Key: resp.Data.Key,
-					Value: resp.Data.Value,
+					Key:      resp.Data.Key,
+					Value:    resp.Data.Value,
 					Metadata: resp.Data.Metadata,
 				}
 			}
@@ -257,7 +258,7 @@ func newLiveLSQLCommand() *cobra.Command {
 			checkValidation(validation)
 			runSQL(cmd, queries[0], sqlMeta, sqlKeys, sqlKeysOnly, sqlLiveStream, sqlStats)
 			return nil
-		
+
 		},
 	}
 

@@ -1,12 +1,14 @@
+// +build shell
+
 package main
 
 import (
-	"github.com/landoop/bite"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/kataras/golog"
+	"github.com/landoop/bite"
 )
 
 var (
@@ -14,17 +16,16 @@ var (
 	revision string
 )
 
-
-// LivePrefixStae is a container for the interactive prompt state
+// LivePrefixState is a container for the interactive prompt state
 var LivePrefixState struct {
 	LivePrefix string
-	IsEnable bool
+	IsEnable   bool
 }
 
 var SqlQuery string
 
 func changeLivePrefix() (string, bool) {
-	return LivePrefixState.LivePrefix , LivePrefixState.IsEnable
+	return LivePrefixState.LivePrefix, LivePrefixState.IsEnable
 }
 
 func sqlExecutor(sql string) {
@@ -37,7 +38,7 @@ func sqlExecutor(sql string) {
 		}
 
 		if trimmed == "!pretty" {
-			
+
 			if bite.GetJSONPrettyFlag(interactiveCmd) {
 				interactiveCmd.Flags().Set("pretty", "false")
 			} else {
@@ -54,7 +55,7 @@ func sqlExecutor(sql string) {
 			} else {
 				sqlKeys = true
 			}
-			
+
 			fmt.Printf("Option [%s] set to [%t]\n", trimmed, sqlKeys)
 			return
 		}
@@ -65,7 +66,7 @@ func sqlExecutor(sql string) {
 			} else {
 				sqlKeysOnly = true
 			}
-			
+
 			fmt.Printf("Option [%s] set to [%t]\n", trimmed, sqlKeysOnly)
 			return
 		}
@@ -77,7 +78,7 @@ func sqlExecutor(sql string) {
 			} else {
 				sqlMeta = true
 			}
-			
+
 			fmt.Printf("Option [%s] set to [%t]\n", trimmed, sqlMeta)
 			return
 		}
@@ -88,7 +89,7 @@ func sqlExecutor(sql string) {
 			} else {
 				sqlStats = true
 			}
-			
+
 			fmt.Printf("Option [%s] set to [%t]\n", trimmed, sqlStats)
 			return
 		}
@@ -101,13 +102,12 @@ func sqlExecutor(sql string) {
 			}
 
 			fmt.Printf("Option [%s] set to [%t]\n", trimmed, sqlLiveStream)
-			return		
+			return
 		}
 
 		golog.Errorf("Unknown option [%s]", trimmed)
 		return
 	}
-
 
 	finalQ := fmt.Sprintf("%s %s", SqlQuery, sql)
 	if sql != "" {
@@ -125,7 +125,7 @@ func sqlExecutor(sql string) {
 				if lintType == "error" || lintType == "warning" {
 					lintError = true
 					golog.Errorf("Validation error: [%s]", lint.Text)
-				} 
+				}
 			}
 
 			if lintError {
@@ -154,7 +154,7 @@ func sqlExecutor(sql string) {
 			if errF != nil {
 				golog.Fatalf("Error writing history to file [%s]. [%s]", sqlHistoryPath, err.Error())
 			}
-			
+
 			SqlQuery = ""
 			LivePrefixState.LivePrefix = "lenses-sql>"
 			LivePrefixState.IsEnable = true

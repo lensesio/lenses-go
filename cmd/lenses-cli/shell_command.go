@@ -1,15 +1,17 @@
+// +build shell
+
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
-	"bufio"
 
-	"github.com/landoop/lenses-go"
-	"github.com/landoop/bite"
-	"github.com/spf13/cobra"
 	"github.com/c-bata/go-prompt"
 	"github.com/kataras/golog"
+	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
+	"github.com/spf13/cobra"
 )
 
 var interactiveCmd *cobra.Command
@@ -45,7 +47,6 @@ Crtl+D to exit
 
 `, client.Config.Host, client.User.Name, configManager.config.CurrentContext)
 
-			
 			var histories []string
 
 			if _, err := os.Stat(sqlHistoryPath); os.IsExist(err) {
@@ -79,7 +80,7 @@ Crtl+D to exit
 			p.Run()
 
 			return nil
-		
+
 		},
 	}
 
