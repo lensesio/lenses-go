@@ -4,10 +4,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
-	"github.com/landoop/lenses-go"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -19,21 +18,22 @@ var (
 	// buildTime is the build unix time (in seconds since 1970-01-01 00:00:00 UTC), like the `buildRevision`,
 	// this is available on after the build state, inside the cli executable - via the "--version" flag.
 	//
-	// Note that this buildTime is not int64, it's type of string.
-	buildTime = fmt.Sprintf("[%d]", time.Now().Unix())
+	// Note that this buildTime is not int64, it's type of string and it is provided at build time.
+	// Do not change!
+	buildTime = ""
 )
 
 const (
-	sqlPath = "apps/sql"
+	sqlPath        = "apps/sql"
 	connectorsPath = "apps/connectors"
 
-	aclsPath = "kafka/acls"
+	aclsPath   = "kafka/acls"
 	topicsPath = "kafka/topics"
 	quotasPath = "kafka/quotas"
 
-	schemasPath = "schemas"
+	schemasPath       = "schemas"
 	alertSettingsPath = "alert-settings"
-	policiesPath = "policies"
+	policiesPath      = "policies"
 )
 
 var (
