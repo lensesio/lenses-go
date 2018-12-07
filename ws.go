@@ -154,7 +154,7 @@ func OpenLiveConnection(config LiveConfiguration) (*LiveConnection, error) {
 	}
 
 	config.Host = strings.Replace(config.Host, "https://", "wss://", 1)
-	config.Host = strings.Replace(config.Host, "https://", "ws://", 1)
+	config.Host = strings.Replace(config.Host, "http://", "ws://", 1)
 
 	//ws://localhost:24015/api/ws/v1/sql/execute?sql=
 	query := url.QueryEscape(config.SQL)
