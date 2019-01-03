@@ -13,7 +13,6 @@ import (
 	golog "github.com/kataras/golog"
 	lenses "github.com/landoop/lenses-go"
 	cobra "github.com/spf13/cobra"
-	viper "github.com/spf13/viper"
 	azure "github.com/Azure/go-autorest/autorest/azure"
 )
 
@@ -96,7 +95,7 @@ func writeAppFiles(secrets map[string]string, secretsFile string) error {
 		golog.Infof("Writing file [%s] for sourcing as environment variables", secretsFile)
 		for key, value := range secrets {
 			keyAsEnv := strings.ToUpper(strings.Replace(key, ".", "_", -1))
-			secretData = append(secretData, fmt.Sprintf("export %s=\"%s\"", keyAsEnv, value))
+			secretData = append(secretData, fmt.Sprintf("export %s=%s", keyAsEnv, value))
 		}
 
 		if err := writePropsFile(secretsFile, secretData); err != nil {
@@ -322,6 +321,10 @@ vault kv put secret/connectors/cassandra connect-cassandra-password=secret conne
 export SECRET_CONNECT_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/con1
 export SECRET_CONNECT_CASSANDRA_USER=/secret/data/connectors/cassandra/con1
 
+In secret file:
+	connect.cassandra.password=secret
+	connect.cassandra.user=lenses
+
 Variables can alternatively be loaded from a file using the from-file flag.
 The file contents should be in key value in the same format as the 
 environment variables
@@ -338,11 +341,6 @@ secrets connect azure --vault-name lenses --client-id xxxx --client-secret xxxx 
 	cmd.PersistentFlags().StringVar(&connectorFile, "connector-file", "connector.props", "The connector file to write connector config to")
 	cmd.PersistentFlags().StringVar(&workerFile, "worker-file", "worker.props", "The connect worker file to connect worker config to")
 	cmd.PersistentFlags().StringVar(&fromFile, "from-file", "", "File to variables load from instead of looking up as environment variables, separated by =")
-
-	viper.BindPFlag("secrets-file", cmd.Flags().Lookup("CONNECTOR_SECRETS_FILE"))
-	viper.BindPFlag("connector-id", cmd.Flags().Lookup("CONNECTOR_FILE"))
-	viper.BindPFlag("worker-file", cmd.Flags().Lookup("CONNECT_WORKER_FILE"))
-	viper.BindPFlag("from-file", cmd.Flags().Lookup("FROM_FILE"))
 
 	cmd.AddCommand(newVaultCommand("connect"))
 	cmd.AddCommand(newAzureCommand("connect"))
@@ -368,6 +366,10 @@ vault kv put secret/connectors/cassandra connect-cassandra-password=secret conne
 
 export SECRET_CONNECT_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/con1
 export SECRET_CONNECT_CASSANDRA_USER=/secret/data/connectors/cassandra/con1
+
+In secret file:
+	connect.cassandra.password=secret
+	connect.cassandra.user=lenses
 
 The token is either the AppRole or Kubernetes token
 
@@ -409,16 +411,13 @@ secrets connect vault --role lenses --token XYZ --from-file my-env.txt
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "", "Provider endpoint")
-	cmd.Flags().StringVar(&role, "role", "", "Vault appRole name. Required for vault provider only")
-	cmd.Flags().StringVar(&token, "token", "", "Vault or kubernetes JWT token. Required for vault provider only")
-	viper.BindPFlag("endpoint", cmd.Flags().Lookup("ENDPOINT"))
-	viper.BindPFlag("role", cmd.Flags().Lookup("VAULT_ROLE"))
-	viper.BindPFlag("token", cmd.Flags().Lookup("VAULT_TOKEN"))
+	cmd.PersistentFlags().StringVar(&endpoint, "vault-server", "", "Provider endpoint")
+	cmd.Flags().StringVar(&role, "vault-role", "", "Vault appRole name. Required for vault provider only")
+	cmd.Flags().StringVar(&token, "vault-token", "", "Vault or kubernetes JWT token. Required for vault provider only")
 
-	cmd.MarkFlagRequired("endpoint")
-	cmd.MarkFlagRequired("role")
-	cmd.MarkFlagRequired("token")
+	cmd.MarkFlagRequired("vault-server")
+	cmd.MarkFlagRequired("vault-role")
+	cmd.MarkFlagRequired("vault-token")
 	return cmd
 }
 
@@ -437,6 +436,10 @@ An environment variable SECRET_CONNECT_CASSANDRA_PASSWORD
 expects a secret name connect-cassandra-password in Azure KeyVault.
 
 export SECRET_CONNECT_CASSANDRA_PASSWORD=connect-cassandra-password
+
+In secret file:
+	connect.cassandra.password=secret
+	connect.cassandra.user=lenses
 
 Variables can alternatively be loaded from a file using the from-file flag.
 The file contents should be in key value in the same format as the 
@@ -492,15 +495,11 @@ secrets connect azure --vault-name lenses --client-id xxxx --client-secret xxxx 
 	cmd.Flags().StringVar(&clientSecret, "client-secret", "", "Azure client secret id")
 	cmd.Flags().StringVar(&tenantID, "tenant-id", "", "Azure tenant id")
 	cmd.Flags().StringVar(&dns, "dns-suffix", "", "Azure key vault dns suffix")
+
 	cmd.MarkFlagRequired("vault-name")
 	cmd.MarkFlagRequired("client-id")
-	cmd.MarkFlagRequired("client-secret-id")
+	cmd.MarkFlagRequired("client-secret")
 	cmd.MarkFlagRequired("tenant-id")
-
-	viper.BindPFlag("client-id", cmd.Flags().Lookup("AZURE_CLIENT_ID"))
-	viper.BindPFlag("client-secret", cmd.Flags().Lookup("AZURE_CLIENT_SECRET"))
-	viper.BindPFlag("tenant-id", cmd.Flags().Lookup("AZURE_TENANT_ID"))
-	viper.BindPFlag("dns-suffix", cmd.Flags().Lookup("AZURE_KEYVAULT_DNS_SUFFIX"))
 
 	return cmd
 }
