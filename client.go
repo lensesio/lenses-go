@@ -186,7 +186,7 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 		req.Header.Set(contentTypeHeaderKey, contentType)
 	}
 
-	// response accept gziped content.
+	// response accept gzipped content.
 	req.Header.Add(acceptEncodingHeaderKey, gzipEncodingHeaderValue)
 
 	if c.PersistentRequestModifier != nil {
@@ -1231,6 +1231,7 @@ type KeyVal struct {
 	Value string `json:"value" yaml:"value"`
 }
 
+// UpdateConfigs is a struct holding a topic configuration for update
 type UpdateConfigs struct {
 	Configs []KeyVal `json:"configs"  yaml:"configs"`
 }
@@ -1395,6 +1396,7 @@ type CreateProcessorPayload struct {
 	Pipeline    string `json:"pipeline" yaml:"pipeline"` // defaults to Name if not set.
 }
 
+// ProcessorAsRequest returns a proccessor as a CreateProcessorPayload
 func (p *ProcessorStream) ProcessorAsRequest() CreateProcessorPayload {
 	return CreateProcessorPayload{
 		Name:        p.Name,
@@ -1522,6 +1524,7 @@ func (c *Client) GetProcessors() (ProcessorsResult, error) {
 	return res, nil
 }
 
+// GetProcessor returns a processor from Lenses for the given id
 func (c *Client) GetProcessor(processorID string) (ProcessorStream, error) {
 	var res ProcessorStream
 
@@ -1705,6 +1708,7 @@ type Connector struct {
 	Tasks []ConnectorTaskReadOnly `json:"tasks,omitempty" header:"Tasks,count"`
 }
 
+// ConnectorAsRequest returns a connector as a request
 func (connector *Connector) ConnectorAsRequest() CreateUpdateConnectorPayload {
 	return CreateUpdateConnectorPayload{
 		ClusterName: connector.ClusterName,
@@ -2274,6 +2278,7 @@ type Schema struct {
 	AvroSchema string `json:"schema" yaml:"avroSchema"`
 }
 
+// SchemaAsRequest returns a schema as a request
 type SchemaAsRequest struct {
 	// Name is the name of the schema is registered under.
 	Name string `json:"subject,omitempty" yaml:"name" header:"Name"` // Name is the "subject" argument in client-code, this structure is being used on CLI for yaml-file based loading.
@@ -2932,6 +2937,7 @@ type (
 	}
 )
 
+// CreateQuotaPayload returns a quota as a payload
 type CreateQuotaPayload struct {
 	QuotaType string      `yaml:"type" json:"type"`
 	Config    QuotaConfig `yaml:"config" json:"config"`
@@ -2942,6 +2948,8 @@ type CreateQuotaPayload struct {
 	ClientID string `yaml:"client" json:"client"`
 }
 
+
+// GetQuotaAsRequest returns a quota as a request
 func (q *Quota) GetQuotaAsRequest() CreateQuotaPayload {
 	var user, clientID string
 
@@ -3665,8 +3673,8 @@ func (c *Client) UpdateDynamicBrokerConfigs(brokerID int, toAddOrUpdate BrokerCo
 
 // DeleteDynamicClusterConfigs deletes cluster configuration(s) dynamically.
 // It reverts the configuration to its default value.
-func (c *Client) DeleteDynamicClusterConfigs(configKeysToBeReseted ...string) error {
-	send, err := json.Marshal(configKeysToBeReseted)
+func (c *Client) DeleteDynamicClusterConfigs(configKeysToBeReset ...string) error {
+	send, err := json.Marshal(configKeysToBeReset)
 	if err != nil {
 		return err
 	}
@@ -3952,11 +3960,13 @@ const (
 	topicExtractPath = "/api/topology/"
 )
 
+// TopicExtract a topics parents and decendants from a Lenses topoloogy
 type TopicExtract struct {
 	Parents    []string `json:"parents" yaml:"parents" header:"Parents"`
 	Decendants []string `json:"descendants" yaml:"descendants" header:"descendants"`
 }
 
+// GetTopicExtract returns a TopicExtract for an id
 func (c *Client) GetTopicExtract(id string) ([]TopicExtract, error) {
 	var topics []TopicExtract
 
@@ -3973,22 +3983,27 @@ const (
 	sqlValidationPath = "/api/v1/sql/presentation"
 )
 
+// SQLValidationRequest is a Lenses SQL Validation request
 type SQLValidationRequest struct {
 	SQL   string `json:"sql"`
 	Caret int    `json:"caret"`
 }
 
+// ValidationLints holds the validation lints returned by Lenses
 type ValidationLints struct {
 	Start int    `json:"start"`
 	End   int    `json:"end"`
 	Text  string `json:"text"`
 	Type  string `json:"type"`
 }
+
+// Suggestions holds the Lenses validation susggestions
 type Suggestions struct {
 	Display string `json:"display"`
 	Text    string `json:"text"`
 }
 
+//SQLValidationResponse is a the validation response from Lenses
 type SQLValidationResponse struct {
 	Input       string            `json:"input"`
 	Caret       int               `json:"caret"`
@@ -3997,6 +4012,7 @@ type SQLValidationResponse struct {
 	Suggestions []Suggestions     `json:"suggestions"`
 }
 
+// ValidateSQL valids a Lenses sql statement
 func (c *Client) ValidateSQL(sql string, caret int) (SQLValidationResponse, error) {
 
 	var response SQLValidationResponse
@@ -4021,6 +4037,7 @@ const (
 	policyPath = "/api/protection/policy"
 )
 
+// Impacts holds the impact response from Lenses for DataPolicies
 type Impacts struct {
 	Topics     []string         `json:"topics" yaml:"topics"`
 	Processors []ImpactsDetails `json:"processors" yaml:"processors"`
@@ -4028,12 +4045,14 @@ type Impacts struct {
 	Apps       []ImpactsDetails `json:"apps" yaml:"apps"`
 }
 
+// ImpactsDetails holds impact details
 type ImpactsDetails struct {
-	Id   string `json:"id" yaml:"id"`
+	ID   string `json:"id" yaml:"id"`
 	Name string `json:"name" yaml:"name"`
 	Type string `json:"type" yaml:"type"`
 }
 
+// DataPolicy holds a Lenses data policy
 type DataPolicy struct {
 	ID              string   `json:"id" yaml:"id" header:"ID,text"`
 	Name            string   `json:"name" yaml:"name" header:"Name,text"`
@@ -4047,6 +4066,7 @@ type DataPolicy struct {
 	LastUpdatedUser string   `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
 }
 
+//DataPolicyTablePrint holds a data policy for bit table printing
 type DataPolicyTablePrint struct {
 	ID              string           `json:"id" yaml:"id" header:"ID"`
 	Name            string           `json:"name" yaml:"name" header:"Name"`
@@ -4063,18 +4083,22 @@ type DataPolicyTablePrint struct {
 	Apps            []ImpactsDetails `json:"apps" yaml:"apps" header:"Apps"`
 }
 
+// DataPolicyFields holds fields impacted by a Lenses data policy
 type DataPolicyFields struct {
 	Fields map[string][]string `json:"fields" yaml:"fields"`
 }
 
+// DataObfuscationType holds the obfuscation type for a policy
 type DataObfuscationType struct {
 	RedactionType string `json:"type" yaml:"type" header:"Type"`
 }
 
+// DataImpactType holds the impact type for a policy
 type DataImpactType struct {
 	ImpactType string `json:"type" yaml:"type" header:"Type"`
 }
 
+// DataPolicyRequest is a Lenses data policy as a request
 type DataPolicyRequest struct {
 	Name        string   `json:"name" yaml:"name"`
 	Category    string   `json:"category" yaml:"category"`
@@ -4083,6 +4107,7 @@ type DataPolicyRequest struct {
 	Fields      []string `json:"fields" yaml:"fields"`
 }
 
+// DataPolicyUpdateRequest is a data policy as an update
 type DataPolicyUpdateRequest struct {
 	ID          string   `json:"id" yaml:"id"`
 	Name        string   `json:"name" yaml:"name"`
@@ -4092,6 +4117,8 @@ type DataPolicyUpdateRequest struct {
 	Fields      []string `json:"fields" yaml:"fields"`
 }
 
+
+// PolicyAsRequest returns a data policy as a request
 func (c *Client) PolicyAsRequest(p DataPolicy) DataPolicyRequest {
 	return DataPolicyRequest{
 		Name:        p.Name,
@@ -4102,6 +4129,7 @@ func (c *Client) PolicyAsRequest(p DataPolicy) DataPolicyRequest {
 	}
 }
 
+// PolicyForPrint returns a policy for table printing
 func (c *Client) PolicyForPrint(p DataPolicy) DataPolicyTablePrint {
 	return DataPolicyTablePrint{
 		ID:              p.ID,
@@ -4120,6 +4148,7 @@ func (c *Client) PolicyForPrint(p DataPolicy) DataPolicyTablePrint {
 	}
 }
 
+// GetPolicies retrieves data policies from Lenses
 func (c *Client) GetPolicies() ([]DataPolicy, error) {
 
 	var response []DataPolicy
@@ -4136,6 +4165,7 @@ func (c *Client) GetPolicies() ([]DataPolicy, error) {
 	return response, nil
 }
 
+// GetPolicy retrieves the specified policy
 func (c *Client) GetPolicy(id string) (DataPolicy, error) {
 	var response DataPolicy
 
@@ -4153,6 +4183,7 @@ func (c *Client) GetPolicy(id string) (DataPolicy, error) {
 	return response, nil
 }
 
+// GetPolicyCategory retrieves the data policy categories
 func (c *Client) GetPolicyCategory() ([]string, error) {
 	var response []string
 
@@ -4168,6 +4199,7 @@ func (c *Client) GetPolicyCategory() ([]string, error) {
 	return response, nil
 }
 
+// GetPolicyObfuscation retrieves the data policy obfuscation types
 func (c *Client) GetPolicyObfuscation() ([]DataObfuscationType, error) {
 	var response []string
 	var redactions []DataObfuscationType
@@ -4188,6 +4220,7 @@ func (c *Client) GetPolicyObfuscation() ([]DataObfuscationType, error) {
 	return redactions, nil
 }
 
+// GetPolicyImpacts retrieves the data policy impacts
 func (c *Client) GetPolicyImpacts() ([]DataImpactType, error) {
 	var response []string
 	var impactTypes []DataImpactType
@@ -4208,6 +4241,7 @@ func (c *Client) GetPolicyImpacts() ([]DataImpactType, error) {
 	return impactTypes, nil
 }
 
+// GetPolicyFields retrieves data policy fields
 func (c *Client) GetPolicyFields() (DataPolicyFields, error) {
 	var response DataPolicyFields
 
@@ -4223,6 +4257,7 @@ func (c *Client) GetPolicyFields() (DataPolicyFields, error) {
 	return response, nil
 }
 
+// CreatePolicy create a data policy
 func (c *Client) CreatePolicy(policy DataPolicyRequest) error {
 
 	send, err := json.Marshal(policy)
@@ -4238,6 +4273,8 @@ func (c *Client) CreatePolicy(policy DataPolicyRequest) error {
 	return resp.Body.Close()
 }
 
+
+// UpdatePolicy updates a policy
 func (c *Client) UpdatePolicy(policy DataPolicyUpdateRequest) error {
 
 	path := fmt.Sprintf("%s/%s", policyPath, policy.ID)
@@ -4255,6 +4292,7 @@ func (c *Client) UpdatePolicy(policy DataPolicyUpdateRequest) error {
 	return resp.Body.Close()
 }
 
+// DeletePolicy deletes a policy
 func (c *Client) DeletePolicy(id string) error {
 	path := fmt.Sprintf("%s/%s", policyPath, id)
 	resp, err := c.Do(http.MethodDelete, path, "", nil)

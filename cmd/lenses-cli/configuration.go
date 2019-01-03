@@ -99,6 +99,14 @@ func newConfigurationManager(set *pflag.FlagSet) *configurationManager {
 	return m
 }
 
+func newEmptyConfigManager() *configurationManager {
+	return &configurationManager{
+		config: &lenses.Config{
+			Contexts: make(map[string]*lenses.ClientConfig),
+		},
+	}
+}
+
 const currentContextEnvKey = "LENSES_CLI_CONTEXT"
 
 func (m *configurationManager) load() (bool, error) {

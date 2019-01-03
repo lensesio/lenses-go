@@ -105,20 +105,20 @@ func newDeleteDynamicClusterConfigsCommand() *cobra.Command {
 		Example:          `cluster configs delete log.cleaner.threads compression.type snappy`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, keysToBeReseted []string) error {
-			if len(keysToBeReseted) == 0 {
+		RunE: func(cmd *cobra.Command, keysToBeReset []string) error {
+			if len(keysToBeReset) == 0 {
 				return bite.PrintInfo(cmd, "Keys are required, pass the config's keys to be removed/reset to their default through command's arguments separated by space")
 			}
 
-			keysStr := strings.Join(keysToBeReseted, ", ")
+			keysStr := strings.Join(keysToBeReset, ", ")
 
-			err := client.DeleteDynamicClusterConfigs(keysToBeReseted...)
+			err := client.DeleteDynamicClusterConfigs(keysToBeReset...)
 			if err != nil {
 				golog.Errorf("Failed to retrieve cluster configurations. [%s]", err.Error())
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Cluster configs [%s] reseted", keysStr)
+			return bite.PrintInfo(cmd, "Cluster configs [%s] reset", keysStr)
 		},
 	}
 
@@ -194,7 +194,7 @@ func newSetDynamicBrokerConfigsCommand() *cobra.Command {
 
 			err := client.UpdateDynamicBrokerConfigs(brokerID, configs)
 			if err != nil {
-				golog.Errorf("Failed to update broker configurations. [%s]", brokerID, err.Error())
+				golog.Errorf("Failed to update broker [%d] configurations. [%s]", brokerID, err.Error())
 				return err
 			}
 
@@ -231,11 +231,11 @@ func newDeleteDynamicBrokerConfigsCommand() *cobra.Command {
 
 			err := client.DeleteDynamicBrokerConfigs(brokerID, keysToBeReset...)
 			if err != nil {
-				golog.Errorf("Failed to delete broker configurations. [%s]", brokerID, err.Error())
+				golog.Errorf("Failed to delete broker [%d] configurations. [%s]", brokerID, err.Error())
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Configs [%s] reseted for broker with id: [%d]", keysStr, brokerID)
+			return bite.PrintInfo(cmd, "Configs [%s] reset for broker with id: [%d]", keysStr, brokerID)
 		},
 	}
 
