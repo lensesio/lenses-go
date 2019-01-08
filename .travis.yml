@@ -17,7 +17,6 @@ jobs:
       - go test -v -cover ./...
   - stage: Build docker
     script:
-      - go get -t ./...
       - "./build.sh"
       - docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
   - stage: Publish docker
@@ -25,7 +24,6 @@ jobs:
       if: branch = master
       provider: script
       script:
-        - go get -t ./...
         - "./build.sh"
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         - docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
