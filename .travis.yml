@@ -19,7 +19,7 @@ jobs:
     script:
       - go get -t ./...
       - "./build.sh"
-      - docker -t landoop/lenses-cli:${TRAVIS_COMMIT} .
+      - docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
   - stage: Publish docker
     deploy:
       if: branch = master
@@ -28,7 +28,7 @@ jobs:
         - go get -t ./...
         - "./build.sh"
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-        - docker -t landoop/lenses-cli:${TRAVIS_TAG} .
+        - docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
         - docker push landoop/lenses-cli:${TRAVIS_TAG}
       on:
         tags: true
