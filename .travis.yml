@@ -12,7 +12,7 @@ go_import_path: github.com/landoop/lenses-go
 
 jobs:
   include:
-  - stage: test
+  - stage: CLI test
     script:
       - go test -v -cover ./...
   - stage: Build docker
