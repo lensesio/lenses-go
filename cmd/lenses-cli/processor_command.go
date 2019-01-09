@@ -4,9 +4,9 @@ import (
 	"net/url"
 	"sort"
 
-	"github.com/landoop/lenses-go"
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,6 @@ func newGetProcessorsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 
 			result, err := client.GetProcessors()
 			if err != nil {
@@ -54,15 +53,15 @@ func newGetProcessorsCommand() *cobra.Command {
 				if clusterName != "" && clusterName != processor.ClusterName {
 					continue
 				}
-		
+
 				if namespace != "" && namespace != processor.Namespace {
 					continue
 				}
-		
+
 				if name != "" && name != processor.Name {
 					continue
 				}
-				
+
 				//processor.SQL = strings.Replace(processor.SQL, "\n", "", -1)
 				//processor.SQL = strings.Replace(processor.SQL, "   ", "", -1)
 
@@ -147,7 +146,6 @@ func newProcessorGroupCommand() *cobra.Command {
 	return root
 }
 
-
 func newProcessorViewCommand() *cobra.Command {
 	var id string
 
@@ -158,7 +156,7 @@ func newProcessorViewCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			
+
 			processor, err := client.GetProcessor(id)
 
 			if err != nil {
@@ -170,7 +168,6 @@ func newProcessorViewCommand() *cobra.Command {
 		},
 	}
 
-	
 	cmd.Flags().StringVar(&id, "id", "", `Processor id`)
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
@@ -308,7 +305,7 @@ func newProcessorUpdateRunnersCommand() *cobra.Command {
 			}
 
 			if err := client.UpdateProcessorRunners(identifier, runners); err != nil {
-				golog.Errorf("Failed to scale processor [%s] to [%d]. [%s]", identifier, runners,  err.Error())
+				golog.Errorf("Failed to scale processor [%s] to [%d]. [%s]", identifier, runners, err.Error())
 				return err
 			}
 

@@ -38,12 +38,12 @@ const (
 
 var (
 	app = &bite.Application{
-		Name:            "lenses-cli",
-		Description:     "Lenses-cli is the command line client for the Lenses REST API.",
-		Version:         lenses.Version,
+		Name:        "lenses-cli",
+		Description: "Lenses-cli is the command line client for the Lenses REST API.",
+		Version:     lenses.Version,
 		//PersistentFlags: setupConfigManager,
-		ShowSpinner:     false,
-		Setup:           setup,
+		ShowSpinner: false,
+		Setup:       setup,
 	}
 
 	configManager *configurationManager

@@ -2948,7 +2948,6 @@ type CreateQuotaPayload struct {
 	ClientID string `yaml:"client" json:"client"`
 }
 
-
 // GetQuotaAsRequest returns a quota as a request
 func (q *Quota) GetQuotaAsRequest() CreateQuotaPayload {
 	var user, clientID string
@@ -4117,7 +4116,6 @@ type DataPolicyUpdateRequest struct {
 	Fields      []string `json:"fields" yaml:"fields"`
 }
 
-
 // PolicyAsRequest returns a data policy as a request
 func (c *Client) PolicyAsRequest(p DataPolicy) DataPolicyRequest {
 	return DataPolicyRequest{
@@ -4272,7 +4270,6 @@ func (c *Client) CreatePolicy(policy DataPolicyRequest) error {
 
 	return resp.Body.Close()
 }
-
 
 // UpdatePolicy updates a policy
 func (c *Client) UpdatePolicy(policy DataPolicyUpdateRequest) error {

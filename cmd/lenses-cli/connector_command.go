@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/landoop/lenses-go"
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -86,7 +86,7 @@ func newConnectorsCommand() *cobra.Command {
 			} else {
 				names, err := client.GetConnectors(clusterName)
 				if err != nil {
-					golog.Errorf("Failed to find connectors in cluster [%s]. [%s]",  clusterName,  err.Error())
+					golog.Errorf("Failed to find connectors in cluster [%s]. [%s]", clusterName, err.Error())
 					return err
 				}
 

@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/kataras/golog"
 	"encoding/json"
 	"fmt"
 	"strings"
-	
-	"github.com/landoop/lenses-go"
+
+	"github.com/kataras/golog"
+
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -183,7 +184,6 @@ func newSetDynamicBrokerConfigsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 
 			if err := bite.TryReadFile(configsRaw, &configs); err != nil {
 				// from flag as json.

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/landoop/lenses-go"
 	"github.com/joho/godotenv"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/pflag"
 )
 

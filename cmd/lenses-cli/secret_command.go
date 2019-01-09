@@ -1,19 +1,20 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"encoding/json"
+
 	"gopkg.in/yaml.v2"
-	"errors"
 
 	filepath "path/filepath"
 
+	azure "github.com/Azure/go-autorest/autorest/azure"
 	golog "github.com/kataras/golog"
 	lenses "github.com/landoop/lenses-go"
 	cobra "github.com/spf13/cobra"
-	azure "github.com/Azure/go-autorest/autorest/azure"
 )
 
 var output, role, endpoint, token, fromFile, secretsFile, appSecretsFile, connectorFile, workerFile string
@@ -30,7 +31,6 @@ func getVars(prefix string) []string {
 
 	return vars
 }
-
 
 func writeAppFile(fileName string, data []byte) error {
 
@@ -54,7 +54,7 @@ func writeAppFile(fileName string, data []byte) error {
 		golog.Fatal(writeErr)
 		return writeErr
 	}
-	
+
 	return nil
 }
 
@@ -114,11 +114,11 @@ func writeAppFiles(secrets map[string]string, secretsFile string) error {
 		} else {
 			data, err = yaml.Marshal(secrets)
 		}
-		
+
 		if err != nil {
 			return err
 		}
-	
+
 		golog.Infof("Writing file [%s]", secretsFile)
 		writeAppFile(secretsFile, data)
 		return nil
@@ -128,7 +128,7 @@ func writeAppFiles(secrets map[string]string, secretsFile string) error {
 	return errors.New("Unsupported output type. Supported types are ENV, JSON and YAML")
 }
 
-func retrieve(fromFile, prefix string) ([]string, error){
+func retrieve(fromFile, prefix string) ([]string, error) {
 	var vars []string
 	if fromFile != "" {
 		golog.Infof("Loading variables from file [%s] with prefix [%s]", fromFile, prefix)
@@ -156,7 +156,7 @@ func retrieve(fromFile, prefix string) ([]string, error){
 }
 
 func writeConnectFiles(secrets map[string]string, secretsFile, connectorFile, workerFile, fromFile string) error {
-	
+
 	var secretData []string
 
 	// lookup connector instance variables
@@ -185,17 +185,17 @@ func writeConnectFiles(secrets map[string]string, secretsFile, connectorFile, wo
 		if err := writePropsFile(connectorFile, connectorVars); err != nil {
 			return err
 		}
-	} 
+	}
 
 	// handle connect file
 	if workerFile != "" {
-		
+
 		if len(connectVars) > 0 {
 			golog.Infof("Writing connect worker props to [%s]", workerFile)
 			connectVars = append(connectorVars, "# External secrets")
 			connectVars = append(connectVars, "config.providers=file")
 			connectVars = append(connectVars, "config.providers.file.class=org.apache.kafka.common.config.provider.FileConfigProvider")
-	
+
 			if err := writePropsFile(workerFile, connectVars); err != nil {
 				return err
 			}
@@ -214,7 +214,7 @@ func writeConnectFiles(secrets map[string]string, secretsFile, connectorFile, wo
 		if err := writePropsFile(secretsFile, secretData); err != nil {
 			return err
 		}
-	} 
+	}
 
 	return nil
 }
@@ -295,9 +295,9 @@ secrets app azure --client-id xxxx --client-secret xxxx --tenant-id xxxxx --outp
 func connectGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   		"connect",
-		Short: 		`Create Apache Kafka Connect config files from secrets stored in Vault or Azure KeyVault`,
-		Long:  		`
+		Use:   "connect",
+		Short: `Create Apache Kafka Connect config files from secrets stored in Vault or Azure KeyVault`,
+		Long: `
 Create Apache Kafka Connect config files from secrets stored in Vault 
 or Azure KeyVault
 
@@ -352,9 +352,9 @@ secrets connect azure --vault-name lenses --client-id xxxx --client-secret xxxx 
 func newVaultCommand(appType string) *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:              "vault",
-		Short:            `Get secrets from Vault with AppRole and Kubernetes AuthMethods`,
-		Long:			  `
+		Use:   "vault",
+		Short: `Get secrets from Vault with AppRole and Kubernetes AuthMethods`,
+		Long: `
 Get secrets from Vault with AppRole and Kubernetes AuthMethods
 
 Secret names must only contain 0-9, a-z, A-Z, and -
@@ -378,7 +378,7 @@ Variables can alternatively be loaded from a file using the from-file flag.
 The file contents should be in key value in the same format as the 
 environment variables
 		`,
-		Example:          `
+		Example: `
 secrets connect vault --role lenses --token XYZ
 secrets connect vault --role lenses --token XYZ --from-file my-env.txt
 `,
@@ -426,9 +426,9 @@ func newAzureCommand(appType string) *cobra.Command {
 	var clientID, clientSecret, tenantID, dns, vaultName string
 
 	cmd := &cobra.Command{
-		Use:              "azure",
-		Short:            `Get secrets from Azure Key Vault.`,
-		Long:			  `
+		Use:   "azure",
+		Short: `Get secrets from Azure Key Vault.`,
+		Long: `
 Get secrets from Azure Key Vault.
 
 Secret names must only contain 0-9, a-z, A-Z, and -
@@ -446,7 +446,7 @@ Variables can alternatively be loaded from a file using the from-file flag.
 The file contents should be in key value in the same format as the 
 environment variables
 `,
-		Example:          `
+		Example: `
 secrets connect azure --vault-name lenses --client-id xxxx --client-secret xxxx --tenant-id xxxxx
 secrets connect azure --vault-name lenses --client-id xxxx --client-secret xxxx --tenant-id xxxxx -from-file my-env.txt
 `,
@@ -464,7 +464,7 @@ secrets connect azure --vault-name lenses --client-id xxxx --client-secret xxxx 
 			if dns == "" {
 				dns = azure.PublicCloud.KeyVaultDNSSuffix
 			}
-		
+
 			vaultURL := fmt.Sprintf("https://%s.%s", vaultName, dns)
 			secrets, err := lenses.AzureKeyVaultHandler(vaultURL, fromFile, azureConfig)
 

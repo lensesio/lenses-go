@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/kataras/golog"
 	"strings"
 
-	"github.com/landoop/lenses-go"
+	"github.com/kataras/golog"
+
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
