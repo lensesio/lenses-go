@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/kataras/golog"
 	"fmt"
+
+	"github.com/kataras/golog"
 
 	"github.com/landoop/bite"
 	"github.com/spf13/cobra"

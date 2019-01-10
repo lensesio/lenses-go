@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/landoop/lenses-go"
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -123,7 +123,7 @@ func newSchemasGroupCommand() *cobra.Command {
 					//
 					// How to debug the order of proceeds:
 					// comment the line after wg.Wait(): fmt.Fprintf(os.Stdout, "\n\033[1A\033[K")
-					// remove the last \r from the below fmt.Pritnf.
+					// remove the last \r from the below fmt.Printf.
 					fmt.Fprintf(os.Stdout, "\033[2C%d/%d\r", proceeds, total)
 				}
 
@@ -249,7 +249,7 @@ func newSchemaGroupCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if id > 0 {
 				if err := getSchemaByID(cmd, id); err != nil {
-					golog.Errorf("Failed to retrieve schema for id [%s]. [%s]", id, err.Error())
+					golog.Errorf("Failed to retrieve schema for id [%d]. [%s]", id, err.Error())
 					return err
 				}
 			}

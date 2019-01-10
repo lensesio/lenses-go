@@ -177,7 +177,7 @@ func (c *Config) ContextExists(name string) bool {
 
 // AddContext adds a context to the config
 // Returns true if context is added
-func(c *Config) AddContext(name string, context *ClientConfig) {
+func (c *Config) AddContext(name string, context *ClientConfig) {
 	c.Contexts[name] = context
 }
 

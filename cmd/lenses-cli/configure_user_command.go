@@ -339,7 +339,7 @@ func newConfigureCommand(name string) *cobra.Command {
 				// and it's not used by a third-party tool because of the survey.
 				// So, print our "banner" :)
 				if !noBanner {
-					fmt.Fprintln(cmd.OutOrStdout(), `
+					fmt.Fprint(cmd.OutOrStdout(), `
     __                                 ________    ____
    / /   ___  ____  ________  _____   / ____/ /   /  _/
   / /   / _ \/ __ \/ ___/ _ \/ ___/  / /   / /    / /  
@@ -866,7 +866,7 @@ const logoutCmdName = "logout"
 // 		TraverseChildren: true,
 // 		RunE: func(cmd *cobra.Command, args []string) error {
 // 			if err := client.Logout(); err != nil {
-// 				return err // first re-voke the access token.
+// 				return err // first revoke the access token.
 // 			}
 
 // 			// after remove the token from the configuration.
