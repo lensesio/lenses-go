@@ -38,12 +38,12 @@ const (
 
 var (
 	app = &bite.Application{
-		Name:            "lenses-cli",
-		Description:     "Lenses-cli is the command line client for the Lenses REST API.",
-		Version:         lenses.Version,
-		PersistentFlags: setupConfigManager,
-		ShowSpinner:     false,
-		Setup:           setup,
+		Name:        "lenses-cli",
+		Description: "Lenses-cli is the command line client for the Lenses REST API.",
+		Version:     lenses.Version,
+		//PersistentFlags: setupConfigManager,
+		ShowSpinner: false,
+		Setup:       setup,
 	}
 
 	configManager *configurationManager
@@ -65,7 +65,7 @@ func setup(cmd *cobra.Command, args []string) error {
 	// let the configure command give a tutorial for user in order to create a configuration file.
 	// Note that if clientConfig is valid and we are inside the configure command
 	// then the configure will normally continue and save the valid configuration (that normally came from flags).
-	if name := cmd.Name(); name == "configure" || name == "context" || name == "contexts" {
+	if name := cmd.Name(); name == "configure" || name == "context" || name == "contexts" || name == "secrets" {
 		return nil
 	}
 
@@ -123,12 +123,20 @@ const (
 )
 
 func main() {
+
 	if buildRevision != "" {
 		app.HelpTemplate = bite.HelpTemplate{
 			BuildRevision:        buildRevision,
 			BuildTime:            buildTime,
 			ShowGoRuntimeVersion: true,
 		}
+	}
+
+	if len(os.Args) == 1 || string(os.Args[1]) != "secrets" {
+		app.PersistentFlags = setupConfigManager
+	} else {
+		configManager = newEmptyConfigManager()
+		app.DisableOutputFormatController = true
 	}
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {

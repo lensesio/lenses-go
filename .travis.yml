@@ -1,0 +1,34 @@
+services:
+  - docker
+
+language: go
+os:
+  - linux
+
+go:
+  - "go1.10"
+
+go_import_path: github.com/landoop/lenses-go
+
+jobs:
+  include:
+  - stage: Build docker
+    script:
+      - go test -v -cover ./...
+      - "./build.sh"
+      - docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
+  - stage: Publish docker
+    deploy:
+      if: branch = master
+      provider: script
+      script:
+        - "./build.sh"
+        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        - docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
+        - docker push landoop/lenses-cli:${TRAVIS_TAG}
+      on:
+        tags: true
+env:
+  matrix:
+  - secure: II8qslnN2wn164YxEEynMJyFmIbNi6IfEX+RRByA2f2VgWaFW1AHeDaSIH6WkXBnQtYm00c2Wx6Rq6TkPcpkkWnGw5jV66jiJ028/mjZSKCHqPWi8QNxvk76ZMEqTYw1Ly2vaM6HMDqQ5gUSFJSuyv56GVc3RkaT8/AltOCppIcoeqQSgjc3A8lU3NrUmx+2N7scAGCNZ/UVckcAghBnjIUW6wnWMQodN6NkKq5RVugt+BPJY+KRBQGD2k7FasixpK2Yru6DEotDqbCWpqBX7SUf0IJh6qok1/BipkHBghK6l2ajF6Rfbmi3WnXhjzm5gT+IsGAZYJvhcc3cwhrlir4BwymGxip57EBMeg/Y2rxVEQB3TVmIvvstuwUyD5BcBa2tqP96cPRcf0G1A//O6EEvh1aW4aE7bhDVWF+rKB4UV6x7QCGR3nwLDkhBxS9dsAEuAoFmIBeUldJJCPivxHyHoMDV7nk1aKna11iJXx9cWlYnPzM8S91mGMSJqRa6c15xOQFfkMMJ1qynCen3xA/ECsLWsCMvuQ6hk7OnsfTRiKPf0GOmM8Y1VCHSPPDcjwjwhfkRdsUnTjyRoYKz1xxtz3BGR+7mhHcNEgphDQM7KwnoleW7TysRL2BKkHbD5Z9lQfMQiS9TQjEwqVw2VDoZj8kV0eqh7eCBV9ViBZc=
+  - secure: G7lHGM9M92Bf+DbjUupRpOXes0VGUkzmCV+yngz+4YfFbVlimIEd1H1DFRDZ6Vl/SjBTSQ6xyogiTOUA4FHgdaIp7bF7BnwekJutfZHnbTntT9Em2KfXyLZKTgPfHOQhD+lOqtPpi/UVa5xjn6qYSdWB1D7naoTg8ihSRYn/rJC/P2QByOUBUwd5Ik9YTks0skJRGxjOAmLew5Ym4MWvtlTmLtkVnmWXDgJdhiVq/0aeg31fsYRptoBG95kYvKcmQMza/OdP+0umj0fWujCEZTQvwZK51aJXy/qdAMI/+LEvECe+/fotsiSvns83Po5AnlhX4l/1xGNkeNMUSMCRSLBRn8mZ1k/Gi28W2r22p2cplTvg0Hfdklshl9ob5sl9jAKPmA5lr6JzRjxKU2a2vIWJbtLSM5iHMgFA1l5ACJ3Q1+V9GvVnhEMU59ALjmzXnr+a+fgckABbWo7o20/VfE8ZdDGpryIH3TTVpso8AO9dZMgZ3W2UFqj2I1EK8pB90TLf/H9HC6+iwHNS1VycYV+vNCViqycQ/NnGtxB9A8hcV/o7D7yHCl/N38zYKy3nyTgoOoeOivAMcgYZR4tiUlnUMqoqw947UmUClaDHHbG8Lz9o8gOLQHvZbeHKkve/zG8Id8/tmeYgHYBszJXJzIP33MruTZWlJaTBiZJJNyg=

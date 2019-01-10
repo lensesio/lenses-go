@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/landoop/bite"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
 
-	"github.com/landoop/lenses-go"
+	"github.com/landoop/bite"
+
 	"github.com/kataras/golog"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -20,9 +21,9 @@ func init() {
 
 func findFiles(dir string) []os.FileInfo {
 	files, err := ioutil.ReadDir(dir)
-    if err != nil {
-        golog.Fatal(err)
-    }
+	if err != nil {
+		golog.Fatal(err)
+	}
 	return files
 }
 
@@ -48,11 +49,11 @@ func loadTopics(cmd *cobra.Command, loadpath string) error {
 		for _, lensesTopic := range topics {
 			if lensesTopic.TopicName == topic.TopicName {
 				found = true
-				if err := client.UpdateTopic(topic.TopicName, []lenses.KV{topic.Configs}); err != nil  {
+				if err := client.UpdateTopic(topic.TopicName, []lenses.KV{topic.Configs}); err != nil {
 					golog.Errorf("Error updating topic [%s]. [%s]", topic.TopicName, err.Error())
 					return err
 				}
-		
+
 				golog.Infof("Updated topic [%s]", topic.TopicName)
 			}
 		}
@@ -62,7 +63,7 @@ func loadTopics(cmd *cobra.Command, loadpath string) error {
 				golog.Errorf("Error creating topic [%s]. [%s]", topic.TopicName, err.Error())
 				return err
 			}
-	
+
 			golog.Infof("Created topic [%s]", topic.TopicName)
 		}
 	}
@@ -89,14 +90,14 @@ func loadAcls(cmd *cobra.Command, loadpath string) error {
 
 		found := true
 		for _, l := range lacls {
-			if acl.Host == l.Host && 
-				acl.Operation == l.Operation && 
-					acl.PermissionType == l.PermissionType && 
-						acl.Principal == l.Principal &&
-							acl.ResourceName == l.ResourceName &&
-								acl.ResourceType == l.ResourceType {
-									found = true
-								}
+			if acl.Host == l.Host &&
+				acl.Operation == l.Operation &&
+				acl.PermissionType == l.PermissionType &&
+				acl.Principal == l.Principal &&
+				acl.ResourceName == l.ResourceName &&
+				acl.ResourceType == l.ResourceType {
+				found = true
+			}
 		}
 
 		if found {
@@ -104,8 +105,8 @@ func loadAcls(cmd *cobra.Command, loadpath string) error {
 		}
 
 		for _, acl := range acls {
-			if err := client.CreateOrUpdateACL(acl); err != nil  {
-				golog.Errorf("Error creating/updating acl from [%s] [%s]", loadpath , err.Error())
+			if err := client.CreateOrUpdateACL(acl); err != nil {
+				golog.Errorf("Error creating/updating acl from [%s] [%s]", loadpath, err.Error())
 				return err
 			}
 		}
@@ -134,7 +135,7 @@ func loadAlertSettings(cmd *cobra.Command, loadpath string) error {
 		}
 
 		alertID := conds.AlertID
-	
+
 		for _, condition := range conds.Conditions {
 			found := false
 			for _, v := range asc {
@@ -142,13 +143,13 @@ func loadAlertSettings(cmd *cobra.Command, loadpath string) error {
 					found = true
 				}
 			}
-	
+
 			if found {
 				continue
 			}
 
-			if err := client.CreateOrUpdateAlertSettingCondition(alertID, condition); err != nil  {
-				golog.Errorf("Error creating/updating alert setting from [%d] [%s] [%s]", alertID, loadpath , err.Error())
+			if err := client.CreateOrUpdateAlertSettingCondition(alertID, condition); err != nil {
+				golog.Errorf("Error creating/updating alert setting from [%d] [%s] [%s]", alertID, loadpath, err.Error())
 				return err
 			}
 			golog.Infof("Created/updated condition [%s] from [%s]", condition, loadpath)
@@ -182,44 +183,44 @@ func loadQuotas(cmd *cobra.Command, loadpath string) error {
 		for _, quota := range quotas {
 
 			found := false
-			for _,lq := range lensesReq {
+			for _, lq := range lensesReq {
 				if quota.ClientID == lq.ClientID &&
 					quota.QuotaType == lq.QuotaType &&
-						quota.User == lq.User &&
-							quota.Config.ConsumerByteRate == quota.Config.ConsumerByteRate &&
-							quota.Config.ProducerByteRate == quota.Config.ProducerByteRate &&
-							quota.Config.RequestPercentage == quota.Config.RequestPercentage {
-								found = true
-							}
+					quota.User == lq.User &&
+					quota.Config.ConsumerByteRate == quota.Config.ConsumerByteRate &&
+					quota.Config.ProducerByteRate == quota.Config.ProducerByteRate &&
+					quota.Config.RequestPercentage == quota.Config.RequestPercentage {
+					found = true
+				}
 			}
 
 			if found {
 				continue
 			}
 
-			if quota.QuotaType == string(lenses.QuotaEntityClient) || 
-				quota.QuotaType == string(lenses.QuotaEntityClients) || 
-					quota.QuotaType == string(lenses.QuotaEntityClientsDefault) {
-						if err := CreateQuotaForClients(cmd, quota); err != nil  {
-							golog.Errorf("Error creating/updating quota type [%s], client [%s], user [%s] from [%s]. [%s]", 
-								quota.QuotaType, quota.ClientID, quota.User, loadpath , err.Error())
-							return err
-						}
+			if quota.QuotaType == string(lenses.QuotaEntityClient) ||
+				quota.QuotaType == string(lenses.QuotaEntityClients) ||
+				quota.QuotaType == string(lenses.QuotaEntityClientsDefault) {
+				if err := CreateQuotaForClients(cmd, quota); err != nil {
+					golog.Errorf("Error creating/updating quota type [%s], client [%s], user [%s] from [%s]. [%s]",
+						quota.QuotaType, quota.ClientID, quota.User, loadpath, err.Error())
+					return err
+				}
 
-						golog.Infof("Created/updated quota type [%s], client [%s], user [%s] from [%s]", 
-								quota.QuotaType, quota.ClientID, quota.User, loadpath)
-						continue
-				
+				golog.Infof("Created/updated quota type [%s], client [%s], user [%s] from [%s]",
+					quota.QuotaType, quota.ClientID, quota.User, loadpath)
+				continue
+
 			}
 
-			if err := CreateQuotaForUsers(cmd, quota); err != nil  {
-				golog.Errorf("Error creating/updating quota type [%s], client [%s], user [%s] from [%s]. [%s]", 
-					quota.QuotaType, quota.ClientID, quota.User, loadpath , err.Error())
+			if err := CreateQuotaForUsers(cmd, quota); err != nil {
+				golog.Errorf("Error creating/updating quota type [%s], client [%s], user [%s] from [%s]. [%s]",
+					quota.QuotaType, quota.ClientID, quota.User, loadpath, err.Error())
 				return err
 			}
 
-			golog.Infof("Created/updated quota type [%s], client [%s], user [%s] from [%s]", 
-					quota.QuotaType, quota.ClientID, quota.User, loadpath)			
+			golog.Infof("Created/updated quota type [%s], client [%s], user [%s] from [%s]",
+				quota.QuotaType, quota.ClientID, quota.User, loadpath)
 		}
 	}
 	return nil
@@ -231,7 +232,7 @@ func loadConnectors(cmd *cobra.Command, loadpath string) error {
 
 	for _, file := range files {
 		var connector lenses.CreateUpdateConnectorPayload
-		if err := load(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &connector) ; err != nil {
+		if err := load(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &connector); err != nil {
 			return err
 		}
 
@@ -246,17 +247,17 @@ func loadConnectors(cmd *cobra.Command, loadpath string) error {
 			if name == connector.Name {
 				c, err := client.GetConnector(connector.ClusterName, connector.Name)
 
-				if err != nil  {
+				if err != nil {
 					return err
 				}
 
 				if !reflect.DeepEqual(c.Config, connector.Config) {
 					_, errU := client.UpdateConnector(connector.ClusterName, connector.Name, connector.Config)
-					if errU != nil  {
+					if errU != nil {
 						golog.Errorf("Error updating connector from file [%s]. [%s]", loadpath, errU.Error())
 						return errU
 					}
-					
+
 					golog.Infof("Updated connector config for cluster [%s], connector [%s]", connector.ClusterName, connector.Name)
 					break
 				}
@@ -269,9 +270,9 @@ func loadConnectors(cmd *cobra.Command, loadpath string) error {
 		if existsOrUpdated {
 			continue
 		}
-		_, errC := client.CreateConnector(connector.ClusterName, connector.Name, connector.Config) 
-		
-		if errC != nil  {
+		_, errC := client.CreateConnector(connector.ClusterName, connector.Name, connector.Config)
+
+		if errC != nil {
 			golog.Errorf("Error creating connector from file [%s]. [%s]", loadpath, errC.Error())
 			return err
 		}
@@ -296,39 +297,39 @@ func loadProcessors(cmd *cobra.Command, loadpath string) error {
 
 		var processor lenses.CreateProcessorPayload
 
-		if err := load(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &processor) ; err != nil {
+		if err := load(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &processor); err != nil {
 			return err
 		}
 
 		for _, p := range processors.Streams {
-			if processor.Name == p.Name && 
-				processor.ClusterName == p.ClusterName && 
-					processor.Namespace == p.Namespace {
+			if processor.Name == p.Name &&
+				processor.ClusterName == p.ClusterName &&
+				processor.Namespace == p.Namespace {
 
-					if processor.Runners != p.Runners {
-						//scale
-						if err := client.UpdateProcessorRunners(p.ID, processor.Runners); err != nil {
-							golog.Errorf("Error scaling processor [%s] from file [%s/%s]. [%s]", p.ID, loadpath, file.Name(), err.Error())
-							return err
-						}
-						golog.Infof("Scaled processor [%s] from file [%s/%s] from [%d] to [%d]", p.ID, loadpath, file.Name(), p.Runners, processor.Runners)
+				if processor.Runners != p.Runners {
+					//scale
+					if err := client.UpdateProcessorRunners(p.ID, processor.Runners); err != nil {
+						golog.Errorf("Error scaling processor [%s] from file [%s/%s]. [%s]", p.ID, loadpath, file.Name(), err.Error())
+						return err
 					}
-					golog.Warnf("Processor [%s] from file [%s/%s] already exists", p.ID, loadpath, file.Name())		
-					break		
+					golog.Infof("Scaled processor [%s] from file [%s/%s] from [%d] to [%d]", p.ID, loadpath, file.Name(), p.Runners, processor.Runners)
+				}
+				golog.Warnf("Processor [%s] from file [%s/%s] already exists", p.ID, loadpath, file.Name())
+				break
 			}
 
 			if err := client.CreateProcessor(
-				processor.Name, 
-				processor.SQL, 
-				processor.Runners, 
-				processor.ClusterName, 
-				processor.Namespace, 
+				processor.Name,
+				processor.SQL,
+				processor.Runners,
+				processor.ClusterName,
+				processor.Namespace,
 				processor.Pipeline); err != nil {
-	
-					golog.Errorf("Error creating processor from file [%s/%s]. [%s]", loadpath, file.Name(), err.Error())
-					return err
-				}
-			
+
+				golog.Errorf("Error creating processor from file [%s/%s]. [%s]", loadpath, file.Name(), err.Error())
+				return err
+			}
+
 			golog.Infof("Created processor from [%s/%s]", loadpath, file.Name())
 
 		}
@@ -342,13 +343,13 @@ func loadSchemas(cmd *cobra.Command, loadpath string) error {
 
 	for _, file := range files {
 		var schema lenses.SchemaAsRequest
-		if err := load(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &schema) ; err != nil {
+		if err := load(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &schema); err != nil {
 			return err
 		}
 
 		_, err := client.RegisterSchema(schema.Name, schema.AvroSchema)
 
-		if err != nil  {
+		if err != nil {
 			golog.Errorf("Error creating schema from file [%s]. [%s]", loadpath, err.Error())
 			return err
 		}
@@ -383,19 +384,19 @@ func loadPolicies(cmd *cobra.Command, loadpath string) error {
 				found = true
 
 				payload := lenses.DataPolicyUpdateRequest{
-					ID: p.ID,
-					Name: p.Name,
-					Category: p.Category,
-					ImpactType: p.ImpactType,
+					ID:          p.ID,
+					Name:        p.Name,
+					Category:    p.Category,
+					ImpactType:  p.ImpactType,
 					Obfuscation: p.Obfuscation,
-					Fields: p.Fields,
+					Fields:      p.Fields,
 				}
 
-				if err := client.UpdatePolicy(payload); err != nil  {
+				if err := client.UpdatePolicy(payload); err != nil {
 					golog.Errorf("Error updating data policy [%s]. [%s]", p.Name, err.Error())
 					return err
 				}
-		
+
 				golog.Infof("Updated policy [%s]", p.Name)
 			}
 		}
@@ -405,7 +406,7 @@ func loadPolicies(cmd *cobra.Command, loadpath string) error {
 				golog.Errorf("Error creating data policy [%s]. [%s]", policy.Name, err.Error())
 				return err
 			}
-	
+
 			golog.Infof("Created data policy [%s]", policy.Name)
 		}
 	}
@@ -414,7 +415,7 @@ func loadPolicies(cmd *cobra.Command, loadpath string) error {
 }
 
 func load(cmd *cobra.Command, path string, data interface{}) error {
-	if err := bite.TryReadFile(path, data) ; err != nil {
+	if err := bite.TryReadFile(path, data); err != nil {
 		return err
 	}
 	return nil
@@ -441,7 +442,7 @@ func importProcessorsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-	
+
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
@@ -469,7 +470,7 @@ func importConnectorsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-	
+
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
@@ -497,7 +498,7 @@ func importAclsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-	
+
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
@@ -525,7 +526,7 @@ func importAlertSettingsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-	
+
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
@@ -553,7 +554,7 @@ func importQuotasCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-	
+
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
@@ -581,7 +582,7 @@ func importTopicsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-	
+
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
@@ -609,7 +610,7 @@ func importSchemasCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-	
+
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
@@ -637,20 +638,19 @@ func importPoliciesCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-	
+
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
 	return cmd
 }
 
-
 func importGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:              "import",
-		Short:            "import a landscape",
-		Example:          `
+		Use:   "import",
+		Short: "import a landscape",
+		Example: `
 import acls --landscape my-acls-dir
 import alert-settings --landscape my-acls-dir
 import connectors --landscape my-acls-dir

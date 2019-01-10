@@ -1,11 +1,11 @@
 package main
 
 import (
-	"strings"
 	"fmt"
-	
-	"github.com/landoop/lenses-go"
+	"strings"
+
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/landoop/tableprinter"
 	"github.com/spf13/cobra"
 )

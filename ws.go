@@ -41,6 +41,7 @@ const (
 )
 
 type (
+	//MetaData is a topic metadata returned by Lenses
 	MetaData struct {
 		Timestamp int `json:"timestamp"`
 		KeySize   int `json:"__keysize"`
@@ -49,6 +50,7 @@ type (
 		Offset    int `json:"offset"`
 	}
 
+	// Data is the data payload for a record returned from Lenses
 	Data struct {
 		Key      json.RawMessage `json:"key"`
 		Value    json.RawMessage `json:"value"`
@@ -295,7 +297,7 @@ func (c *LiveConnection) OnError(cb LiveListener) { c.On(ErrorResponse, cb) }
 // OnInvalidRequest adds a listener, a websocket message subscriber based on the "INVALIDREQUEST" `ResponseType`.
 func (c *LiveConnection) OnInvalidRequest(cb LiveListener) { c.On(InvalidRequestResponse, cb) }
 
-// OnKafkaMessage adds a listener, a websocket message subscriber based on the "RECORD" `ResponseType`.
+// OnRecordMessage adds a listener, a websocket message subscriber based on the "RECORD" `ResponseType`.
 func (c *LiveConnection) OnRecordMessage(cb LiveListener) { c.On(RecordMessageResponse, cb) }
 
 // OnHeartbeat adds a listener, a websocket message subscriber based on the "HEARTBEAT" `ResponseType`.
