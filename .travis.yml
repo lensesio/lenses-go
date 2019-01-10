@@ -13,12 +13,18 @@ jobs:
     - ./build
     - docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
   - stage: Publish docker
-    deploy:   
+    branches:
+      only:
+        - master 
+    deploy: 
       on:
         tags: true
       provider: script
       script: bash ./build && ./publish-docker ${TRAVIS_TAG}
   - stage: GitHub Release
+    branches:
+      only:
+        - master  
     before_deploy: cd bin; for i in *; do tar -czf $i.tar.gz $i; done
     deploy:   
       on:
