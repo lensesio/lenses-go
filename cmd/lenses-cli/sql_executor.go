@@ -20,7 +20,7 @@ var LivePrefixState struct {
 	IsEnable   bool
 }
 
-var SqlQuery string
+var sqlQuery string
 
 func changeLivePrefix() (string, bool) {
 	return LivePrefixState.LivePrefix, LivePrefixState.IsEnable
@@ -107,7 +107,7 @@ func sqlExecutor(sql string) {
 		return
 	}
 
-	finalQ := fmt.Sprintf("%s %s", SqlQuery, sql)
+	finalQ := fmt.Sprintf("%s %s", sqlQuery, sql)
 	if sql != "" {
 		if strings.HasSuffix(finalQ, ";") {
 			validation, err := client.ValidateSQL(strings.Replace(finalQ, "  ", " ", 0), 0)
@@ -127,7 +127,7 @@ func sqlExecutor(sql string) {
 			}
 
 			if lintError {
-				SqlQuery = ""
+				sqlQuery = ""
 				LivePrefixState.LivePrefix = "lenses-sql>"
 				LivePrefixState.IsEnable = true
 				return
@@ -153,13 +153,13 @@ func sqlExecutor(sql string) {
 				golog.Fatalf("Error writing history to file [%s]. [%s]", sqlHistoryPath, err.Error())
 			}
 
-			SqlQuery = ""
+			sqlQuery = ""
 			LivePrefixState.LivePrefix = "lenses-sql>"
 			LivePrefixState.IsEnable = true
 			return
 		}
 
-		SqlQuery = finalQ
+		sqlQuery = finalQ
 		LivePrefixState.LivePrefix = "......... >"
 		LivePrefixState.IsEnable = true
 	}

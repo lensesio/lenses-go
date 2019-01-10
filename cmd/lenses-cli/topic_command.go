@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/landoop/lenses-go"
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -304,7 +304,7 @@ func newTopicMetadataCreateCommand() *cobra.Command {
 				return err
 			}
 
-			if err := client.CreateOrUpdateTopicMetadata(meta); err != nil { 
+			if err := client.CreateOrUpdateTopicMetadata(meta); err != nil {
 				golog.Errorf("Failed to update topic metadat for [%s]. [%s]", meta.TopicName, err.Error())
 				return err
 			}

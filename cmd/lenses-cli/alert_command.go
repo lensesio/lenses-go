@@ -2,10 +2,10 @@ package main
 
 import (
 	"time"
-	
-	"github.com/landoop/lenses-go"
+
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -74,7 +74,7 @@ func newRegisterAlertCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "register",
 		Short:            "Register an alert",
-		Example:          `alert register ./alert.yml or alert register --alert=1000 --startsAt="2018-03-27T21:23:23.634+02:00" --endsAt=... --source="" --summary="Broker on 1 is down" --docs="" --category="Infrastructure" --severity="HIGH" --instance="instance101" --generator="http://lenses"`,
+		Example:          `alert register ./alert.yml or alert register --alert=1000 --startsAt="2018-03-27T21:23:23.634+02:00" --endsAt=... --source="" --summary="Broker on 1 is down" --docs="" --category="Infrastructure" --severity="HIGH" --instance="instance101" --generator="https://lenses"`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -229,11 +229,13 @@ func newAlertSettingConditionGroupCommand() *cobra.Command {
 	return rootSub
 }
 
+// AlertSettingConditionPayloads is the payload for creating alert setttings
 type AlertSettingConditionPayloads struct {
 	AlertID    int      `json:"alert" yaml:"alert"`
 	Conditions []string `json:"conditions" yaml:"conditions"`
 }
 
+// AlertSettingConditionPayload is the payload for creating alert setttings
 type AlertSettingConditionPayload struct {
 	AlertID   int    `json:"alert" yaml:"alert"`
 	Condition string `json:"condition" yaml:"condition"`
@@ -257,7 +259,7 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 				for _, condition := range conds.Conditions {
 					err := client.CreateOrUpdateAlertSettingCondition(alertID, condition)
 					if err != nil {
-						golog.Errorf("Failed to creating/updating alert setting condition [%d]. [%s]", condition, err.Error())
+						golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", condition, err.Error())
 						return err
 					}
 					bite.PrintInfo(cmd, "Condition [%s] added", condition)
@@ -271,7 +273,7 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 
 			err := client.CreateOrUpdateAlertSettingCondition(cond.AlertID, cond.Condition)
 			if err != nil {
-				golog.Errorf("Failed to creating/updating alert setting condition [%d]. [%s]", cond.Condition, err.Error())
+				golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", cond.Condition, err.Error())
 				return err
 			}
 

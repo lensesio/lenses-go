@@ -2,10 +2,10 @@ package main
 
 import (
 	"sort"
-	
-	"github.com/landoop/lenses-go"
+
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

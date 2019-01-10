@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/kataras/golog"
 	"strings"
 
-	"github.com/landoop/lenses-go"
+	"github.com/kataras/golog"
+
 	"github.com/landoop/bite"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 )
 
@@ -270,6 +271,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 	return rootSub
 }
 
+// CreateQuotaForClients creates quotas for clients
 func CreateQuotaForClients(cmd *cobra.Command, quota lenses.CreateQuotaPayload) error {
 	if id := quota.ClientID; id != "" && id != "all" && id != "*" && strings.HasPrefix(quota.QuotaType, "CLIENT") {
 		if err := client.CreateOrUpdateQuotaForClient(quota.ClientID, quota.Config); err != nil {
@@ -283,6 +285,7 @@ func CreateQuotaForClients(cmd *cobra.Command, quota lenses.CreateQuotaPayload) 
 	return err
 }
 
+// CreateQuotaForUsers creates quotas for users
 func CreateQuotaForUsers(cmd *cobra.Command, quota lenses.CreateQuotaPayload) error {
 	if quota.User != "" && strings.HasPrefix(quota.QuotaType, "USER") {
 		if clientID := quota.ClientID; clientID != "" {

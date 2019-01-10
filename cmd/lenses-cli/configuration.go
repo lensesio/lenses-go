@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/landoop/lenses-go"
 	"github.com/joho/godotenv"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/pflag"
 )
 
@@ -97,6 +97,14 @@ func newConfigurationManager(set *pflag.FlagSet) *configurationManager {
 
 	set.StringVar(&m.filepath, "config", "", "Load or save the host, user, pass and debug fields from or to a configuration file (yaml or json)")
 	return m
+}
+
+func newEmptyConfigManager() *configurationManager {
+	return &configurationManager{
+		config: &lenses.Config{
+			Contexts: make(map[string]*lenses.ClientConfig),
+		},
+	}
 }
 
 const currentContextEnvKey = "LENSES_CLI_CONTEXT"
