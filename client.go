@@ -3959,9 +3959,9 @@ const (
 	topicExtractPath = "/api/topology/"
 )
 
-// TopicExtract a topics parents and decendants from a Lenses topology
+// TopicExtract a topics parents and descendants from a Lenses topology
 type TopicExtract struct {
-	Parents    []string `json:"parents" yaml:"parents" header:"Parents"`
+	Parents     []string `json:"parents" yaml:"parents" header:"Parents"`
 	Descendants []string `json:"descendants" yaml:"descendants" header:"descendants"`
 }
 

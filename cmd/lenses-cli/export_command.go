@@ -332,7 +332,7 @@ func handleDependents(cmd *cobra.Command, id string) error {
 	}
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	fileName := fmt.Sprintf("acls-%s.%s", "all", strings.ToLower(output))
-	return writeFile(aclsPath, fileName, output, topicAcls);
+	return writeFile(aclsPath, fileName, output, topicAcls)
 }
 
 // writeConnectors writes the connectors to files as yaml
@@ -511,11 +511,7 @@ func writeQuotas(cmd *cobra.Command) error {
 		requests = append(requests, q.GetQuotaAsRequest())
 	}
 
-	if err := writeFile(quotasPath, fileName, output, requests); err != nil {
-		return err
-	}
-
-	return nil
+	return writeFile(quotasPath, fileName, output, requests)
 }
 
 func getAlertSettings(cmd *cobra.Command, topics []string) (AlertSettingConditionPayloads, error) {
