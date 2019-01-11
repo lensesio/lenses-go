@@ -1,16 +1,17 @@
 package main
 
 import (
-	"github.com/landoop/bite"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
-	"encoding/json"
-	"bytes"
 
-	"github.com/landoop/lenses-go"
+	"github.com/landoop/bite"
+
 	"github.com/kataras/golog"
+	"github.com/landoop/lenses-go"
 	"github.com/spf13/cobra"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
@@ -27,19 +28,19 @@ var mode lenses.ExecutionMode
 var dependents bool
 var landscapeDir string
 var systemTopicExclusions = []string{
-	"connect-configs", 
-	"connect-offsets", 
-	"connect-status", 
-	"connect-statuses", 
-	"_schemas", 
-	"__consumer_offsets", 
-	"_kafka_lenses_", 
-	"lsql_", 
-	"__transaction_state", 
-	"__topology", 
-	"__topology__metrics", 
-	"_connect-configs", 
-	"_connect-status", 
+	"connect-configs",
+	"connect-offsets",
+	"connect-status",
+	"connect-statuses",
+	"_schemas",
+	"__consumer_offsets",
+	"_kafka_lenses_",
+	"lsql_",
+	"__transaction_state",
+	"__topology",
+	"__topology__metrics",
+	"_connect-configs",
+	"_connect-status",
 	"_connect-offsets",
 	"_lenses_",
 }
@@ -53,12 +54,7 @@ func init() {
 }
 
 func createDirectory(directoryPath string) error {
-	//choose your permissions well
-	if err := os.MkdirAll(directoryPath, 0777); err != nil {
-		return err
-	}
-
-	return nil
+	return os.MkdirAll(directoryPath, 0777)
 }
 
 func toYaml(o interface{}) ([]byte, error) {
@@ -116,11 +112,7 @@ func writeJSON(basePath, fileName string, resource interface{}) error {
 		return err
 	}
 
-	if err := write(basePath, fileName, y); err != nil {
-		return err
-	}
-
-	return nil
+	return write(basePath, fileName, y)
 }
 
 func writeYAML(basePath, fileName string, resource interface{}) error {
@@ -131,16 +123,12 @@ func writeYAML(basePath, fileName string, resource interface{}) error {
 		return err
 	}
 
-	if err := write(basePath, fileName, y); err != nil {
-		return err
-	}
-
-	return nil
+	return write(basePath, fileName, y)
 }
 
 func setExecutionMode() error {
 	execMode, err := getExecutionMode()
-	
+
 	if err != nil {
 		return err
 	}
@@ -157,7 +145,6 @@ func getExecutionMode() (lenses.ExecutionMode, error) {
 
 	return mode, nil
 }
-
 
 func writeProcessors(cmd *cobra.Command, id, cluster, namespace, name string) error {
 
@@ -181,11 +168,11 @@ func writeProcessors(cmd *cobra.Command, id, cluster, namespace, name string) er
 			if cluster != "" && cluster != processor.ClusterName {
 				continue
 			}
-	
+
 			if namespace != "" && namespace != processor.Namespace {
 				continue
 			}
-	
+
 			if name != "" && name != processor.Name {
 				continue
 			}
@@ -199,7 +186,7 @@ func writeProcessors(cmd *cobra.Command, id, cluster, namespace, name string) er
 
 		output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
-		if (output == "TABLE") {
+		if output == "TABLE" {
 			output = "YAML"
 		}
 
@@ -217,7 +204,7 @@ func writeProcessors(cmd *cobra.Command, id, cluster, namespace, name string) er
 		request.SQL = strings.TrimSpace(request.SQL)
 		request.SQL = strings.Replace(request.SQL, "\t", "  ", -1)
 		request.SQL = strings.Replace(request.SQL, " \n", "\n", -1)
-	
+
 		if err := writeFile(sqlPath, fileName, output, request); err != nil {
 			return err
 		}
@@ -239,19 +226,19 @@ func getAttachedTopics(id string) ([]lenses.CreateTopicPayload, error) {
 		if err != nil {
 			return topics, err
 		}
-	
+
 		for _, topicName := range extractedTopics {
-			var tree = append(topicName.Decendants, topicName.Parents...)
-	
+			var tree = append(topicName.Descendants, topicName.Parents...)
+
 			for _, t := range tree {
 				if strings.HasPrefix(t, "TOPIC-") {
 					var strippedTopicName = strings.Replace(t, "TOPIC-", "", len(t))
 					topic, err := client.GetTopic(strippedTopicName)
-	
+
 					if err != nil {
 						return topics, err
 					}
-	
+
 					overrides := getTopicConfigOverrides(topic.Configs)
 					topics = append(topics, topic.GetTopicAsRequest(overrides))
 				}
@@ -265,7 +252,7 @@ func getAttachedTopics(id string) ([]lenses.CreateTopicPayload, error) {
 func createBranch(cmd *cobra.Command, branchName string) error {
 
 	dir, err := os.Getwd()
-	
+
 	if err != nil {
 		golog.Fatal(err)
 		return err
@@ -284,7 +271,7 @@ func createBranch(cmd *cobra.Command, branchName string) error {
 	}
 
 	branch := fmt.Sprintf("refs/heads/%s", branchName)
-    b := plumbing.ReferenceName(branch)
+	b := plumbing.ReferenceName(branch)
 	if err = w.Checkout(&git.CheckoutOptions{Create: true, Force: false, Branch: b}); err != nil {
 		return err
 	}
@@ -315,7 +302,7 @@ func handleDependents(cmd *cobra.Command, id string) error {
 
 	// write topics
 	writeTopicsAsRequest(cmd, topics)
-	
+
 	// get alert settings
 	settings, err := getAlertSettings(cmd, topicNames)
 
@@ -344,11 +331,8 @@ func handleDependents(cmd *cobra.Command, id string) error {
 		}
 	}
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
-	fileName := fmt.Sprintf("acls-%s.%s", "all" ,strings.ToLower(output))
-	if err := writeFile(aclsPath, fileName, output, topicAcls); err != nil {
-		return err
-	}
-	return nil	
+	fileName := fmt.Sprintf("acls-%s.%s", "all", strings.ToLower(output))
+	return writeFile(aclsPath, fileName, output, topicAcls);
 }
 
 // writeConnectors writes the connectors to files as yaml
@@ -370,13 +354,13 @@ func writeConnectors(cmd *cobra.Command, clusterName string, name string) error 
 		}
 
 		if clusterName != "" && cluster.Name != clusterName {
-				continue
+			continue
 		}
 
 		for _, connectorName := range connectorNames {
 
 			if name != "" && connectorName != name {
-					continue
+				continue
 			}
 
 			if prefix != "" && !strings.HasPrefix(connectorName, prefix) {
@@ -385,7 +369,7 @@ func writeConnectors(cmd *cobra.Command, clusterName string, name string) error 
 
 			connector, err := client.GetConnector(cluster.Name, connectorName)
 
-			if (connector.Config[connectorClassKey] == sqlConnectorClass) {
+			if connector.Config[connectorClassKey] == sqlConnectorClass {
 				continue
 			}
 
@@ -398,11 +382,11 @@ func writeConnectors(cmd *cobra.Command, clusterName string, name string) error 
 			output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 			fileName := fmt.Sprintf("connector-%s-%s.%s", strings.ToLower(cluster.Name), strings.ToLower(connectorName), strings.ToLower(output))
 
-			if (output == "TABLE") {
+			if output == "TABLE" {
 				output = "YAML"
 			}
 
-			golog.Debugf("Exporting connector [%s.%s] to [%s%s]", cluster.Name, connectorName, landscapeDir, fileName)	
+			golog.Debugf("Exporting connector [%s.%s] to [%s%s]", cluster.Name, connectorName, landscapeDir, fileName)
 			if err := writeFile(connectorsPath, fileName, output, request); err != nil {
 				return err
 			}
@@ -429,13 +413,13 @@ func writeTopics(cmd *cobra.Command, topicName string) error {
 		// don't export control topics
 		excluded := false
 		for _, exclude := range systemTopicExclusions {
-			if strings.HasPrefix(topic.TopicName, exclude) || 
+			if strings.HasPrefix(topic.TopicName, exclude) ||
 				strings.Contains(topic.TopicName, "KSTREAM-") ||
 				strings.Contains(topic.TopicName, "_agg_") ||
 				strings.Contains(topic.TopicName, "_sql_store_") {
 				excluded = true
 				break
-			} 
+			}
 		}
 
 		if excluded {
@@ -448,7 +432,7 @@ func writeTopics(cmd *cobra.Command, topicName string) error {
 			if topic.TopicName == exclude {
 				excluded = true
 				break
-			} 
+			}
 		}
 
 		if excluded {
@@ -469,11 +453,7 @@ func writeTopics(cmd *cobra.Command, topicName string) error {
 		requests = append(requests, topic.GetTopicAsRequest(overrides))
 	}
 
-	if wErr := writeTopicsAsRequest(cmd, requests); wErr != nil {
-		return wErr
-	}
-	
-	return nil 
+	return writeTopicsAsRequest(cmd, requests)
 }
 
 func writeTopicsAsRequest(cmd *cobra.Command, requests []lenses.CreateTopicPayload) error {
@@ -497,7 +477,7 @@ func getTopicConfigOverrides(configs []lenses.KV) lenses.KV {
 
 	for _, kv := range configs {
 		if val, ok := kv["isDefault"]; ok {
-			if (val.(bool) == false) {
+			if val.(bool) == false {
 				var name, value string
 
 				if val, ok := kv["name"]; ok {
@@ -534,14 +514,13 @@ func writeQuotas(cmd *cobra.Command) error {
 	if err := writeFile(quotasPath, fileName, output, requests); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
 func getAlertSettings(cmd *cobra.Command, topics []string) (AlertSettingConditionPayloads, error) {
 	var alertSettings AlertSettingConditionPayloads
 	var conditions []string
-	
 
 	settings, err := client.GetAlertSettings()
 
@@ -555,7 +534,7 @@ func getAlertSettings(cmd *cobra.Command, topics []string) (AlertSettingConditio
 	}
 
 	consumerSettings := settings.Categories.Consumers
-	
+
 	for _, setting := range consumerSettings {
 		for _, condition := range setting.Conditions {
 			if len(topics) == 0 {
@@ -565,7 +544,7 @@ func getAlertSettings(cmd *cobra.Command, topics []string) (AlertSettingConditio
 
 			// filter by topic name
 			for _, topic := range topics {
-				if (strings.Contains(condition, fmt.Sprintf("topic %s", topic))) {
+				if strings.Contains(condition, fmt.Sprintf("topic %s", topic)) {
 					conditions = append(conditions, condition)
 				}
 			}
@@ -580,7 +559,7 @@ func getAlertSettings(cmd *cobra.Command, topics []string) (AlertSettingConditio
 	return AlertSettingConditionPayloads{AlertID: 2000, Conditions: conditions}, nil
 }
 
-func writeAlertSetting(cmd *cobra.Command) (error) {
+func writeAlertSetting(cmd *cobra.Command) error {
 
 	var topics []string
 	settings, err := getAlertSettings(cmd, topics)
@@ -588,7 +567,7 @@ func writeAlertSetting(cmd *cobra.Command) (error) {
 	if err != nil {
 		return err
 	}
-	
+
 	writeAlertSettingsAsRequest(cmd, settings)
 
 	return nil
@@ -598,10 +577,7 @@ func writeAlertSettingsAsRequest(cmd *cobra.Command, settings AlertSettingCondit
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	fileName := fmt.Sprintf("alert-setting.%s", strings.ToLower(output))
 
-	if err := writeFile(alertSettingsPath, fileName, output, settings); err != nil {
-		return err
-	}
-	return nil
+	return writeFile(alertSettingsPath, fileName, output, settings)
 }
 
 func writeACLs(cmd *cobra.Command) error {
@@ -615,11 +591,7 @@ func writeACLs(cmd *cobra.Command) error {
 		return err
 	}
 
-	if err := writeFile(aclsPath, fileName, output, acls); err != nil {
-		return err
-	}
-
-	return nil
+	return writeFile(aclsPath, fileName, output, acls)
 }
 
 func writeSchemas(cmd *cobra.Command) error {
@@ -635,35 +607,32 @@ func writeSchemas(cmd *cobra.Command) error {
 			continue
 		}
 
-			// don't export control topics
-			excluded := false
-			for _, exclude := range systemTopicExclusions {
-				if strings.HasPrefix(subject, exclude) || 
-					strings.Contains(subject, "KSTREAM-") ||
-					strings.Contains(subject, "_agg_") ||
-					strings.Contains(subject, "_sql_store_") {
-					excluded = true
-					break
-				} 
+		// don't export control topics
+		excluded := false
+		for _, exclude := range systemTopicExclusions {
+			if strings.HasPrefix(subject, exclude) ||
+				strings.Contains(subject, "KSTREAM-") ||
+				strings.Contains(subject, "_agg_") ||
+				strings.Contains(subject, "_sql_store_") {
+				excluded = true
+				break
 			}
-	
-			if excluded {
-				continue
-			}
-
-
-		if err := writeSchema(cmd, subject, 0); err != nil {
-			return err
 		}
+
+		if excluded {
+			continue
+		}
+
+		return writeSchema(cmd, subject, 0)
 	}
 
 	return nil
 }
 
 func prettyPrint(b []byte) ([]byte, error) {
-    var out bytes.Buffer
-    err := json.Indent(&out, b, "", "  ")
-    return out.Bytes(), err
+	var out bytes.Buffer
+	err := json.Indent(&out, b, "", "  ")
+	return out.Bytes(), err
 }
 
 func writeSchema(cmd *cobra.Command, name string, version int) error {
@@ -689,29 +658,22 @@ func writeSchema(cmd *cobra.Command, name string, version int) error {
 	}
 
 	request := client.GetSchemaAsRequest(schema)
-	fileName := fmt.Sprintf("schema-%s.%s", strings.ToLower(name) ,strings.ToLower(output))
-	if err := writeFile(schemasPath, fileName, output, request); err != nil {
-		return err
-	}
-
-	return nil
+	fileName := fmt.Sprintf("schema-%s.%s", strings.ToLower(name), strings.ToLower(output))
+	return writeFile(schemasPath, fileName, output, request)
 }
 
 func writePolicies(cmd *cobra.Command, name string, ID string) error {
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
-	
+
 	if ID != "" {
 		policy, err := client.GetPolicy(ID)
 		if err != nil {
 			return err
 		}
 
-		fileName := fmt.Sprintf("policies-%s.%s", strings.ToLower(policy.Name) ,strings.ToLower(output))
+		fileName := fmt.Sprintf("policies-%s.%s", strings.ToLower(policy.Name), strings.ToLower(output))
 		request := client.PolicyAsRequest(policy)
-		if err := writeFile(policiesPath, fileName, output, request); err != nil {
-			return err
-		}
-		return nil
+		return writeFile(policiesPath, fileName, output, request)
 	}
 
 	policies, err := client.GetPolicies()
@@ -720,17 +682,12 @@ func writePolicies(cmd *cobra.Command, name string, ID string) error {
 	}
 
 	for _, policy := range policies {
-		fileName := fmt.Sprintf("policies-%s.%s", strings.ToLower(policy.Name) ,strings.ToLower(output))
+		fileName := fmt.Sprintf("policies-%s.%s", strings.ToLower(policy.Name), strings.ToLower(output))
 		if name != "" && policy.Name == name {
-			if err := writeFile(policiesPath, fileName, output, policy); err != nil {
-				return err
-			}
-			return nil
+			return writeFile(policiesPath, fileName, output, policy)
 		}
 
-		if err := writeFile(policiesPath, fileName, output, policy); err != nil {
-			return err
-		}
+		return writeFile(policiesPath, fileName, output, policy)
 	}
 
 	return nil
@@ -753,11 +710,11 @@ func addGitSupport(cmd *cobra.Command, gitURL string) error {
 	}
 
 	file, err := os.OpenFile(
-			".gitignore",
-			os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-			0666,
+		".gitignore",
+		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
+		0666,
 	)
-	
+
 	if err != nil {
 		golog.Fatal(err)
 	}
@@ -785,7 +742,7 @@ This repo contains Lenses landscape resource descriptions described in yaml file
 	if err != nil {
 		return err
 	}
-	
+
 	wt.Add(".gitignore")
 	wt.Add("landscape")
 	wt.Add("README.md")
@@ -793,7 +750,7 @@ This repo contains Lenses landscape resource descriptions described in yaml file
 	bite.PrintInfo(cmd, "Landscape directory structure created")
 
 	if gitURL != "" {
-		bite.PrintInfo(cmd, "Setting remote to [" + gitURL + "]")
+		bite.PrintInfo(cmd, "Setting remote to ["+gitURL+"]")
 		repo.CreateRemote(&config.RemoteConfig{
 			Name: "origin",
 			URLs: []string{gitURL},
@@ -818,13 +775,13 @@ func checkFileFlags(cmd *cobra.Command) {
 
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
-	if (output == "TABLE") {
+	if output == "TABLE" {
 		output = "YAML"
 	}
 
 	if output != "JSON" && output != "YAML" {
 		golog.Fatalf("Unsupported output format [%s]. Output type must be json or yaml for export", bite.GetOutPutFlag(cmd))
-		return 
+		return
 	}
 
 	cmd.Flag(bite.GetOutPutFlagKey()).Value.Set(output)
@@ -858,16 +815,16 @@ func initRepoCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&gitSupport, "git", false, "Initialize a git repo")
 	cmd.Flags().StringVar(&gitURL, "git-url", "", "-Remote url to set for the repo")
 	cmd.MarkFlagRequired("name")
-	
+
 	return cmd
 }
 
 func exportGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:              "export",
-		Short:            "export a landscape",
-		Example:          `	
+		Use:   "export",
+		Short: "export a landscape",
+		Example: `	
 export acls --dir my-dir
 export alert-settings --dir my-dir
 export connectors --dir my-dir --resource-name my-connector --cluster-name Cluster1
@@ -881,7 +838,7 @@ export policies --dir my-dir --resource-name my-policy`,
 	}
 
 	cmd.PersistentFlags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
-	cmd.PersistentFlags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts" )
+	cmd.PersistentFlags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	cmd.MarkPersistentFlagRequired("dir")
 	cmd.AddCommand(exportAclsCommand())
 	cmd.AddCommand(exportAlertsCommand())
@@ -920,7 +877,7 @@ func exportProcessorsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Select by namespace, available only in KUBERNETES mode")
 	cmd.Flags().StringVar(&id, "id", "", "ID of the processor to export")
 	cmd.Flags().StringVar(&prefix, "prefix", "", "Processor with the prefix in the name only")
-	
+
 	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
 	return cmd
@@ -1095,14 +1052,14 @@ func exportSchemasCommand() *cobra.Command {
 				golog.Errorf("Version [%s] is not at integer", version)
 				return err
 			}
-			
+
 			if name != "" {
 				if err := writeSchema(cmd, name, versionInt); err != nil {
 					golog.Errorf("Error writing schema. [%s]", err.Error())
 					return err
 				}
 				return nil
-			} 
+			}
 
 			if err := writeSchemas(cmd); err != nil {
 				golog.Errorf("Error writing schemas. [%s]", err.Error())
