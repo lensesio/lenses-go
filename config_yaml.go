@@ -245,9 +245,9 @@ func ConfigUnmarshalYAML(b []byte, c *Config) error {
 
 					switch contextPropertyItem.Key.(string) {
 					case "User":
-						username, ok = contextPropertyItem.Value.(string) // safe set.
+						username, _ = contextPropertyItem.Value.(string) // safe set.
 					case "Password":
-						password, ok = contextPropertyItem.Value.(string) // safe set.
+						password, _ = contextPropertyItem.Value.(string) // safe set.
 					}
 				}
 

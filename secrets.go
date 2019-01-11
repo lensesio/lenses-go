@@ -3,14 +3,14 @@ package lenses
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"errors"
 
 	keyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
-	azureAuth "github.com/Azure/go-autorest/autorest/azure/auth"
 	azure "github.com/Azure/go-autorest/autorest/azure"
+	azureAuth "github.com/Azure/go-autorest/autorest/azure/auth"
 	vaultapi "github.com/hashicorp/vault/api"
 	golog "github.com/kataras/golog"
 )
@@ -119,7 +119,7 @@ func getVaultClient(server, token string) (*vaultapi.Client, error) {
 			return nil, errors.New(``)
 		}
 		client.SetToken(token)
-	} 
+	}
 
 	return client, nil
 }

@@ -98,11 +98,7 @@ func writeAppFiles(secrets map[string]string, secretsFile string) error {
 			secretData = append(secretData, fmt.Sprintf("export %s=%s", keyAsEnv, value))
 		}
 
-		if err := writePropsFile(secretsFile, secretData); err != nil {
-			return err
-		}
-
-		return nil
+		return writePropsFile(secretsFile, secretData)
 	}
 
 	if outputType == "YAML" || outputType == "JSON" {
@@ -394,19 +390,11 @@ secrets app vault --vault-role lenses --vault-token XYZ	--vault-addr http://127.
 			}
 
 			if "connect" == appType {
-				if err := writeConnectFiles(secrets, secretsFile, connectorFile, workerFile, fromFile); err != nil {
-					return err
-				}
-
-				return nil
+				return writeConnectFiles(secrets, secretsFile, connectorFile, workerFile, fromFile)
 			}
 
 			if "app" == appType {
-				if err := writeAppFiles(secrets, appSecretsFile); err != nil {
-					return err
-				}
-
-				return nil
+				return writeAppFiles(secrets, appSecretsFile)
 			}
 
 			return nil
@@ -504,17 +492,11 @@ secrets app azure --vault-name lenses --client-id xxxx --client-secret xxxx --te
 			}
 
 			if "connect" == appType {
-				if err := writeConnectFiles(secrets, secretsFile, connectorFile, workerFile, fromFile); err != nil {
-					return err
-				}
+				return writeConnectFiles(secrets, secretsFile, connectorFile, workerFile, fromFile)
 			}
 
 			if "app" == appType {
-				if err := writeAppFiles(secrets, appSecretsFile); err != nil {
-					return err
-				}
-
-				return nil
+				return writeAppFiles(secrets, appSecretsFile)
 			}
 
 			return nil

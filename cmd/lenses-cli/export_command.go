@@ -54,12 +54,7 @@ func init() {
 }
 
 func createDirectory(directoryPath string) error {
-	//choose your permissions well
-	if err := os.MkdirAll(directoryPath, 0777); err != nil {
-		return err
-	}
-
-	return nil
+	return os.MkdirAll(directoryPath, 0777)
 }
 
 func toYaml(o interface{}) ([]byte, error) {
@@ -117,11 +112,7 @@ func writeJSON(basePath, fileName string, resource interface{}) error {
 		return err
 	}
 
-	if err := write(basePath, fileName, y); err != nil {
-		return err
-	}
-
-	return nil
+	return write(basePath, fileName, y)
 }
 
 func writeYAML(basePath, fileName string, resource interface{}) error {
@@ -132,11 +123,7 @@ func writeYAML(basePath, fileName string, resource interface{}) error {
 		return err
 	}
 
-	if err := write(basePath, fileName, y); err != nil {
-		return err
-	}
-
-	return nil
+	return write(basePath, fileName, y)
 }
 
 func setExecutionMode() error {
@@ -241,7 +228,7 @@ func getAttachedTopics(id string) ([]lenses.CreateTopicPayload, error) {
 		}
 
 		for _, topicName := range extractedTopics {
-			var tree = append(topicName.Decendants, topicName.Parents...)
+			var tree = append(topicName.Descendants, topicName.Parents...)
 
 			for _, t := range tree {
 				if strings.HasPrefix(t, "TOPIC-") {
@@ -597,10 +584,7 @@ func writeAlertSettingsAsRequest(cmd *cobra.Command, settings AlertSettingCondit
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	fileName := fmt.Sprintf("alert-setting.%s", strings.ToLower(output))
 
-	if err := writeFile(alertSettingsPath, fileName, output, settings); err != nil {
-		return err
-	}
-	return nil
+	return writeFile(alertSettingsPath, fileName, output, settings)
 }
 
 func writeACLs(cmd *cobra.Command) error {
@@ -614,11 +598,7 @@ func writeACLs(cmd *cobra.Command) error {
 		return err
 	}
 
-	if err := writeFile(aclsPath, fileName, output, acls); err != nil {
-		return err
-	}
-
-	return nil
+	return writeFile(aclsPath, fileName, output, acls)
 }
 
 func writeSchemas(cmd *cobra.Command) error {
@@ -650,9 +630,7 @@ func writeSchemas(cmd *cobra.Command) error {
 			continue
 		}
 
-		if err := writeSchema(cmd, subject, 0); err != nil {
-			return err
-		}
+		return writeSchema(cmd, subject, 0)
 	}
 
 	return nil
@@ -706,10 +684,7 @@ func writePolicies(cmd *cobra.Command, name string, ID string) error {
 
 		fileName := fmt.Sprintf("policies-%s.%s", strings.ToLower(policy.Name), strings.ToLower(output))
 		request := client.PolicyAsRequest(policy)
-		if err := writeFile(policiesPath, fileName, output, request); err != nil {
-			return err
-		}
-		return nil
+		return writeFile(policiesPath, fileName, output, request)
 	}
 
 	policies, err := client.GetPolicies()
@@ -726,9 +701,7 @@ func writePolicies(cmd *cobra.Command, name string, ID string) error {
 			return nil
 		}
 
-		if err := writeFile(policiesPath, fileName, output, policy); err != nil {
-			return err
-		}
+		return writeFile(policiesPath, fileName, output, policy)
 	}
 
 	return nil
