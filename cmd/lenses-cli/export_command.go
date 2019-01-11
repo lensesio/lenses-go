@@ -332,10 +332,7 @@ func handleDependents(cmd *cobra.Command, id string) error {
 	}
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	fileName := fmt.Sprintf("acls-%s.%s", "all", strings.ToLower(output))
-	if err := writeFile(aclsPath, fileName, output, topicAcls); err != nil {
-		return err
-	}
-	return nil
+	return writeFile(aclsPath, fileName, output, topicAcls);
 }
 
 // writeConnectors writes the connectors to files as yaml
@@ -456,11 +453,7 @@ func writeTopics(cmd *cobra.Command, topicName string) error {
 		requests = append(requests, topic.GetTopicAsRequest(overrides))
 	}
 
-	if wErr := writeTopicsAsRequest(cmd, requests); wErr != nil {
-		return wErr
-	}
-
-	return nil
+	return writeTopicsAsRequest(cmd, requests)
 }
 
 func writeTopicsAsRequest(cmd *cobra.Command, requests []lenses.CreateTopicPayload) error {
@@ -666,11 +659,7 @@ func writeSchema(cmd *cobra.Command, name string, version int) error {
 
 	request := client.GetSchemaAsRequest(schema)
 	fileName := fmt.Sprintf("schema-%s.%s", strings.ToLower(name), strings.ToLower(output))
-	if err := writeFile(schemasPath, fileName, output, request); err != nil {
-		return err
-	}
-
-	return nil
+	return writeFile(schemasPath, fileName, output, request)
 }
 
 func writePolicies(cmd *cobra.Command, name string, ID string) error {
@@ -695,10 +684,7 @@ func writePolicies(cmd *cobra.Command, name string, ID string) error {
 	for _, policy := range policies {
 		fileName := fmt.Sprintf("policies-%s.%s", strings.ToLower(policy.Name), strings.ToLower(output))
 		if name != "" && policy.Name == name {
-			if err := writeFile(policiesPath, fileName, output, policy); err != nil {
-				return err
-			}
-			return nil
+			return writeFile(policiesPath, fileName, output, policy)
 		}
 
 		return writeFile(policiesPath, fileName, output, policy)
