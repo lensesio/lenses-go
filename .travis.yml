@@ -25,7 +25,7 @@ jobs:
     branches:
       only:
         - master  
-    before_deploy: cd bin; for i in *; do tar -czf $i.tar.gz $i; done
+    before_deploy: cd bin; for i in *; do tar -czf $i.tar.gz $i; done; cd ../
     deploy:   
       on:
         tags: true
