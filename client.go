@@ -3839,7 +3839,7 @@ type LogLine struct {
 	Logger     string `json:"logger"`
 	Message    string `json:"message" header:"Message"`
 	Stacktrace string `json:"stacktrace"`
-	Timestmap  int64  `json:"timestamp"`
+	Timestamp  int64  `json:"timestamp"`
 	Time       string `json:"time" header:"Time"`
 }
 
@@ -3959,10 +3959,10 @@ const (
 	topicExtractPath = "/api/topology/"
 )
 
-// TopicExtract a topics parents and decendants from a Lenses topoloogy
+// TopicExtract a topics parents and decendants from a Lenses topology
 type TopicExtract struct {
 	Parents    []string `json:"parents" yaml:"parents" header:"Parents"`
-	Decendants []string `json:"descendants" yaml:"descendants" header:"descendants"`
+	Descendants []string `json:"descendants" yaml:"descendants" header:"descendants"`
 }
 
 // GetTopicExtract returns a TopicExtract for an id

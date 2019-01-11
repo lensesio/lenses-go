@@ -415,10 +415,7 @@ func loadPolicies(cmd *cobra.Command, loadpath string) error {
 }
 
 func load(cmd *cobra.Command, path string, data interface{}) error {
-	if err := bite.TryReadFile(path, data); err != nil {
-		return err
-	}
-	return nil
+	return bite.TryReadFile(path, data)
 }
 
 func importProcessorsCommand() *cobra.Command {
