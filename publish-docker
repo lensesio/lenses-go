@@ -1,7 +1,54 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-TAG=$1
+echo "Major versions detected:"
+git tag -l | grep -E "^([0-9]+\.){2,2}[0-9]+$" | grep -v 99 | cut -f 1,2 -d . | sort -ur
+echo
 
+echo "Valid tags detected:"
+git tag -l | grep -E "^([0-9]+\.){2,2}[0-9]+$" | grep -v 99 | sort -t . -n -r -k 1,1 -k 2,2 -k 3,3
+echo
+
+# if we are not on a tag, skip.
+if ! git describe --tags | grep -Esq "^([0-9]+\.){2,2}[0-9]+$"; then
+    echo "Not a commit with a valid tag. Will not release."
+    exit 1
+fi
+
+# Current major version
+CUR_MAJOR="$(git describe --tags | cut -f 1,2 -d .)"
+echo "Current major is $CUR_MAJOR"
+
+# Latest major version in repo
+REPO_MAJOR="$(git tag -l | grep -E "^([0-9]+\.){2,2}[0-9]+$" | grep -v 99 | cut -f 1,2 -d . | sort -ur | head -1)"
+echo "Repo highest major is $REPO_MAJOR"
+
+# Current minor version
+CUR_MINOR="$(git describe --tags)"
+echo "Current tag is $CUR_MINOR"
+
+# Highest minor version for the current major
+HIGH_MINOR="$(git tag -l | grep -E "^([0-9]+\.){2,2}[0-9]+$" | grep -E "^${CUR_MAJOR}\." | sort -t . -n -r -k 3,3 | head -1)"
+echo "Highest patch for current version is $HIGH_MINOR"
+
+# Publish docker
 echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-docker build -t landoop/lenses-cli:${TAG} .
-docker push landoop/lenses-cli:${TAG}
+docker build -t landoop/lenses-cli:${CUR_MINOR} .
+
+echo "Publishing landoop/lenses-cli:${CUR_MINOR}"
+docker push landoop/lenses-cli:${CUR_MINOR}
+
+# If we have the highest patch (minor) for our version, then we need to tag
+# with our version too (e.g 2.2)
+if [[ $CUR_MINOR == $HIGH_MINOR ]]; then
+    echo "Publishing landoop/lenses-cli:${CUR_MAJOR}"
+    docker tag landoop/lenses-cli:${CUR_MINOR} landoop/lenses-cli:${CUR_MAJOR}
+    docker push landoop/lenses-cli:${CUR_MAJOR}
+    # If we have the highest version too, then we need to tag with latest too
+    if [[ $REPO_MAJOR == $CUR_MAJOR ]]; then
+        echo "Publishing landoop/lenses-cli:latest"
+        docker tag landoop/lenses-cli:${CUR_MINOR} landoop/lenses-cli:latest
+        docker push landoop/lenses-cli:latest
+    fi
+fi
+
+docker logout
