@@ -30,6 +30,7 @@ jobs:
       on:
         tags: true
       provider: releases
+      name: Release ${TRAVIS_TAG}
       api_key:
         secure: q+kT2K6ZMh4qtiveEmsuC8t/T5IZTZd9zbHeOBQn1YoFt38ym9za94Ehq13jffEvsHOGKX1oc7FxpUkDInDllSXQrYXC2QNEhnA9ZmzijLzyVEKBNir7ts0g0cNXXlEhu+o86z+3nZi14x77NujF+u9ALSOqpLmfo6HmHtCows/Bkf9WC8LQ1wWla4ovh8BkCLe00P+G36tBzpm7khi1In0DaIgQdyG9rUCLQkfKy2smzfq+Cj9R2beXRGP6Zx7so5lwuGCl3xQL7s1LUct/4GyNyTOIpCfZtllJddghw6mY+pJAsurfjP/qdSrGCVj+WAYWh6ZtH0XqqNQe0QnH0NrBC9JCc7oixC/quhz3DEn7ufbUzNxqTOoHWw6wYcJoP2XaUxCXOsQ7KmLmAEa+WtUWxpalHrSScTz6NlxTBFlLGYL1Gl2OxpB4vmOVOS7/5HE1rFJAGYZkpgv4qiD9REoSkD8Qt3eG/BCv9gE7HVgeeiftGD4fEiVxNQw4lt09J/49RZ4ZrGBGcMMd9PGW0cOTYaFoTW+Sy/wKifsUPJSEfm7Avw/LOfuxhDytmbiUIRaFfchfEm8u5UwkOpas8ooGOtwK7bAUG83Le6lndeiAxQyA+0a0vTMkkRqSI1sxN6uV+tflVQZd6ULG3WrdvL/Bqq/ji9gQsIIEDwCavI4= 
       file_glob: true
