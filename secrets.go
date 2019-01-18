@@ -354,3 +354,27 @@ func (k *KeyVault) getSecret(keyName string) (string, error) {
 
 	return *keyBundle.Value, nil
 }
+
+
+// EnvSecretHandler retrieves secret key values from environment variables
+func EnvSecretHandler(file string) (map[string]string, error) {
+	var secretVars []string
+	secrets := make(map[string]string)
+
+	// load secrets from environment or file
+	secretVars, err := loadSecrets(file)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range secretVars {
+		split := strings.Split(v, "=")
+		key := split[0]
+		value := split[1]
+		keyAsProp := strings.ToLower(strings.Replace(key, "_", ".", -1))
+		secrets[keyAsProp] = value
+	}
+
+	return secrets, nil
+}

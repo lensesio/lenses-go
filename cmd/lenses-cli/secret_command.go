@@ -289,7 +289,7 @@ func connectGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "connect",
-		Short: `Create Apache Kafka Connect config files from secrets stored in Vault or Azure KeyVault`,
+		Short: `Create Apache Kafka Connect config files from secrets stored in Vault, Azure KeyVault or as environment variables`,
 		Long: `
 Create Apache Kafka Connect config files from secrets stored in Vault 
 or Azure KeyVault
@@ -319,6 +319,15 @@ In secret file:
 	connect.cassandra.password=secret
 	connect.cassandra.user=lenses
 
+For Environment Variables, e.g. Kubernetes secrets mounted as environment vars
+
+	export SECRET_CONNECT_CASSANDRA_PASSWORD=secret
+	export SECRET_CONNECT_CASSANDRA_USER=lenses
+	
+	In secret file:
+		connect.cassandra.password=secret
+		connect.cassandra.user=lenses
+
 Variables can alternatively be loaded from a file using the from-file flag.
 The file contents should be in key value in the same format as the 
 environment variables
@@ -338,6 +347,7 @@ secrets connect azure --vault-name lenses --client-id xxxx --client-secret xxxx 
 
 	cmd.AddCommand(newVaultCommand("connect"))
 	cmd.AddCommand(newAzureCommand("connect"))
+	cmd.AddCommand(newEnvCommand("connect"))
 
 	return cmd
 }
@@ -412,7 +422,7 @@ func newAzureCommand(appType string) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "azure",
-		Short: `Get secrets from Azure Key Vault.`,
+		Short: `Get secrets from Azure Key Vault`,
 		Long: `
 Get secrets from Azure Key Vault.
 
@@ -512,3 +522,52 @@ secrets app azure --vault-name lenses --client-id xxxx --client-secret xxxx --te
 
 	return cmd
 }
+
+func newEnvCommand(appType string) *cobra.Command {
+
+	cmd := &cobra.Command{
+		Use:   "env",
+		Short: `Get secrets from environment`,
+		Long: `
+Get secrets from environment variables.
+
+export SECRET_CONNECT_CASSANDRA_PASSWORD=secret
+export SECRET_CONNECT_CASSANDRA_USER=lenses
+
+In secret file:
+	connect.cassandra.password=secret
+	connect.cassandra.user=lenses
+
+Variables can alternatively be loaded from a file using the from-file flag.
+The file contents should be in key value in the same format as the 
+environment variables
+`,
+		Example: `
+secrets connect env
+`,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			secrets, err := lenses.EnvSecretHandler(fromFile)
+
+			if err != nil {
+				return err
+			}
+
+			if "connect" == appType {
+				return writeConnectFiles(secrets, secretsFile, connectorFile, workerFile, fromFile)
+			}
+
+			if "app" == appType {
+				return writeAppFiles(secrets, appSecretsFile)
+			}
+
+			return nil
+
+		},
+	}
+
+	return cmd
+}
+
