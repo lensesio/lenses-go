@@ -318,8 +318,8 @@ value. For example a secret in Vault:
 
 vault kv put secret/connectors/cassandra connect-cassandra-password=secret connect-cassandra-user=lenses
 
-export SECRET_CONNECTOR_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/con1
-export SECRET_CONNECTOR_CASSANDRA_USER=/secret/data/connectors/cassandra/con1
+export SECRET_CONNECT_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/con1
+export SECRET_CONNECT_CASSANDRA_USER=/secret/data/connectors/cassandra/con1
 
 In secret file:
 	connect.cassandra.password=secret
@@ -327,8 +327,8 @@ In secret file:
 
 For Environment Variables, e.g. Kubernetes secrets mounted as environment vars
 
-	export SECRET_CONNECTOR_CASSANDRA_PASSWORD=secret
-	export SECRET_CONNECTOR_CASSANDRA_USER=lenses
+	export SECRET_CONNECT_CASSANDRA_PASSWORD=secret
+	export SECRET_CONNECT_CASSANDRA_USER=lenses
 	
 	In secret file:
 		connect.cassandra.password=secret
@@ -374,8 +374,8 @@ value. For example a secret in Vault:
 
 vault kv put secret/connectors/cassandra connect-cassandra-password=secret connect-cassandra-user=lenses
 
-export SECRET_CONNECTOR_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/con1
-export SECRET_CONNECTOR_CASSANDRA_USER=/secret/data/connectors/cassandra/con1
+export SECRET_CONNECT_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/con1
+export SECRET_CONNECT_CASSANDRA_USER=/secret/data/connectors/cassandra/con1
 
 In secret file:
 	connect.cassandra.password=secret
@@ -434,10 +434,10 @@ Get secrets from Azure Key Vault.
 
 Secret names must only contain 0-9, a-z, A-Z, and -
 
-An environment variable SECRET_CONNECTOR_CASSANDRA_PASSWORD 
+An environment variable SECRET_CONNECT_CASSANDRA_PASSWORD 
 expects a secret name connect-cassandra-password in Azure KeyVault.
 
-export SECRET_CONNECTOR_CASSANDRA_PASSWORD=connect-cassandra-password
+export SECRET_CONNECT_CASSANDRA_PASSWORD=connect-cassandra-password
 
 In secret file:
 	connect.cassandra.password=secret
@@ -537,8 +537,8 @@ func newEnvCommand(appType string) *cobra.Command {
 		Long: `
 Get secrets from environment variables.
 
-export SECRET_CONNECTOR_CASSANDRA_PASSWORD=secret
-export SECRET_CONNECTOR_CASSANDRA_USER=lenses
+export SECRET_CONNECT_CASSANDRA_PASSWORD=secret
+export SECRET_CONNECT_CASSANDRA_USER=lenses
 
 In secret file:
 	connect.cassandra.password=secret

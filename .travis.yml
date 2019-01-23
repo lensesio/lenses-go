@@ -9,9 +9,11 @@ go_import_path: github.com/landoop/lenses-go
 jobs:
   include:
   - stage: Build docker
-    script:
-    - ./build linux
-    - docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
+    deploy: 
+      on:
+        tags: false
+      provider: script
+      script: bash ./build linux && docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
   - stage: Publish docker
     branches:
       only:
