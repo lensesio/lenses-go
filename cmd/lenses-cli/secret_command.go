@@ -25,7 +25,7 @@ func getVars(prefix string) []string {
 	for _, v := range os.Environ() {
 		if strings.HasPrefix(v, prefix) {
 			golog.Infof("Found environment var [%s]", v)
-			vars = append(vars, strings.ToLower(strings.Replace(strings.Replace(v, prefix, "", -1), "_", ".", -1)))
+			vars = append(vars, strings.Replace(strings.Replace(v, prefix, "", -1), "_", ".", -1))
 		}
 	}
 
@@ -136,7 +136,7 @@ func retrieve(fromFile, prefix string) ([]string, error) {
 
 		for _, l := range lines {
 			if strings.HasPrefix(l, prefix) {
-				vars = append(vars, strings.ToLower(strings.Replace(strings.Replace(l, prefix, "", -1), "_", ".", -1)))
+				vars = append(vars, strings.Replace(strings.Replace(l, prefix, "", -1), "_", ".", -1))
 			}
 		}
 	} else {
