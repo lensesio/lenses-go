@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/landoop/bite"
 	"github.com/landoop/lenses-go"
@@ -65,7 +66,7 @@ func setup(cmd *cobra.Command, args []string) error {
 	// let the configure command give a tutorial for user in order to create a configuration file.
 	// Note that if clientConfig is valid and we are inside the configure command
 	// then the configure will normally continue and save the valid configuration (that normally came from flags).
-	if name := cmd.Name(); name == "configure" || name == "context" || name == "contexts" || name == "secrets" {
+	if name := cmd.Name(); name == "configure" || name == "context" || name == "contexts" || strings.Contains(cmd.CommandPath(), " secrets ") {
 		return nil
 	}
 
