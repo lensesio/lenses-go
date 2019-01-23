@@ -186,7 +186,7 @@ func writeConnectFiles(secrets map[string]string, secretsFile, connectorFile, wo
 	// handle connect file
 	if len(connectVars) > 0 {
 		golog.Infof("Writing connect worker props to [%s]", workerFile)
-		connectVars = append(connectVars, "# External secrets")
+		connectVars = append(connectVars, "\n# External secrets")
 		connectVars = append(connectVars, "config.providers=file")
 		connectVars = append(connectVars, "config.providers.file.class=org.apache.kafka.common.config.provider.FileConfigProvider")
 
