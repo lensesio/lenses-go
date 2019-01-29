@@ -20,8 +20,16 @@ var providerType SecretProvider
 const (
 	// SecretPreFix for looking up env vars
 	SecretPreFix = "SECRET_"
+	// ConnectWorkerSecretPrefix prefix for connect worker secrets
+	ConnectWorkerSecretPrefix = "WORKER_CONNECT_SECRET_"
 	// EnvVaultRole is the environment var holding the vault role
 	EnvVaultRole = "VAULT_ROLE"
+	// EnvAzureClientID is the environment var holding the azure client id
+	EnvAzureClientID = "AZURE_CLIENT_ID"
+	// EnvAzureClientSecret is the environment var holding the azure client secret
+	EnvAzureClientSecret = "AZURE_CLIENT_SECRET"
+	// EnvAzureClientTenantID is the environment var holding the azure tenant id
+	EnvAzureClientTenantID = "AZURE_TENANT_ID"
 	// EnvAzureKeyVaultName is the environment var holding the azure key vault name
 	EnvAzureKeyVaultName = "AZURE_KEY_VAULT"
 	// EnvAzureKeyVaultDNS is the environment var holding the azure key dns
@@ -45,6 +53,13 @@ type vaultAppRoleCredentials struct {
 	SecretID string
 }
 
+// Secret holds the mapping of the env var to the secret key
+type Secret struct {
+	EnvKey string
+	Key    string
+	Value  string
+}
+
 func loadSecrets(file string) ([]string, error) {
 	var secretVars []string
 
@@ -53,7 +68,7 @@ func loadSecrets(file string) ([]string, error) {
 		lines, err := ReadLines(file)
 
 		for _, l := range lines {
-			if strings.HasPrefix(l, SecretPreFix) {
+			if strings.HasPrefix(l, SecretPreFix) || strings.HasPrefix(l, ConnectWorkerSecretPrefix) {
 				secretVars = append(secretVars, strings.Replace(l, SecretPreFix, "", -1))
 			}
 		}
@@ -80,9 +95,9 @@ func getSecretVars() []string {
 	vars := os.Environ()
 
 	for _, v := range vars {
-		if strings.HasPrefix(v, SecretPreFix) {
+		if strings.HasPrefix(v, SecretPreFix) || strings.HasPrefix(v, ConnectWorkerSecretPrefix) {
 			golog.Infof("Found environment var [%s]", v)
-			secretVars = append(secretVars, strings.Replace(v, SecretPreFix, "", -1))
+			secretVars = append(secretVars, v)
 		}
 	}
 
@@ -170,8 +185,8 @@ func vaultAppRoleLogin(client *vaultapi.Client, credentials vaultAppRoleCredenti
 }
 
 // VaultConnectExternalHandler retrieves secret key values from Vault based on environment variables
-func VaultConnectExternalHandler(role, token, endpoint, file string) (map[string]string, error) {
-	secrets := make(map[string]string)
+func VaultConnectExternalHandler(role, token, endpoint, file string) ([]Secret, error) {
+	var secrets []Secret
 	var secretVars []string
 
 	client, err := getVaultClient(endpoint, token)
@@ -210,7 +225,8 @@ func VaultConnectExternalHandler(role, token, endpoint, file string) (map[string
 	for _, v := range secretVars {
 		split := strings.Split(v, "=")
 		path := split[1]
-		key := split[0]
+		envKey := split[0]
+		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", -1), SecretPreFix, "", -1)
 		keyForVault := strings.ToLower(strings.Replace(key, "_", "-", -1))
 		keyAsProp := strings.ToLower(strings.Replace(key, "_", ".", -1))
 
@@ -237,9 +253,8 @@ func VaultConnectExternalHandler(role, token, endpoint, file string) (map[string
 			secret := fmt.Sprintf("%v", val)
 			if secret != "" {
 				golog.Infof("Found secret for EnvVar: [%s], Key: [%s] in endpoint [%s]", key, keyForVault, endpoint)
-				secrets[keyAsProp] = secret
+				secrets = append(secrets, Secret{EnvKey: envKey, Key: keyAsProp, Value: secret})
 			}
-			secrets[keyAsProp] = fmt.Sprintf("%v", val)
 		}
 
 	}
@@ -252,6 +267,7 @@ type AzureConfiguration struct {
 	ClientID     string
 	ClientSecret string
 	TenantID     string
+	KeyVaultName string
 }
 
 // KeyVault holds the information for a keyvault instance
@@ -277,9 +293,9 @@ func ReadLines(path string) ([]string, error) {
 }
 
 // AzureKeyVaultHandler retrieves secret key values from Azure KeyVault based on environment variables
-func AzureKeyVaultHandler(vaultURL, file string, config AzureConfiguration) (map[string]string, error) {
+func AzureKeyVaultHandler(vaultURL, file string, config AzureConfiguration) ([]Secret, error) {
 	var secretVars []string
-	secrets := make(map[string]string)
+	var secrets []Secret
 
 	// load secrets from environment or file
 	secretVars, err := loadSecrets(file)
@@ -298,7 +314,9 @@ func AzureKeyVaultHandler(vaultURL, file string, config AzureConfiguration) (map
 
 	for _, v := range secretVars {
 		split := strings.Split(v, "=")
-		key := split[0]
+		envKey := split[0]
+		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", -1), SecretPreFix, "", -1)
+
 		keyForAz := strings.ToLower(strings.Replace(key, "_", "-", -1))
 		keyAsProp := strings.ToLower(strings.Replace(key, "_", ".", -1))
 		golog.Infof(fmt.Sprintf("Retrieving secret from vault [%s]. EnvVar: [%s], Key: [%s]", vaultURL, v, keyForAz))
@@ -311,7 +329,7 @@ func AzureKeyVaultHandler(vaultURL, file string, config AzureConfiguration) (map
 
 		if secret != "" {
 			golog.Infof("Found secret for EnvVar: [%s], Key: [%s] in vault [%s]", key, keyForAz, vaultURL)
-			secrets[keyAsProp] = secret
+			secrets = append(secrets, Secret{EnvKey: envKey, Key: keyAsProp, Value: secret})
 		}
 	}
 
@@ -355,11 +373,10 @@ func (k *KeyVault) getSecret(keyName string) (string, error) {
 	return *keyBundle.Value, nil
 }
 
-
 // EnvSecretHandler retrieves secret key values from environment variables
-func EnvSecretHandler(file string) (map[string]string, error) {
+func EnvSecretHandler(file string) ([]Secret, error) {
 	var secretVars []string
-	secrets := make(map[string]string)
+	var secrets []Secret
 
 	// load secrets from environment or file
 	secretVars, err := loadSecrets(file)
@@ -370,10 +387,11 @@ func EnvSecretHandler(file string) (map[string]string, error) {
 
 	for _, v := range secretVars {
 		split := strings.Split(v, "=")
-		key := split[0]
+		envKey := split[0]
+		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", -1), SecretPreFix, "", -1)
 		value := split[1]
 		keyAsProp := strings.ToLower(strings.Replace(key, "_", ".", -1))
-		secrets[keyAsProp] = value
+		secrets = append(secrets, Secret{EnvKey: envKey, Key: keyAsProp, Value: value})
 	}
 
 	return secrets, nil

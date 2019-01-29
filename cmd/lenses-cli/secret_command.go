@@ -92,16 +92,16 @@ func writePropsFile(fileName string, data []string) error {
 	return nil
 }
 
-func writeAppFiles(secrets map[string]string, secretsFile string) error {
+func writeAppFiles(secrets []lenses.Secret, secretsFile string) error {
 	var secretData []string
 	outputType := strings.ToUpper(output)
 
 	if outputType == "ENV" {
 
 		golog.Infof("Writing file [%s] for sourcing as environment variables", secretsFile)
-		for key, value := range secrets {
-			keyAsEnv := strings.ToUpper(strings.Replace(key, ".", "_", -1))
-			secretData = append(secretData, fmt.Sprintf("export %s=%s", keyAsEnv, value))
+		for _, s := range secrets {
+			keyAsEnv := strings.ToUpper(strings.Replace(s.Key, ".", "_", -1))
+			secretData = append(secretData, fmt.Sprintf("export %s=%s", keyAsEnv, s.Value))
 		}
 
 		return writePropsFile(secretsFile, secretData)
@@ -157,7 +157,7 @@ func retrieve(fromFile, prefix string) ([]string, error) {
 	return vars, nil
 }
 
-func writeConnectFiles(secrets map[string]string, secretsFile, connectorFile, workerFile, fromFile string) error {
+func writeConnectFiles(secrets []lenses.Secret, secretsFile, connectorFile, workerFile, fromFile string) error {
 
 	var secretData []string
 
@@ -176,8 +176,8 @@ func writeConnectFiles(secrets map[string]string, secretsFile, connectorFile, wo
 	}
 
 	// add secrets to connectorData
-	for key := range secrets {
-		record := fmt.Sprintf("%s=${file:%s:%s}", key, secretsFile, key)
+	for _, s := range secrets {
+		record := fmt.Sprintf("%s=${file:%s:%s}", s.Key, secretsFile, s.Key)
 		connectorVars = append(connectorVars, record)
 	}
 
@@ -196,15 +196,24 @@ func writeConnectFiles(secrets map[string]string, secretsFile, connectorFile, wo
 		connectVars = append(connectVars, "config.providers=file")
 		connectVars = append(connectVars, "config.providers.file.class=org.apache.kafka.common.config.provider.FileConfigProvider")
 
+		for _, s := range secrets {
+			if strings.HasPrefix(s.EnvKey, lenses.ConnectWorkerSecretPrefix) {
+				connectVars = append(connectVars, fmt.Sprintf("%s=%s", s.Key, s.Value))
+			}
+		}
+
 		if err := writePropsFile(workerFile, connectVars); err != nil {
 			return err
 		}
 	}
 
 	// format secrets
-	for key, secret := range secrets {
-		record := fmt.Sprintf("%s=%s", key, secret)
-		secretData = append(secretData, record)
+	for _, s := range secrets {
+		// not connect worker secrets
+		if strings.HasPrefix(s.EnvKey, lenses.SecretPreFix) {
+			record := fmt.Sprintf("%s=%s", s.Key, s.Value)
+			secretData = append(secretData, record)
+		}
 	}
 
 	if len(secretData) > 0 {
@@ -337,6 +346,12 @@ For Environment Variables, e.g. Kubernetes secrets mounted as environment vars
 Variables can alternatively be loaded from a file using the from-file flag.
 The file contents should be in key value in the same format as the 
 environment variables
+
+Connect worker secrets can be set with the prefix WORKER_CONNECT_SECRET_
+
+.e.g.
+
+		export WORKER_CONNECT_SECRET_SSL_TRUSTORE_LOCATION=/secret/data/connect/workers
 `,
 		Example: `	
 secrets connect vault --vault-role lenses --vault-token XYZ	--vault-addr http://127.0.0.1:8200
@@ -459,9 +474,10 @@ secrets app azure --vault-name lenses --client-id xxxx --client-secret xxxx --te
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			azureConfig := lenses.AzureConfiguration{
-				TenantID:     os.Getenv("AZURE_TENANT_ID"),
-				ClientID:     os.Getenv("AZURE_CLIENT_ID"),
-				ClientSecret: os.Getenv("AZURE_CLIENT_SECRET"),
+				TenantID:     os.Getenv(lenses.EnvAzureClientTenantID),
+				ClientID:     os.Getenv(lenses.EnvAzureClientID),
+				ClientSecret: os.Getenv(lenses.EnvAzureClientSecret),
+				KeyVaultName: os.Getenv(lenses.EnvAzureKeyVaultName),
 			}
 
 			if azureConfig.ClientID == "" {
@@ -488,11 +504,11 @@ secrets app azure --vault-name lenses --client-id xxxx --client-secret xxxx --te
 				azureConfig.TenantID = tenantID
 			}
 
-			if envKeyVaultName := os.Getenv(lenses.EnvAzureKeyVaultName); envKeyVaultName != "" {
-				vaultName = envKeyVaultName
-			} else if vaultName == "" {
-				golog.Error(`Required flag "vault-name" not set and no AZURE_KEY_VAULT environment variable found`)
-				os.Exit(1)
+			if azureConfig.KeyVaultName == "" {
+				if vaultName == "" {
+					golog.Error(`Required flag "vault-name" not set and no AZURE_KEY_VAULT environment variable found`)
+					os.Exit(1)
+				}
 			}
 
 			// set the dns to the default if not provided
@@ -576,4 +592,3 @@ secrets connect env
 
 	return cmd
 }
-
