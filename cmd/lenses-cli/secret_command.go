@@ -29,8 +29,7 @@ func getVars(prefix string) []string {
 
 			if len(split) == 2 {
 				name := strings.ToLower(strings.Replace(strings.Replace(split[0], prefix, "", 1), "_", ".", -1))
-				value := strings.Replace(strings.Replace(split[1], prefix, "", 1), "_", ".", -1)
-				vars = append(vars, fmt.Sprintf("%s=%s", name, value))
+				vars = append(vars, fmt.Sprintf("%s=%s", name, split[1]))
 			}
 		}
 	}
