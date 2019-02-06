@@ -226,7 +226,7 @@ func VaultConnectExternalHandler(role, token, endpoint, file string) ([]Secret, 
 		split := strings.Split(v, "=")
 		path := split[1]
 		envKey := split[0]
-		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", -1), SecretPreFix, "", -1)
+		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", 1), SecretPreFix, "", 1)
 		keyForVault := strings.ToLower(strings.Replace(key, "_", "-", -1))
 		keyAsProp := strings.ToLower(strings.Replace(key, "_", ".", -1))
 
@@ -315,7 +315,7 @@ func AzureKeyVaultHandler(vaultURL, file string, config AzureConfiguration) ([]S
 	for _, v := range secretVars {
 		split := strings.Split(v, "=")
 		envKey := split[0]
-		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", -1), SecretPreFix, "", -1)
+		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", 1), SecretPreFix, "", 1)
 
 		keyForAz := strings.ToLower(strings.Replace(key, "_", "-", -1))
 		keyAsProp := strings.ToLower(strings.Replace(key, "_", ".", -1))
@@ -388,7 +388,7 @@ func EnvSecretHandler(file string) ([]Secret, error) {
 	for _, v := range secretVars {
 		split := strings.Split(v, "=")
 		envKey := split[0]
-		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", -1), SecretPreFix, "", -1)
+		key := strings.Replace(strings.Replace(envKey, ConnectWorkerSecretPrefix, "", 1), SecretPreFix, "", 1)
 		value := split[1]
 		keyAsProp := strings.ToLower(strings.Replace(key, "_", ".", -1))
 		secrets = append(secrets, Secret{EnvKey: envKey, Key: keyAsProp, Value: value})
