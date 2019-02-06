@@ -28,8 +28,8 @@ func getVars(prefix string) []string {
 			split := strings.Split(v, "=")
 
 			if len(split) == 2 {
-				name := strings.ToLower(strings.Replace(strings.Replace(split[0], prefix, "", -1), "_", ".", -1))
-				value := strings.Replace(strings.Replace(split[1], prefix, "", -1), "_", ".", -1)
+				name := strings.ToLower(strings.Replace(strings.Replace(split[0], prefix, "", 1), "_", ".", -1))
+				value := strings.Replace(strings.Replace(split[1], prefix, "", 1), "_", ".", -1)
 				vars = append(vars, fmt.Sprintf("%s=%s", name, value))
 			}
 		}
@@ -142,7 +142,7 @@ func retrieve(fromFile, prefix string) ([]string, error) {
 
 		for _, l := range lines {
 			if strings.HasPrefix(l, prefix) {
-				vars = append(vars, strings.Replace(strings.Replace(l, prefix, "", -1), "_", ".", -1))
+				vars = append(vars, strings.Replace(strings.Replace(l, prefix, "", 1), "_", ".", -1))
 			}
 		}
 	} else {
