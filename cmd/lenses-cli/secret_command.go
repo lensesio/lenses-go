@@ -142,7 +142,7 @@ func retrieve(fromFile, prefix string) ([]string, error) {
 
 		for _, l := range lines {
 			if strings.HasPrefix(l, prefix) {
-				vars = append(vars, strings.Replace(strings.Replace(l, prefix, "", -1), "_", ".", -1))
+				vars = append(vars, strings.Replace(strings.Replace(l, prefix, "", 1), "_", ".", -1))
 			}
 		}
 	} else {
