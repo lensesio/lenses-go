@@ -25,7 +25,7 @@ func getVars(prefix string) []string {
 	for _, v := range os.Environ() {
 		if strings.HasPrefix(v, prefix) {
 			golog.Infof("Found environment var [%s]", v)
-			split := strings.Split(v, "=")
+			split := strings.SplitN(v, "=", 2)
 
 			if len(split) == 2 {
 				name := strings.ToLower(strings.Replace(strings.Replace(split[0], prefix, "", 1), "_", ".", -1))
