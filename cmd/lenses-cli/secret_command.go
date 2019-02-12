@@ -29,8 +29,7 @@ func getVars(prefix string) []string {
 
 			if len(split) == 2 {
 				name := strings.ToLower(strings.Replace(strings.Replace(split[0], prefix, "", 1), "_", ".", -1))
-				value := strings.Replace(strings.Replace(split[1], prefix, "", 1), "_", ".", -1)
-				vars = append(vars, fmt.Sprintf("%s=%s", name, value))
+				vars = append(vars, fmt.Sprintf("%s=%s", name, split[1]))
 			}
 		}
 	}
@@ -276,8 +275,8 @@ value. For example a secret in Vault:
 
 vault kv put secret/cassandra cassandra-password=secret cassandra-user=lenses
 
-export SECRET_CASSANDRA_PASSWORD=/secret/data/cassandra/con1
-export SECRET_CASSANDRA_USER=/secret/data/cassandra/con1
+export SECRET_CASSANDRA_PASSWORD=/secret/data/cassandra
+export SECRET_CASSANDRA_USER=/secret/data/cassandra
 
 Variables can alternatively be loaded from a file using the from-file flag.
 The file contents should be in key value in the same format as the 
@@ -327,8 +326,8 @@ value. For example a secret in Vault:
 
 vault kv put secret/connectors/cassandra connect-cassandra-password=secret connect-cassandra-user=lenses
 
-export SECRET_CONNECT_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/con1
-export SECRET_CONNECT_CASSANDRA_USER=/secret/data/connectors/cassandra/con1
+export SECRET_CONNECT_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra
+export SECRET_CONNECT_CASSANDRA_USER=/secret/data/connectors/cassandra
 
 In secret file:
 	connect.cassandra.password=secret
@@ -389,8 +388,8 @@ value. For example a secret in Vault:
 
 vault kv put secret/connectors/cassandra connect-cassandra-password=secret connect-cassandra-user=lenses
 
-export SECRET_CONNECT_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/con1
-export SECRET_CONNECT_CASSANDRA_USER=/secret/data/connectors/cassandra/con1
+export SECRET_CONNECT_CASSANDRA_PASSWORD=/secret/data/connectors/cassandra/
+export SECRET_CONNECT_CASSANDRA_USER=/secret/data/connectors/cassandra/
 
 In secret file:
 	connect.cassandra.password=secret
