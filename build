@@ -8,7 +8,12 @@ input="./cmd/lenses-cli"
 export CGO_ENABLED=0
 
 if [[ -z $1 ]]; then
-    echo "No argument provided. Pass all|windows|linux|darwin"
+    echo "No os type provided. Pass all|windows|linux|darwin and the version to build"
+    exit 1
+fi
+
+if [[ -z $2 ]]; then
+    echo "No version provided. Pass all|windows|linux|darwin and the version to build"
     exit 1
 fi
 
@@ -21,14 +26,14 @@ if [[ $1 == "all" || $1 == "windows" ]]; then
     export GOARCH=amd64
     go get
     go get ./cmd/lenses-cli
-    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s)" -o $output/$executable-windows-amd64.exe $input
+    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s) -X main.buildVersion=$2" -o $output/$executable-windows-amd64.exe $input
     # windows-x86
 
     export GOOS=windows
     export GOARCH=386
     go get
     go get ./cmd/lenses-cli
-    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s)" -o $output/$executable-windows-386.exe $input
+    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s) -X main.buildVersion=$2" -o $output/$executable-windows-386.exe $input
 fi
 
 if [[ $1 == "all" || $1 == "linux" ]]; then
@@ -39,25 +44,25 @@ if [[ $1 == "all" || $1 == "linux" ]]; then
     export GOARCH=amd64
     go get
     go get ./cmd/lenses-cli
-    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s)" -o $output/$executable-linux-amd64 $input
+    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s) -X main.buildVersion=$2" -o $output/$executable-linux-amd64 $input
     # linux-x86
     export GOOS=linux
     export GOARCH=386
     go get
     go get ./cmd/lenses-cli
-    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s)" -o $output/$executable-linux-386 $input
+    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s) -X main.buildVersion=$2" -o $output/$executable-linux-386 $input
     # linux-arm64
     export GOOS=linux
     export GOARCH=arm64
     go get
     go get ./cmd/lenses-cli
-    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s)" -o $output/$executable-linux-arm64 $input
+    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s) -X main.buildVersion=$2" -o $output/$executable-linux-arm64 $input
     # linux-arm
     export GOOS=linux
     export GOARCH=arm
     go get
     go get ./cmd/lenses-cli
-    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s)" -o $output/$executable-linux-arm $input
+    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s) -X main.buildVersion=$2" -o $output/$executable-linux-arm $input
 fi
 
 if [[ $1 == "all" || $1 == "darwin" ]]; then
@@ -68,5 +73,5 @@ if [[ $1 == "all" || $1 == "darwin" ]]; then
     export GOARCH=amd64
     go get
     go get ./cmd/lenses-cli
-    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s)" -o $output/$executable-darwin-amd64 $input
+    go build -ldflags="-s -w -X main.buildRevision=$(git rev-parse HEAD) -X main.buildTime=$(date +%s) -X main.buildVersion=$2" -o $output/$executable-darwin-amd64 $input
 fi    

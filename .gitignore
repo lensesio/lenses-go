@@ -3,3 +3,6 @@
 .idea/
 .vscode/
 /demo
+connector.props
+secrets.props
+worker.props

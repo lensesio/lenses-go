@@ -13,7 +13,7 @@ jobs:
       on:
         tags: false
       provider: script
-      script: bash ./build linux && docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
+      script: bash ./build linux ${TRAVIS_COMMIT} && docker build -t landoop/lenses-cli:${TRAVIS_COMMIT} .
   - stage: Publish docker
     branches:
       only:
@@ -22,7 +22,7 @@ jobs:
       on:
         tags: true
       provider: script
-      script: bash ./build linux && ./publish-docker ${TRAVIS_TAG}
+      script: bash ./build linux ${TRAVIS_TAG} && ./publish-docker ${TRAVIS_TAG}
   - stage: GitHub Release
     branches:
       only:

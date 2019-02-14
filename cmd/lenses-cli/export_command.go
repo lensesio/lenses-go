@@ -833,8 +833,6 @@ export policies --dir my-dir --resource-name my-policy`,
 		TraverseChildren: true,
 	}
 
-	cmd.PersistentFlags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
-	cmd.PersistentFlags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	cmd.MarkPersistentFlagRequired("dir")
 	cmd.AddCommand(exportAclsCommand())
 	cmd.AddCommand(exportAlertsCommand())
@@ -868,6 +866,8 @@ func exportProcessorsCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
+	cmd.Flags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	cmd.Flags().StringVar(&name, "resource-name", "", "The processor name to export")
 	cmd.Flags().StringVar(&cluster, "cluster-name", "", "Select by cluster name, available only in CONNECT and KUBERNETES mode")
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Select by namespace, available only in KUBERNETES mode")
@@ -897,6 +897,8 @@ func exportTopicsCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
+	cmd.Flags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	cmd.Flags().StringVar(&name, "resource-name", "", "The topic name to export")
 	cmd.Flags().StringVar(&topicExclusions, "exclude", "", "Topics to exclude")
 	cmd.Flags().StringVar(&prefix, "prefix", "", "Topics with the prefix only")
@@ -923,6 +925,8 @@ func exportAlertsCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
+	cmd.Flags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
 	return cmd
@@ -947,6 +951,8 @@ func exportAclsCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
+	cmd.Flags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
 	return cmd
@@ -971,6 +977,8 @@ func exportQuotasCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
+	cmd.Flags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	return cmd
@@ -982,7 +990,7 @@ func exportConnectorsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "connectors",
 		Short:            "export connectors",
-		Example:          `export connectors --resource-name my-connector --cluster-name`,
+		Example:          `export connectors --resource-name my-connector --cluster-name cluster1`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -996,6 +1004,8 @@ func exportConnectorsCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
+	cmd.Flags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	cmd.Flags().StringVar(&name, "resource-name", "", "The resource name to export")
 	cmd.Flags().StringVar(&cluster, "cluster-name", "", "Select by cluster name, available only in CONNECT and KUBERNETES mode")
 	cmd.Flags().StringVar(&prefix, "prefix", "", "Connector with the prefix in the name only")
@@ -1024,6 +1034,8 @@ func exportPoliciesCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
+	cmd.Flags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	cmd.Flags().StringVar(&name, "resource-name", "", "The resource name to export")
 	cmd.Flags().StringVar(&ID, "id", "", "The policy id to extract")
 	bite.CanPrintJSON(cmd)
@@ -1065,6 +1077,8 @@ func exportSchemasCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&landscapeDir, "dir", ".", "Base directory to export to")
+	cmd.Flags().BoolVar(&dependents, "dependents", false, "Extract dependencies, topics, acls, quotas, alerts")
 	cmd.Flags().StringVar(&name, "resource-name", "", "The schema to export. Both the key schema and value schema are exported")
 	cmd.Flags().StringVar(&version, "version", "0", "The schema version to export.")
 	cmd.Flags().StringVar(&prefix, "prefix", "", "Schemas with the prefix only")

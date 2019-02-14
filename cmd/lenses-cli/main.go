@@ -22,6 +22,7 @@ var (
 	// Note that this buildTime is not int64, it's type of string and it is provided at build time.
 	// Do not change!
 	buildTime = ""
+	buildVersion = ""
 )
 
 const (
@@ -41,7 +42,7 @@ var (
 	app = &bite.Application{
 		Name:        "lenses-cli",
 		Description: "Lenses-cli is the command line client for the Lenses REST API.",
-		Version:     lenses.Version,
+		Version:     "blop",
 		//PersistentFlags: setupConfigManager,
 		ShowSpinner: false,
 		Setup:       setup,
@@ -127,8 +128,10 @@ func main() {
 
 	if buildRevision != "" {
 		app.HelpTemplate = bite.HelpTemplate{
+			Name:				  "lenses-cli",
 			BuildRevision:        buildRevision,
 			BuildTime:            buildTime,
+			BuildVersion: 		  buildVersion,
 			ShowGoRuntimeVersion: true,
 		}
 	}
