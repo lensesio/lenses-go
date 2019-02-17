@@ -507,7 +507,7 @@ func newConnectorPauseCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
@@ -537,7 +537,7 @@ func newConnectorResumeCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clusterName", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
@@ -717,7 +717,7 @@ func newConnectorDeleteCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "clustername", "", `Connect cluster name`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Connect cluster name`)
 	cmd.Flags().StringVar(&name, "name", "", `Connector name`)
 	bite.CanBeSilent(cmd)
 
