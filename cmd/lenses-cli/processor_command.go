@@ -37,11 +37,6 @@ func newGetProcessorsCommand() *cobra.Command {
 				return err
 			}
 
-			if mode == lenses.ExecutionModeInProcess {
-				clusterName = "IN_PROC"
-				namespace = "lenses"
-			}
-
 			sort.Slice(result.Streams, func(i, j int) bool {
 				return result.Streams[i].Name < result.Streams[j].Name
 			})
@@ -49,22 +44,21 @@ func newGetProcessorsCommand() *cobra.Command {
 			var final []lenses.ProcessorStream
 
 			for _, processor := range result.Streams {
+				if mode == lenses.ExecutionModeConnect || mode == lenses.ExecutionModeKubernetes {
+					if name != "" && processor.Name != name {
+						continue
+					}
+				}
+
+				if mode == lenses.ExecutionModeKubernetes {
+					if namespace != "" && processor.Namespace != namespace {
+						continue
+					}
+				}
 
 				if clusterName != "" && clusterName != processor.ClusterName {
 					continue
 				}
-
-				if namespace != "" && namespace != processor.Namespace {
-					continue
-				}
-
-				if name != "" && name != processor.Name {
-					continue
-				}
-
-				//processor.SQL = strings.Replace(processor.SQL, "\n", "", -1)
-				//processor.SQL = strings.Replace(processor.SQL, "   ", "", -1)
-
 				final = append(final, processor)
 			}
 
