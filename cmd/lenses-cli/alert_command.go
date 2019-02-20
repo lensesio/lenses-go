@@ -249,7 +249,7 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
 		Short:            "Create or Update an alert setting's condition or load from file",
-		Example:          `alert setting condition set --alert=1001 --condition="lag >= 100000or alert setting condition set ./alert_cond.yml`,
+		Example:          `alert setting condition set --alert=1001 --condition="lag >= 100000 or alert setting condition set ./alert_cond.yml`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {

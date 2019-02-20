@@ -226,7 +226,7 @@ func newDeletePolicyCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Policy [%s] deleted", id)
+			return bite.PrintInfo(cmd, "Policy [%s] deleted if it exists.", id)
 		},
 	}
 
