@@ -473,7 +473,7 @@ func newDeleteSchemaVersionCommand() *cobra.Command {
 			})
 
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to delete the schema with version [%s], schema [%s] does not exist", versionStringOrInt, name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "Unable to delete schema with version [%s]. Either schema [%s] or version [%s] does not exist.", versionStringOrInt, name, versionStringOrInt)
 				return err
 			}
 
