@@ -509,7 +509,7 @@ func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "compatibility [?set [compatibility]]",
 		Short:            "Print or change the compatibility level of a schema",
-		Example:          `schema --name="name" compatibility or compatibility set FULL`,
+		Example:          `schema compatibility --name="name" or schema compatibility set FULL --name="name"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -519,7 +519,7 @@ func newSchemaCompatibilityLevelGroupCommand() *cobra.Command {
 
 			lv, err := client.GetSubjectCompatibilityLevel(name)
 			if err != nil {
-				bite.FriendlyError(cmd, errResourceNotFoundMessage, "unable to retrieve the compatibility level, subject [%s] does not exist", name)
+				bite.FriendlyError(cmd, errResourceNotFoundMessage, "Unable to retrieve the compatibility level, subject [%s] either does not exist or no compatibility has been set", name)
 				return err
 			}
 
