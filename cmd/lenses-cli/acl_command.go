@@ -111,7 +111,7 @@ func newDeleteACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags func() bi
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete an Access Control List",
-		Example:          `acl delete ./acl_to_be_deleted.json or .yml or acl delete --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permission-type="Allow" --acl-host="*" --operation="Read"`,
+		Example:          `acl delete ./acl_to_be_deleted.json or .yml or acl delete --resource-type="Topic" --resource-name="transactions" --principal="principalType:principalName" --permission-type="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
 		RunE: bite.Join(
 			bite.FileBind(&acl),
@@ -122,7 +122,7 @@ func newDeleteACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags func() bi
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "ACL deleted")
+				return bite.PrintInfo(cmd, "ACL deleted if it exists")
 			}),
 	}
 
