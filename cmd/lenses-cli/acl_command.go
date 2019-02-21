@@ -64,7 +64,7 @@ func newACLGroupCommand() *cobra.Command {
 	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resource-type", "The resource type: Topic, Cluster, Group or TRANSACTIONALID")
 	childrenFlagSet.StringVar(&acl.ResourceName, "resource-name", "", "The name of the resource")
 	childrenFlagSet.StringVar(&acl.Principal, "principal", "", "The name of the principal")
-	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "PermissionType", "Allow or Deny")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "permission-type", "Allow or Deny")
 	childrenFlagSet.StringVar(&acl.Host, "acl-host", "", "The acl host, can be empty to apply to all")
 	childrenFlagSet.Var(bite.NewFlagVar(&acl.Operation), "operation", "The allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
 
@@ -78,7 +78,7 @@ func newCreateOrUpdateACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags f
 		Use:              "set",
 		Aliases:          []string{"create", "update"}, // acl create or acl update or acl set.
 		Short:            "Sets, create or update Access Control Lists",
-		Example:          `acl set --resource-type="Topic" --resource-name="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`,
+		Example:          `acl set --resource-type="Topic" --resource-name="transactions" --principal="principalType:principalName" --permission-type="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
 		RunE: bite.Join(
 			bite.FileBind(&acls),
@@ -111,7 +111,7 @@ func newDeleteACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags func() bi
 	cmd := &cobra.Command{
 		Use:              "delete",
 		Short:            "Delete an Access Control List",
-		Example:          `acl delete ./acl_to_be_deleted.json or .yml or acl delete --resourceType="Topic" --resourceName="transactions" --principal="principalType:principalName" --permissionType="Allow" --acl-host="*" --operation="Read"`,
+		Example:          `acl delete ./acl_to_be_deleted.json or .yml or acl delete --resource-type="Topic" --resource-name="transactions" --principal="principalType:principalName" --permission-type="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
 		RunE: bite.Join(
 			bite.FileBind(&acl),
@@ -122,7 +122,7 @@ func newDeleteACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags func() bi
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "ACL deleted")
+				return bite.PrintInfo(cmd, "ACL deleted if it exists")
 			}),
 	}
 
