@@ -27,7 +27,7 @@ jobs:
     branches:
       only:
         - master  
-    before_deploy: ./build all;cd bin; for i in *; do tar -czf $i.tar.gz $i; done; ls -1; cd ../;
+    before_deploy: ./build all ${TRAVIS_TAG};cd bin; for i in *; do tar -czf $i.tar.gz $i; done; ls -1; cd ../;
     deploy:   
       on:
         tags: true
