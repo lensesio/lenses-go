@@ -261,7 +261,7 @@ func newSchemaGroupCommand() *cobra.Command {
 
 			// it's not empty, always, so it's called latest.
 			if versionStringOrInt != "" {
-				golog.Errorf("Failed to retrieve schema [%s], version [%s]", name, versionStringOrInt)
+				// golog.Errorf("Failed to retrieve schema [%s], version [%s]", name, versionStringOrInt)
 				return getSchemaByVersion(cmd, name, versionStringOrInt)
 			}
 
