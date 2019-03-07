@@ -62,14 +62,14 @@ func newACLGroupCommand() *cobra.Command {
 
 	childrenFlagSet := pflag.NewFlagSet("acl", pflag.ExitOnError)
 	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resource-type", "The resource type: Topic, Cluster, Group or TRANSACTIONALID")
-	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resourceType", "The resource type: Topic, Cluster, Group or TRANSACTIONALID --- Depracated ---")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.ResourceType), "resourceType", "The resource type: Topic, Cluster, Group or TRANSACTIONALID --- Deprecated ---")
 	childrenFlagSet.StringVar(&acl.ResourceName, "resource-name", "", "The name of the resource")
-	childrenFlagSet.StringVar(&acl.ResourceName, "resourceName", "", "The name of the resource --- Depracated ---")
+	childrenFlagSet.StringVar(&acl.ResourceName, "resourceName", "", "The name of the resource --- Deprecated ---")
 	childrenFlagSet.StringVar(&acl.Principal, "principal", "", "The name of the principal")
 	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "permission-type", "Allow or Deny")
-	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "permissionType", "Allow or Deny --- Depracated ---")
+	childrenFlagSet.Var(bite.NewFlagVar(&acl.PermissionType), "permissionType", "Allow or Deny --- Deprecated ---")
 	childrenFlagSet.StringVar(&acl.Host, "acl-host", "", "The acl host, can be empty to apply to all")
-	childrenFlagSet.StringVar(&acl.Host, "aclHost", "", "The acl host, can be empty to apply to all --- Depracated ---")
+	childrenFlagSet.StringVar(&acl.Host, "aclHost", "", "The acl host, can be empty to apply to all --- Deprecated ---")
 	childrenFlagSet.Var(bite.NewFlagVar(&acl.Operation), "operation", "The allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
 
 	root.AddCommand(newCreateOrUpdateACLCommand(childrenFlagSet, childrenRequiredFlags))
