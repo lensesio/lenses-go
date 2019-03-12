@@ -24,7 +24,7 @@ Lenses offers a powerful CLI (command-line tool) built in Go that utilizes the R
 
 ### Documentation
 
-Please navigate to <https://lenses.stream/dev/lenses-cli/> to learn how to install and use the `lenses-cli`.
+Please navigate to <https://docs.lenses.io/dev/lenses-cli/> to learn how to install and use the `lenses-cli`.
 
 ## Client
 
