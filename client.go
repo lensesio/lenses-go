@@ -513,10 +513,10 @@ const (
 type BoxConfig struct {
 	ConnectClusters []BoxConnectClusterConfigProperty `json:"lenses.connect.clusters"`
 
-	Version string `json:"lenses.version" header:"Version"`
-	IP      string `json:"lenses.ip" header:"IP"`
-	Port    int    `json:"lenses.port" header:"Port,text"`
-	JMXPort int    `json:"lenses.jmx.port,omitempty" header:"JMX Port,text"`
+	Version string      `json:"lenses.version" header:"Version"`
+	IP      string      `json:"lenses.ip" header:"IP"`
+	Port    int         `json:"lenses.port" header:"Port,text"`
+	JMXPort json.Number `json:"lenses.jmx.port,omitempty" header:"JMX Port,text"`
 
 	KafkaBrokers string `json:"lenses.kafka.brokers"`
 
