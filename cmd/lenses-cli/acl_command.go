@@ -72,8 +72,13 @@ func newACLGroupCommand() *cobra.Command {
 	childrenFlagSet.StringVar(&acl.Host, "aclHost", "", "The acl host, can be empty to apply to all --- Deprecated ---")
 	childrenFlagSet.Var(bite.NewFlagVar(&acl.Operation), "operation", "The allowed operation: All, Read, Write, Describe, Create, Delete, DescribeConfigs, AlterConfigs, ClusterAction, IdempotentWrite or Alter")
 
-	root.AddCommand(newCreateOrUpdateACLCommand(childrenFlagSet, childrenRequiredFlags))
+	createCommand := newCreateOrUpdateACLCommand(childrenFlagSet, childrenRequiredFlags)
+	bite.CanBeSilent(createCommand)
+	bite.Prepend(createCommand, bite.FileBind(&acls))
+
+	root.AddCommand(createCommand)
 	root.AddCommand(newDeleteACLCommand(childrenFlagSet, childrenRequiredFlags))
+
 	return root
 }
 
@@ -85,29 +90,26 @@ func newCreateOrUpdateACLCommand(childrenFlagSet *pflag.FlagSet, requiredFlags f
 		Example:          `acl set --resource-type="Topic" --resource-name="transactions" --principal="principalType:principalName" --permission-type="Allow" --acl-host="*" --operation="Read"`,
 		TraverseChildren: true,
 		RunE: bite.Join(
-			bite.FileBind(&acls),
-			bite.RequireFlags(requiredFlags),
 			func(cmd *cobra.Command, args []string) error {
-
 				if len(acls) > 0 {
 					for _, acl := range acls {
 						if err := client.CreateOrUpdateACL(acl); err != nil {
 							golog.Errorf("Failed to create acl. [%s]", err.Error())
 							return err
 						}
-						bite.PrintInfo(cmd, "ACL created")
 					}
-					return bite.PrintInfo(cmd, "ACL created")
+					return bite.PrintInfo(cmd, "ACLs created")
 				}
-
+				if err := bite.CheckRequiredFlags(cmd, requiredFlags()); err != nil {
+					return err
+				}
+				if err := client.CreateOrUpdateACL(acl); err != nil {
+					return err
+				}
 				return bite.PrintInfo(cmd, "ACL created")
-
 			}),
 	}
-
 	cmd.Flags().AddFlagSet(childrenFlagSet)
-
-	bite.CanBeSilent(cmd)
 	return cmd
 }
 
