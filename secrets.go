@@ -220,6 +220,10 @@ func VaultConnectExternalHandler(role, token, endpoint, file string) ([]Secret, 
 	// login as appRole
 	vaultAppRoleLogin(client, ids)
 
+	server := endpoint
+	if endpoint == "" {
+		server = os.Getenv(vaultapi.EnvVaultAddress)
+	}
 	logical := client.Logical()
 
 	for _, v := range secretVars {
@@ -230,7 +234,7 @@ func VaultConnectExternalHandler(role, token, endpoint, file string) ([]Secret, 
 		keyForVault := strings.ToLower(strings.Replace(key, "_", "-", -1))
 		keyAsProp := strings.ToLower(strings.Replace(key, "_", ".", -1))
 
-		golog.Infof(fmt.Sprintf("Retrieving secret from server [%s]. EnvVar: [%s], Path: [%s], Key: [%s]", endpoint, v, path, keyForVault))
+		golog.Infof(fmt.Sprintf("Retrieving secret from server [%s]. EnvVar: [%s], Path: [%s], Key: [%s]", server, v, path, keyForVault))
 		secret, err := logical.Read(fmt.Sprintf("%s", path))
 
 		if err != nil {
