@@ -135,7 +135,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 							return err
 						}
 
-						return bite.PrintInfo(cmd, "Quota for user [%s] deleted for all clients", user)
+						return bite.PrintInfo(cmd, "Quota for user [%s] deleted for all clients, if it exists", user)
 					}
 
 					if err := client.DeleteQuotaForUserClient(user, clientID, args...); err != nil {
@@ -143,7 +143,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 						return err
 					}
 
-					return bite.PrintInfo(cmd, "Quota for user [%s] deleted for client [%s]", user, clientID)
+					return bite.PrintInfo(cmd, "Quota for user [%s] deleted for client [%s], if it exists", user, clientID)
 				}
 
 				if err := client.DeleteQuotaForUser(user, args...); err != nil {
@@ -151,7 +151,7 @@ func newQuotaUsersSubGroupCommand() *cobra.Command {
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "Quota for user [%s] [%sd]", user, actionMsg)
+				return bite.PrintInfo(cmd, "Quota for user [%s] [%sd], if it exists", user, actionMsg)
 			}
 
 			if err := client.DeleteQuotaForAllUsers(args...); err != nil {
@@ -251,7 +251,7 @@ func newQuotaClientsSubGroupCommand() *cobra.Command {
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "Quota for client [%s] [%sd]", id, actionMsg)
+				return bite.PrintInfo(cmd, "Quota for client [%s] [%sd], if it exists", id, actionMsg)
 			}
 
 			if err := client.DeleteQuotaForAllClients(args...); err != nil {
@@ -278,7 +278,7 @@ func CreateQuotaForClients(cmd *cobra.Command, quota lenses.CreateQuotaPayload) 
 			return err
 		}
 
-		return bite.PrintInfo(cmd, "Quota for client [%s] created/updated", quota.ClientID)
+		return bite.PrintInfo(cmd, "Quota for client [%s] created/updated, if it exists", quota.ClientID)
 	}
 
 	err := client.CreateOrUpdateQuotaForAllClients(quota.Config)
@@ -294,7 +294,7 @@ func CreateQuotaForUsers(cmd *cobra.Command, quota lenses.CreateQuotaPayload) er
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "Quota for user [%s] and all clients created/updated", quota.User)
+				return bite.PrintInfo(cmd, "Quota for user [%s] and all clients created/updated, if it exists", quota.User)
 
 			}
 
@@ -302,14 +302,14 @@ func CreateQuotaForUsers(cmd *cobra.Command, quota lenses.CreateQuotaPayload) er
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Quota for user [%s] and client [%s] created/updated", quota.User, clientID)
+			return bite.PrintInfo(cmd, "Quota for user [%s] and client [%s] created/updated, if it exists", quota.User, clientID)
 		}
 
 		if err := client.CreateOrUpdateQuotaForUser(quota.User, quota.Config); err != nil {
 			return err
 		}
 
-		return bite.PrintInfo(cmd, "Quota for user [%s] created/updated", quota.User)
+		return bite.PrintInfo(cmd, "Quota for user [%s] created/updated, if it exists", quota.User)
 	}
 
 	err := client.CreateOrUpdateQuotaForAllUsers(quota.Config)
