@@ -129,7 +129,7 @@ func newCreatePolicyCommand() *cobra.Command {
 				"category":  policy.Category,
 				"redaction": policy.Obfuscation,
 				"impact":    policy.ImpactType,
-				"fields":    fields,
+				"fields":    policy.Fields,
 			}
 
 			if err := bite.CheckRequiredFlags(cmd, flags); err != nil {
