@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -3317,9 +3318,10 @@ func (c *Client) GetAlertSetting(id int) (setting AlertSetting, err error) {
 }
 
 // EnableAlertSetting enables a specific alert setting based on its "id".
-func (c *Client) EnableAlertSetting(id int) error {
+func (c *Client) EnableAlertSetting(id int, enable bool) error {
 	path := fmt.Sprintf(alertSettingPath, id)
-	resp, err := c.Do(http.MethodPut, path, "", nil)
+	payload := strconv.FormatBool(enable)
+	resp, err := c.Do(http.MethodPut, path, "", []byte(payload))
 	if err != nil {
 		return err
 	}

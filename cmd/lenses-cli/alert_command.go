@@ -152,7 +152,7 @@ func newAlertSettingGroupCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if mustEnable {
-				if err := client.EnableAlertSetting(id); err != nil {
+				if err := client.EnableAlertSetting(id, mustEnable); err != nil {
 					return err
 				}
 
