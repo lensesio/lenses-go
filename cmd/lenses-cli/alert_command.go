@@ -286,6 +286,7 @@ func newCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 
 	bite.CanBeSilent(cmd)
 
+	bite.Prepend(cmd, bite.FileBind(&cond))
 	bite.Prepend(cmd, bite.FileBind(&conds))
 
 	return cmd
