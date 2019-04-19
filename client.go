@@ -512,7 +512,7 @@ const (
 //
 // Note that this structure contains only the properties that are exposed via the API's response data.
 type BoxConfig struct {
-	ConnectClusters []BoxConnectClusterConfigProperty `json:"lenses.connect.clusters"`
+	ConnectClusters []BoxConnectClusterConfigProperty `json:"lenses.kafka.connect.clusters"`
 
 	Version string      `json:"lenses.version" header:"Version"`
 	IP      string      `json:"lenses.ip" header:"IP"`
@@ -522,8 +522,8 @@ type BoxConfig struct {
 	KafkaBrokers string `json:"lenses.kafka.brokers"`
 
 	KubernetesConfigFile     string `json:"lenses.kubernetes.config.file,omitempty"`
-	KubernetesImageName      string `json:"lenses.kubernetes.image.name,omitempty" header:"K8 Image"`
-	KubernetesImageTag       string `json:"lenses.kubernetes.image.tag,omitempty" header:"K8 Tag"`
+	KubernetesImageName      string `json:"lenses.kubernetes.processor.image.name,omitempty" header:"K8 Image"`
+	KubernetesImageTag       string `json:"lenses.kubernetes.processor.image.tag,omitempty" header:"K8 Tag"`
 	KubernetesServiceAccount string `json:"lenses.kubernetes.service.account,omitempty" header:"K8 Service Acc"`
 
 	LicenseFile        string                 `json:"lenses.license.file"`
@@ -677,7 +677,7 @@ type ConnectCluster struct {
 	Offsets  string `json:"offsets" header:"Offsets,count"`
 }
 
-const connectClustersKey = "lenses.connect.clusters"
+const connectClustersKey = "lenses.kafka.connect.clusters"
 
 // GetConnectClusters returns the `lenses.connect.clusters` key from the lenses configuration (`GetConfig`).
 func (c *Client) GetConnectClusters() (clusters []ConnectCluster, err error) {
