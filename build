@@ -6,6 +6,7 @@ input="./cmd/lenses-cli"
 
 # disable CGO
 export CGO_ENABLED=0
+export GO111MODULE=on
 
 if [[ -z $1 ]]; then
     echo "No os type provided. Pass all|windows|linux|darwin and the version to build"
