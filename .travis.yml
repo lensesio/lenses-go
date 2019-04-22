@@ -6,6 +6,8 @@ os:
 go:
 - go1.12
 go_import_path: github.com/landoop/lenses-go
+script:
+  env GO111MODULE=off
 jobs:
   include:
   - stage: Build docker
