@@ -619,7 +619,9 @@ func writeSchemas(cmd *cobra.Command) error {
 			continue
 		}
 
-		return writeSchema(cmd, subject, 0)
+		if err := writeSchema(cmd, subject, 0); err != nil {
+			golog.Error(fmt.Sprintf("Error while exporting schema [%s]", subject))
+		}
 	}
 
 	return nil
