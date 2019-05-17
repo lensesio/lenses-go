@@ -67,7 +67,7 @@ func setup(cmd *cobra.Command, args []string) error {
 	// let the configure command give a tutorial for user in order to create a configuration file.
 	// Note that if clientConfig is valid and we are inside the configure command
 	// then the configure will normally continue and save the valid configuration (that normally came from flags).
-	if name := cmd.Name(); name == "configure" || name == "context" || name == "contexts" || strings.Contains(cmd.CommandPath(), " secrets ") {
+	if name := cmd.Name(); name == "configure" || name == "version" || name == "context" || name == "contexts" || strings.Contains(cmd.CommandPath(), " secrets ") {
 		return nil
 	}
 
@@ -136,7 +136,7 @@ func main() {
 		}
 	}
 
-	if len(os.Args) == 1 || string(os.Args[1]) != "secrets" {
+	if len(os.Args) == 1 || (string(os.Args[1]) != "secrets" && string(os.Args[1]) != "version") {
 		app.PersistentFlags = setupConfigManager
 	} else {
 		configManager = newEmptyConfigManager()
