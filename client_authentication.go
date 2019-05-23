@@ -44,7 +44,7 @@ type BasicAuthentication struct {
 }
 
 var errUnknownPath = func(c *Client, relPath string) error {
-	return fmt.Errorf("the requested URL %s was not found on this server. That’s all we know", c.Config.Host+"/"+relPath)
+	return fmt.Errorf("could not connect to Lenses (URL: %s)", c.Config.Host+"/"+relPath)
 }
 
 // Auth implements the `Authentication` for the `BasicAuthentication`.
