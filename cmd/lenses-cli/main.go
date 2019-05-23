@@ -67,7 +67,8 @@ func setup(cmd *cobra.Command, args []string) error {
 	// let the configure command give a tutorial for user in order to create a configuration file.
 	// Note that if clientConfig is valid and we are inside the configure command
 	// then the configure will normally continue and save the valid configuration (that normally came from flags).
-	if name := cmd.Name(); name == "configure" || name == "version" || name == "context" || name == "contexts" || strings.Contains(cmd.CommandPath(), " secrets ") {
+	topLevelSubCmd := strings.Split(cmd.CommandPath(), " ")[1]
+	if name := topLevelSubCmd; name == "configure" || name == "version" || name == "context" || name == "contexts" || strings.Contains(cmd.CommandPath(), " secrets ") {
 		return nil
 	}
 
@@ -131,7 +132,7 @@ func main() {
 			Name:				  "lenses-cli",
 			BuildRevision:        buildRevision,
 			BuildTime:            buildTime,
-			BuildVersion: 		  buildVersion,
+			BuildVersion:         buildVersion,
 			ShowGoRuntimeVersion: true,
 		}
 	}
