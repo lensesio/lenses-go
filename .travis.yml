@@ -10,6 +10,8 @@ script:
   env GO111MODULE=off
 jobs:
   include:
+  - stage: Tests
+    script: go test -cover ./...
   - stage: Build docker
     deploy: 
       on:
