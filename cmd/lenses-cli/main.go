@@ -7,12 +7,36 @@ import (
 	"strings"
 
 	"github.com/landoop/bite"
-	"github.com/landoop/lenses-go"
+	"github.com/landoop/lenses-go/pkg/acl"
+	"github.com/landoop/lenses-go/pkg/alert"
+	"github.com/landoop/lenses-go/pkg/api"
+	"github.com/landoop/lenses-go/pkg/audit"
+	config "github.com/landoop/lenses-go/pkg/configs"
+	"github.com/landoop/lenses-go/pkg/connector"
+	"github.com/landoop/lenses-go/pkg/export"
+	imports "github.com/landoop/lenses-go/pkg/import"
+	"github.com/landoop/lenses-go/pkg/logs"
+	"github.com/landoop/lenses-go/pkg/policy"
+	"github.com/landoop/lenses-go/pkg/processor"
+	"github.com/landoop/lenses-go/pkg/quota"
+	"github.com/landoop/lenses-go/pkg/schema"
+	"github.com/landoop/lenses-go/pkg/secret"
+	"github.com/landoop/lenses-go/pkg/shell"
+	"github.com/landoop/lenses-go/pkg/sql"
+	"github.com/landoop/lenses-go/pkg/topic"
+	"github.com/landoop/lenses-go/pkg/user"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 var (
+	app = &bite.Application{
+		Name:        "lenses-cli",
+		Description: "Lenses-cli is the command line client for the Lenses REST API.",
+		Version:     "blop",
+		ShowSpinner: false,
+		Setup:       setup,
+	}
+
 	// buildRevision is the build revision (docker commit string or git rev-parse HEAD) but it's
 	// available only on the build state, on the cli executable - via the "--version" flag.
 	buildRevision = ""
@@ -21,48 +45,12 @@ var (
 	//
 	// Note that this buildTime is not int64, it's type of string and it is provided at build time.
 	// Do not change!
-	buildTime = ""
+	buildTime    = ""
 	buildVersion = ""
 )
 
-const (
-	sqlPath        = "apps/sql"
-	connectorsPath = "apps/connectors"
-
-	aclsPath   = "kafka/acls"
-	topicsPath = "kafka/topics"
-	quotasPath = "kafka/quotas"
-
-	schemasPath       = "schemas"
-	alertSettingsPath = "alert-settings"
-	policiesPath      = "policies"
-)
-
-var (
-	app = &bite.Application{
-		Name:        "lenses-cli",
-		Description: "Lenses-cli is the command line client for the Lenses REST API.",
-		Version:     "blop",
-		//PersistentFlags: setupConfigManager,
-		ShowSpinner: false,
-		Setup:       setup,
-	}
-
-	configManager *configurationManager
-	client        *lenses.Client
-)
-
-func setupConfigManager(set *pflag.FlagSet) {
-	configManager = newConfigurationManager(set)
-}
-
-func setupClient() (err error) {
-	client, err = lenses.OpenConnection(*configManager.config.GetCurrent())
-	return
-}
-
 func setup(cmd *cobra.Command, args []string) error {
-	ok, err := configManager.load()
+	ok, err := config.Manager.Load()
 	// if command is "configure" and the configuration is invalid at this point, don't give a failure,
 	// let the configure command give a tutorial for user in order to create a configuration file.
 	// Note that if clientConfig is valid and we are inside the configure command
@@ -73,7 +61,7 @@ func setup(cmd *cobra.Command, args []string) error {
 	}
 
 	// it's not nil, if context does not exist then it would throw an error.
-	currentConfig := configManager.config.GetCurrent()
+	currentConfig := config.Manager.Config.GetCurrent()
 	for !ok {
 		if err != nil {
 			return err
@@ -84,26 +72,26 @@ func setup(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Fprintln(cmd.OutOrStderr(), "cannot retrieve credentials, please configure below")
-		configureCmd := newConfigureCommand("")
+		configureCmd := user.NewConfigureCommand("")
 		// disable any flags passed on the parent command before execute.
 		configureCmd.DisableFlagParsing = true
 		if err = configureCmd.Execute(); err != nil {
 			return err
 		}
 
-		ok, err = configManager.load()
+		ok, err = config.Manager.Load()
 	}
 
 	// if login, remove the token so setupClient will generate a new one and save it to the home dir/lenses-cli.yml.
 	if cmd.Name() == "login" {
 		currentConfig.Token = ""
 
-		if basicAuth, isBasicAuth := currentConfig.Authentication.(lenses.BasicAuthentication); isBasicAuth {
+		if basicAuth, isBasicAuth := currentConfig.Authentication.(api.BasicAuthentication); isBasicAuth {
 			//  and fire any errors if host or user or pass are not there.
 			if currentConfig.Host == "" || basicAuth.Username == "" || basicAuth.Password == "" {
 				// return fmt.Errorf("cannot retrieve credentials, please setup the configuration using the '%s' command first", "configure")
 				//
-				if err := newConfigureCommand("").Execute(); err != nil {
+				if err := user.NewConfigureCommand("").Execute(); err != nil {
 					return err
 				}
 
@@ -115,21 +103,14 @@ func setup(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	return setupClient()
+	return config.SetupClient()
 }
-
-const (
-	errResourceNotFoundMessage      = 404 // 404
-	errResourceNotAccessibleMessage = 403 // 403
-	errResourceNotGoodMessage       = 400 // 400
-	errResourceInternal             = 500 // 500
-)
 
 func main() {
 
 	if buildRevision != "" {
 		app.HelpTemplate = bite.HelpTemplate{
-			Name:				  "lenses-cli",
+			Name:                 "lenses-cli",
 			BuildRevision:        buildRevision,
 			BuildTime:            buildTime,
 			BuildVersion:         buildVersion,
@@ -138,11 +119,76 @@ func main() {
 	}
 
 	if len(os.Args) == 1 || (string(os.Args[1]) != "secrets" && string(os.Args[1]) != "version") {
-		app.PersistentFlags = setupConfigManager
+		app.PersistentFlags = config.SetupConfigManager
 	} else {
-		configManager = newEmptyConfigManager()
+		config.Manager = config.NewEmptyConfigManager()
 		app.DisableOutputFormatController = true
 	}
+
+	//ACL
+	app.AddCommand(acl.NewGetACLsCommand())
+	app.AddCommand(acl.NewACLGroupCommand())
+
+	//Alert
+	app.AddCommand(alert.NewAlertGroupCommand())
+	app.AddCommand(alert.NewGetAlertsCommand())
+
+	//Audit
+	app.AddCommand(audit.NewGetAuditEntriesCommand())
+
+	//Config
+	app.AddCommand(config.NewGetConfigsCommand())
+	app.AddCommand(config.NewGetModeCommand())
+
+	//Connectors
+	app.AddCommand(connector.NewConnectorsCommand())
+	app.AddCommand(connector.NewConnectorGroupCommand())
+
+	//Export
+	app.AddCommand(export.NewExportGroupCommand())
+
+	//Import
+	app.AddCommand(imports.NewImportGroupCommand())
+
+	//Logs
+	app.AddCommand(logs.NewLogsCommandGroup())
+
+	//Policies
+	app.AddCommand(policy.NewGetPoliciesCommand())
+	app.AddCommand(policy.NewPolicyGroupCommand())
+
+	//Processors
+	app.AddCommand(processor.NewGetProcessorsCommand())
+	app.AddCommand(processor.NewProcessorGroupCommand())
+
+	//Topics
+	app.AddCommand(topic.NewTopicsGroupCommand())
+	app.AddCommand(topic.NewTopicGroupCommand())
+
+	//Quotas
+	app.AddCommand(quota.NewGetQuotasCommand())
+	app.AddCommand(quota.NewQuotaGroupCommand())
+
+	//Schemas
+	app.AddCommand(schema.NewSchemasGroupCommand())
+	app.AddCommand(schema.NewSchemaGroupCommand())
+
+	//Shell
+	app.AddCommand(shell.NewInteractiveCommand())
+
+	//Secrets
+	app.AddCommand(secret.NewSecretsGroupCommand())
+
+	//SQL
+	app.AddCommand(sql.NewLiveLSQLCommand())
+
+	//User
+	app.AddCommand(user.NewGetConfigurationContextsCommand())
+	app.AddCommand(user.NewConfigurationContextCommand())
+	app.AddCommand(user.NewConfigureCommand(""))
+	app.AddCommand(user.NewLoginCommand(app))
+	app.AddCommand(user.NewGetLicenseInfoCommand())
+	app.AddCommand(user.NewUserGroupCommand())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
