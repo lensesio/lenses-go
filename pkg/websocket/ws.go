@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -72,6 +71,13 @@ type (
 )
 
 type (
+	//Message for WS
+	Message struct {
+		Token string `json:"token"`
+		SQL   string `json:"sql"`
+		Live  bool   `json:"live"`
+		Stats int    `json:"stats"`
+	}
 	// LiveConfiguration contains the contact information
 	// about the websocket communication.
 	// It contains the host(including the scheme),
@@ -80,12 +86,9 @@ type (
 	//
 	// See `OpenLiveConnection` for more.
 	LiveConfiguration struct {
-		Host  string `json:"host"`
-		Token string `json:"token"`
-		Debug bool   `json:"debug"`
-		SQL   string `json:"sql"`
-		Live  bool   `json:"live"`
-		Stats int    `json:"stats"`
+		Host    string `json:"host"`
+		Debug   bool   `json:"debug"`
+		Message Message
 		// ws-specific settings, optionally.
 
 		// HandshakeTimeout specifies the duration for the handshake to complete.
@@ -158,13 +161,8 @@ func OpenLiveConnection(config LiveConfiguration) (*LiveConnection, error) {
 	config.Host = strings.Replace(config.Host, "https://", "wss://", 1)
 	config.Host = strings.Replace(config.Host, "http://", "ws://", 1)
 
-	//ws://localhost:24015/api/ws/v1/sql/execute?sql=
-	query := url.QueryEscape(config.SQL)
-	endpoint := fmt.Sprintf("%s/api/ws/v1/sql/execute?sql=%s&token=%s", config.Host, query, config.Token)
-
-	if config.Live {
-		endpoint = fmt.Sprintf("%s/api/ws/v1/sql/execute?sql=%s&token=%s&live=true", config.Host, query, config.Token)
-	}
+	//ws://localhost:24015/api/ws/v1/sql/execute
+	endpoint := fmt.Sprintf("%s/api/ws/v2/sql/execute", config.Host)
 
 	c := &LiveConnection{
 		config:      config,
@@ -193,6 +191,13 @@ func (c *LiveConnection) start() error {
 		golog.Debug(err)
 		return err
 	}
+
+	err = conn.WriteJSON(c.config.Message)
+	if err != nil {
+		golog.Debug(err)
+		return err
+	}
+
 	// set the websocket connection.
 	c.conn = conn
 
