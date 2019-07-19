@@ -79,13 +79,16 @@ func readAndQuoteQueries(args []string) ([]string, error) {
 func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool, liveStream bool, stats bool) error {
 	currentConfig := config.Manager.Config.GetCurrent()
 
-	conn, err := websocket.OpenLiveConnection(websocket.LiveConfiguration{
+	message := websocket.Message{
 		Token: config.Client.Config.Token,
-		Host:  currentConfig.Host,
-		Debug: currentConfig.Debug,
 		SQL:   sql,
 		Live:  liveStream,
 		Stats: 2,
+	}
+	conn, err := websocket.OpenLiveConnection(websocket.LiveConfiguration{
+		Host:    currentConfig.Host,
+		Debug:   currentConfig.Debug,
+		Message: message,
 	})
 
 	if err != nil {
