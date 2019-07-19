@@ -72,6 +72,9 @@ export policies --dir my-dir --resource-name my-policy`,
 	cmd.AddCommand(NewExportSchemasCommand())
 	cmd.AddCommand(NewExportTopicsCommand())
 	cmd.AddCommand(NewExportPoliciesCommand())
+	cmd.AddCommand(NewExportUsersCommand())
+	cmd.AddCommand(NewExportGroupsCommand())
+	cmd.AddCommand(NewExportServiceAccountsCommand())
 
 	return cmd
 }

@@ -31,6 +31,9 @@ import policies --landscape my-acls-dir`,
 	cmd.AddCommand(NewImportSchemasCommand())
 	cmd.AddCommand(NewImportTopicsCommand())
 	cmd.AddCommand(NewImportPoliciesCommand())
+	cmd.AddCommand(NewImportGroupsCommand())
+	cmd.AddCommand(NewImportUsersCommand())
+	cmd.AddCommand(NewImportServiceAccountsCommand())
 
 	return cmd
 }
