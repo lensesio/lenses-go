@@ -23,7 +23,7 @@ type User struct {
 	Token                string   `json:"token"`
 	Name                 string   `json:"user" header:"Name"`
 	SchemaRegistryDelete bool     `json:"schemaRegistryDelete" header:"Schema Registry Delete"`
-	Roles                []string `json:"roles" header:"Roles"`
+	Permissions          []string `json:"permissions" header:"permissions"`
 }
 
 // Client is the lenses http client.
@@ -410,6 +410,15 @@ func (c *Client) Logout() error {
 	}
 
 	return resp.Body.Close()
+}
+
+//QueryFiltering used to add query params in an API request
+type QueryFiltering struct {
+	PageSize     int
+	Page         int
+	Name         string
+	SortBy       string
+	SortingOrder string
 }
 
 // LicenseInfo describes the data received from the `GetLicenseInfo`.
@@ -969,7 +978,7 @@ var errRequired = func(field string) error {
 	return fmt.Errorf("client: [%s] is required", field)
 }
 
-const topicsPath = "api/topics"
+const topicsPath = "api/v1/kafka/topics"
 
 // GetTopics returns the list of topics.
 func (c *Client) GetTopics() (topics []Topic, err error) {
@@ -1269,23 +1278,26 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	return resp.Body.Close()
 }
 
+type topicsResponse struct {
+	Topics []Topic `json:"topics"`
+}
+
 // Topic describes the data that the `GetTopic` returns.
 type Topic struct {
-	TopicName            string             `json:"topicName" header:"Name"`
-	KeyType              string             `json:"keyType" header:"Key /,NULL"`        // maybe string-based enum?
-	ValueType            string             `json:"valueType" header:"Value Type,NULL"` // maybe string-based enum?
-	Partitions           int                `json:"partitions" header:"Part"`
-	Replication          int                `json:"replication" header:"Repl"`
-	IsControlTopic       bool               `json:"isControlTopic"`
-	KeySchema            string             `json:"keySchema,omitempty"`
-	ValueSchema          string             `json:"valueSchema,omitempty"`
-	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
-	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
-	Timestamp            int64              `json:"timestamp"`
-	Configs              []KV               `json:"config" header:"Configs,count"`
-	ConsumersGroup       []ConsumersGroup   `json:"consumers"`
-	MessagesPerPartition []PartitionMessage `json:"messagesPerPartition"`
-	IsMarkedForDeletion  bool               `json:"isMarkedForDeletion" header:"Marked Del"`
+	TopicName           string `json:"topicName" header:"Name"`
+	KeyType             string `json:"keyType" header:"Key /,NULL"`        // maybe string-based enum?
+	ValueType           string `json:"valueType" header:"Value Type,NULL"` // maybe string-based enum?
+	Partitions          int    `json:"partitions" header:"Part"`
+	Replication         int    `json:"replication" header:"Repl"`
+	IsControlTopic      bool   `json:"isControlTopic"`
+	KeySchema           string `json:"keySchema,omitempty"`
+	ValueSchema         string `json:"valueSchema,omitempty"`
+	MessagesPerSecond   int64  `json:"messagesPerSecond" header:"msg/sec"`
+	TotalMessages       int64  `json:"totalMessages" header:"Total Msg"`
+	Timestamp           int64  `json:"timestamp"`
+	Configs             []KV   `json:"config" header:"Configs,count"`
+	ConsumersGroup      int    `json:"consumers"`
+	IsMarkedForDeletion bool   `json:"isMarkedForDeletion" header:"Marked Del"`
 }
 
 // GetTopicAsRequest takes a topic returned from Lenses and transforms to a request

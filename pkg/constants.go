@@ -13,6 +13,10 @@ const (
 	SqlPath        = "apps/sql"
 	ConnectorsPath = "apps/connectors"
 
+	GroupsPath          = "groups"
+	UsersPath           = "users"
+	ServiceAccountsPath = "service-accounts"
+
 	AclsPath   = "kafka/acls"
 	TopicsPath = "kafka/topics"
 	QuotasPath = "kafka/quotas"
