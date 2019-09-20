@@ -36,7 +36,7 @@ func NewInteractiveCommand() *cobra.Command {
   / /   / _ \/ __ \/ ___/ _ \/ ___/  / /   / /    / /  
  / /___/  __/ / / (__  )  __(__  )  / /___/ /____/ /   
 /_____/\___/_/ /_/____/\___/____/   \____/_____/___/   
-Docs at https://docs.api.io
+Docs at https://docs.lenses.io
 Connected to [%s] as [%s], context [%s]
 Use "!" to set output options [!keys|!keysOnly|!stats|!meta|!pretty]
 Crtl+D to exit

@@ -1,12 +1,12 @@
 # Lenses Client (Go)
 
-The [Landoop's](http://www.landoop.com) Lenses [REST API](https://lenses.stream/dev/lenses-apis/rest-api/index.html) client written in Go.
+The [Lenses's](http://www.lenses.io) Lenses [REST API](https://docs.lenses.io/dev/lenses-apis/rest-api/index.html) client written in Go.
 
 [![Build Status](https://travis-ci.org/Landoop/lenses-go.svg?branch=master)](https://travis-ci.org/Landoop/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/Landoop/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/landoop-community)
 
 ## Installation
 
-The only requirement is the [Go Programming Language](https://golang.org/dl) version **1.10+** and a [Lenses Box](http://www.landoop.com/kafka-lenses/) of version **2.0 at least**.
+The only requirement is the [Go Programming Language](https://golang.org/dl) version **1.10+** and a [Lenses Box](https://lenses.io/box/) of version **2.0 at least**.
 
 ```sh
 $ go get -u github.com/landoop/lenses-go/cmd/lenses-cli
@@ -149,7 +149,7 @@ ReadConfigFromYAML(filename string, outPtr *Config) error
 CurrentContext: main
 Contexts:
   main:
-    Host: https://landoop.com
+    Host: https://<your-lenses-host-url>
     Kerberos:
       ConfFile: /etc/krb5.conf
       WithPassword:
@@ -201,8 +201,6 @@ topics[0].ConsumersGroup[0].Coordinator.Host
 Detailed documentation can be found at [godocs](https://godoc.org/github.com/landoop/lenses-go).
 
 ## Versioning
-
-Current: **v2.1.9**
 
 Read more about Semantic Versioning 2.0.0
 
