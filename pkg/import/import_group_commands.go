@@ -18,7 +18,9 @@ import processors  --landscape my-acls-dir
 import quota --landscape my-acls-dir
 import schemas --landscape my-acls-dir
 import topics --landscape my-acls-dir
-import policies --landscape my-acls-dir`,
+import policies --landscape my-acls-dir
+import groups --dir groups
+import serviceaccounts --dir serviceaccounts`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 	}
@@ -31,6 +33,8 @@ import policies --landscape my-acls-dir`,
 	cmd.AddCommand(NewImportSchemasCommand())
 	cmd.AddCommand(NewImportTopicsCommand())
 	cmd.AddCommand(NewImportPoliciesCommand())
+	cmd.AddCommand(NewImportGroupsCommand())
+	cmd.AddCommand(NewImportServiceAccountsCommand())
 
 	return cmd
 }

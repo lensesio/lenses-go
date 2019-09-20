@@ -58,7 +58,10 @@ export processors --dir my-dir --resource-name my-processor
 export quota --dir my-dir
 export schemas --dir my-dir --resource-name my-schema-value --version 1
 export topics --dir my-dir --resource-name my-topic
-export policies --dir my-dir --resource-name my-policy`,
+export policies --dir my-dir --resource-name my-policy
+export groups --dir groups
+export serviceaccounts --dir serviceaccounts
+`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 	}
@@ -72,6 +75,8 @@ export policies --dir my-dir --resource-name my-policy`,
 	cmd.AddCommand(NewExportSchemasCommand())
 	cmd.AddCommand(NewExportTopicsCommand())
 	cmd.AddCommand(NewExportPoliciesCommand())
+	cmd.AddCommand(NewExportGroupsCommand())
+	cmd.AddCommand(NewExportServiceAccountsCommand())
 
 	return cmd
 }

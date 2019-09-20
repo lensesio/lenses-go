@@ -16,6 +16,7 @@ import (
 	"github.com/landoop/lenses-go/pkg/export"
 	imports "github.com/landoop/lenses-go/pkg/import"
 	"github.com/landoop/lenses-go/pkg/logs"
+	"github.com/landoop/lenses-go/pkg/management"
 	"github.com/landoop/lenses-go/pkg/policy"
 	"github.com/landoop/lenses-go/pkg/processor"
 	"github.com/landoop/lenses-go/pkg/quota"
@@ -189,6 +190,11 @@ func main() {
 	app.AddCommand(user.NewLoginCommand(app))
 	app.AddCommand(user.NewGetLicenseInfoCommand())
 	app.AddCommand(user.NewUserGroupCommand())
+
+	//Management
+	app.AddCommand(management.NewGroupsCommand())
+	app.AddCommand(management.NewUsersCommand())
+	app.AddCommand(management.NewServiceAccountsCommand())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)

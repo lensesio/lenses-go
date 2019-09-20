@@ -199,6 +199,16 @@ func RichLog(level string, log string) {
 	}
 }
 
+//StringInSlice check if a string is in slice
+func StringInSlice(str string, list []string) bool {
+	for _, v := range list {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
 //ToHash hashes with SHA256 the provided string
 func ToHash(plain string) []byte {
 	h := sha256.Sum256([]byte(plain))
