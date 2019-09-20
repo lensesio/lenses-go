@@ -510,7 +510,7 @@ func NewLoginCommand(app *bite.Application) *cobra.Command {
 			out := cmd.OutOrStdout()
 			signedUser := client.User
 			fmt.Fprintf(out, "Welcome [%s%s],\ntype 'help' to learn more about the available commands or 'exit' to terminate.\n",
-				signedUser.Name, strings.Join(signedUser.Roles, ", "))
+				signedUser.Name, strings.Join(signedUser.Permissions, ", "))
 
 			// read the input pipe, on each read its buffer consumed, so loop 'forever' here.
 			streamReader := bufio.NewReader(os.Stdin)
