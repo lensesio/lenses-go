@@ -45,7 +45,7 @@ Crtl+D to exit
 
 			var histories []string
 
-			if _, err := os.Stat(sqlHistoryPath); os.IsExist(err) {
+			if _, err := os.Stat(sqlHistoryPath); err == nil {
 				file, err := os.Open(sqlHistoryPath)
 				if err != nil {
 					golog.Warnf("Unable to open command history. [%s]", err.Error())

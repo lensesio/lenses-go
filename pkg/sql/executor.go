@@ -155,19 +155,23 @@ func (e *Executor) Execute(sql string) {
 
 			runSQL(e.interactiveCmd, finalQ, sqlMeta, sqlKeys, sqlKeysOnly, sqlLiveStream, sqlStats)
 
-			file, err := os.Create(e.sqlHistoryPath)
+			if _, err := os.Stat(e.sqlHistoryPath); os.IsNotExist(err) {
+				file, err := os.Create(e.sqlHistoryPath)
+				defer file.Close()
+				if err != nil {
+					golog.Fatalf("Cannot create file [%s]. [%s]", e.sqlHistoryPath, err.Error())
+
+				}
+
+			}
+
+			file, err := os.OpenFile(e.sqlHistoryPath, os.O_APPEND|os.O_WRONLY, 0600)
 			if err != nil {
 				golog.Fatalf("Cannot open file [%s]. [%s]", e.sqlHistoryPath, err.Error())
 			}
 			defer file.Close()
 
-			_, errS := file.WriteString(sql)
-
-			if errS != nil {
-				golog.Fatalf("Error writing history to file [%s]. [%s]", e.sqlHistoryPath, err.Error())
-			}
-
-			_, errF := file.WriteString(finalQ)
+			_, errF := file.WriteString(fmt.Sprintln(finalQ))
 
 			if errF != nil {
 				golog.Fatalf("Error writing history to file [%s]. [%s]", e.sqlHistoryPath, err.Error())
