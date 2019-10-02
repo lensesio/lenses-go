@@ -3359,47 +3359,35 @@ func (c *Client) GetAlertSettingConditions(id int) (AlertSettingConditions, erro
 }
 
 type (
+	//AlertResult  alerts in a paging format
+	AlertResult struct {
+		PagesCount int     `json:"pagesAmount"`
+		Alerts     []Alert `json:"values"`
+	}
+
 	// Alert is the request payload that is used to register an Alert via `RegisterAlert` and the response that client retrieves from the `GetAlerts`.
 	Alert struct {
 		// AlertID  is a unique identifier for the setting corresponding to this alert. See the available ids via `GetAlertSettings`.
 		AlertID int `json:"alertId" yaml:"alertID" header:"ID,text"`
 
-		// Labels field is a list of key-value pairs. It must contain a non empty `Severity` value.
-		Labels AlertLabels `json:"labels" yaml:"labels" header:"inline"`
-		// Annotations is a list of key-value pairs. It contains the summary, source, and docs fields.
-		Annotations AlertAnnotations `json:"annotations" yaml:"annotations"` // header:"inline"`
-		// GeneratorURL is a unique URL identifying the creator of this alert.
-		// It matches AlertManager requirements for providing this field.
-		GeneratorURL string `json:"generatorURL" yaml:"generatorURL"` // header:"Gen URL"`
-
-		// StartsAt is the time as string, in ISO format, for when the alert starts
-		StartsAt string `json:"startsAt" yaml:"startsAt" header:"Start,date"`
-		// EndsAt is the time as string the alert ended at.
-		EndsAt string `json:"endsAt" yaml:"endsAt" header:"End,date"`
-	}
-
-	// AlertLabels labels for the `Alert`, at least Severity should be filled.
-	AlertLabels struct {
 		Category string `json:"category,omitempty" yaml:"category,omitempty" header:"Category"`
 		Severity string `json:"severity" yaml:"severity,omitempty" header:"Severity"`
 		Instance string `json:"instance,omitempty" yaml:"instance,omitempty" header:"Instance"`
-	}
 
-	// AlertAnnotations annotations for the `Alert`, at least Summary should be filled.
-	AlertAnnotations struct {
-		Summary string `json:"summary" yaml:"summary" header:"Summary"`
-		Source  string `json:"source,omitempty" yaml:"source,omitempty" header:"Source,empty"`
-		Docs    string `json:"docs,omitempty" yaml:"docs,omitempty" header:"Docs,empty"`
+		Summary string                 `json:"summary" yaml:"summary" header:"Summary"`
+		Source  string                 `json:"source,omitempty" yaml:"source,omitempty" header:"Source,empty"`
+		Docs    string                 `json:"docs,omitempty" yaml:"docs,omitempty" header:"Docs,empty"`
+		Map     map[string]interface{} `json:"map,omitempty" yaml:"map,omitempty" header:"Map,empty"`
 	}
 )
 
 // RegisterAlert registers an Alert, returns an error on failure.
 func (c *Client) RegisterAlert(alert Alert) error {
-	if alert.Labels.Severity == "" {
-		return errRequired("Labels.Severity")
+	if alert.Severity == "" {
+		return errRequired("Severity")
 	}
 
-	alert.Labels.Severity = strings.ToUpper(alert.Labels.Severity)
+	alert.Severity = strings.ToUpper(alert.Severity)
 
 	send, err := json.Marshal(alert)
 	if err != nil {
@@ -3415,14 +3403,19 @@ func (c *Client) RegisterAlert(alert Alert) error {
 }
 
 // GetAlerts returns the registered alerts.
-func (c *Client) GetAlerts() (alerts []Alert, err error) {
-	resp, respErr := c.Do(http.MethodGet, alertsPath, "", nil)
+func (c *Client) GetAlerts(pageSize int) (alerts []Alert, err error) {
+	path := fmt.Sprintf("%s?pageSize=%d", alertsPath, pageSize)
+
+	var results AlertResult
+	resp, respErr := c.Do(http.MethodGet, path, "", nil)
 	if respErr != nil {
 		err = respErr
 		return
 	}
 
-	err = c.ReadJSON(resp, &alerts)
+	err = c.ReadJSON(resp, &results)
+	alerts = results.Alerts
+
 	return
 }
 
