@@ -227,7 +227,7 @@ secrets app vault --vault-role lenses --vault-token XYZ	--vault-addr http://127.
 	return cmd
 }
 
-//NewAzureCommand
+//NewAzureCommand get secrets for azure by app type
 func NewAzureCommand(appType string) *cobra.Command {
 	var clientID, clientSecret, tenantID, dns, vaultName string
 
@@ -335,6 +335,7 @@ secrets app azure --vault-name lenses --client-id xxxx --client-secret xxxx --te
 	return cmd
 }
 
+//NewEnvCommand secrets from environment variables
 func NewEnvCommand(appType string) *cobra.Command {
 
 	cmd := &cobra.Command{

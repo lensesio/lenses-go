@@ -25,8 +25,8 @@ func checkValidation(validation api.SQLValidationResponse) bool {
 	return true
 }
 
-//SqlCompleter sql completer
-func SqlCompleter(d prompt.Document) []prompt.Suggest {
+//Completer sql completer
+func Completer(d prompt.Document) []prompt.Suggest {
 
 	if strings.HasPrefix(d.GetWordBeforeCursor(), "!") {
 		return prompt.FilterHasPrefix(optionSuggestions(), d.GetWordBeforeCursor(), true)

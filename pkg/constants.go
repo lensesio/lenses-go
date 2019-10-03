@@ -10,7 +10,7 @@ const (
 
 //Paths
 const (
-	SqlPath        = "apps/sql"
+	SQLPath        = "apps/sql"
 	ConnectorsPath = "apps/connectors"
 
 	GroupsPath          = "groups"

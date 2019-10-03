@@ -103,7 +103,7 @@ func writeProcessors(cmd *cobra.Command, client *api.Client, id, cluster, namesp
 		request.SQL = strings.Replace(request.SQL, "\t", "  ", -1)
 		request.SQL = strings.Replace(request.SQL, " \n", "\n", -1)
 
-		if err := utils.WriteFile(landscapeDir, pkg.SqlPath, fileName, output, request); err != nil {
+		if err := utils.WriteFile(landscapeDir, pkg.SQLPath, fileName, output, request); err != nil {
 			return err
 		}
 		if dependents {

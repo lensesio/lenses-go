@@ -65,7 +65,7 @@ Crtl+D to exit
 
 			p := prompt.New(
 				executor.Execute,
-				sql.SqlCompleter,
+				sql.Completer,
 				prompt.OptionTitle(fmt.Sprintf("lenses: connected to [%s] ", client.Config.Host)),
 				prompt.OptionPrefix("lenses-sql> "),
 				prompt.OptionLivePrefix(executor.ChangeLivePrefix),

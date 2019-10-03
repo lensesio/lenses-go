@@ -1,8 +1,8 @@
 # Lenses Client (Go)
 
-The [Lenses's](http://www.lenses.io) Lenses [REST API](https://docs.lenses.io/dev/lenses-apis/rest-api/index.html) client written in Go.
+The [Lenses's](http://www.lenses.io) [REST API](https:/api.lenses.io) client written in Go.
 
-[![Build Status](https://travis-ci.org/Landoop/lenses-go.svg?branch=master)](https://travis-ci.org/Landoop/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/Landoop/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/landoop-community)
+[![Build Status](https://travis-ci.org/Landoop/lenses-go.svg?branch=master)](https://travis-ci.org/Landoop/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/Landoop/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/lenses-community)
 
 ## Installation
 
@@ -26,9 +26,47 @@ Lenses offers a powerful CLI (command-line tool) built in Go that utilizes the R
 
 Please navigate to <https://docs.lenses.io/dev/lenses-cli/> to learn how to install and use the `lenses-cli`.
 
-## Client
+### Development
 
-The `lenses-go` package is made to be used by Go developers to communicate with Lenses by calling the REST and Websocket APIs. 
+#### Build
+
+`lenses-go` use [go modules](https://github.com/golang/go/wiki/Modules) as dependency management system. For daily development workflow you need to use `Makefile` with certain actions.
+
+Builds a binary based on your current OS system
+```
+make build
+```
+
+Builds binaries for all OS systems
+```
+make cross-build
+```
+
+#### Lint
+
+We use the Golang [golint](https://github.com/golang/lint) for linting using:
+
+```
+make lint
+```
+
+#### Tests
+
+If you want to run the tests, use the following:
+
+```
+make tests
+```
+
+#### Clean
+
+Clean all binaries and coverage files:
+
+```
+make clean
+```
+
+## Client
 
 ### Getting started
 
@@ -201,8 +239,6 @@ topics[0].ConsumersGroup[0].Coordinator.Host
 Detailed documentation can be found at [godocs](https://godoc.org/github.com/landoop/lenses-go).
 
 ## Versioning
-
-Read more about Semantic Versioning 2.0.0
 
  - http://semver.org/
  - https://en.wikipedia.org/wiki/Software_versioning
