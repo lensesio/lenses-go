@@ -2,7 +2,6 @@ package alert
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
@@ -22,7 +21,6 @@ func NewAlertGroupCommand() *cobra.Command {
 	}
 
 	root.AddCommand(
-		NewRegisterAlertCommand(),
 		NewGetAlertSettingsCommand(),
 		NewAlertSettingGroupCommand(),
 	)
@@ -32,7 +30,10 @@ func NewAlertGroupCommand() *cobra.Command {
 
 //NewGetAlertsCommand creates the `alerts` command
 func NewGetAlertsCommand() *cobra.Command {
-	var sse bool
+	var (
+		sse      bool
+		pageSize int
+	)
 
 	cmd := &cobra.Command{
 		Use:              "alerts",
@@ -47,7 +48,7 @@ func NewGetAlertsCommand() *cobra.Command {
 				}
 				return config.Client.GetAlertsLive(handler)
 			}
-			alerts, err := config.Client.GetAlerts()
+			alerts, err := config.Client.GetAlerts(pageSize)
 			if err != nil {
 				golog.Errorf("Failed to retrieve alerts. [%s]", err.Error())
 				return err
@@ -60,55 +61,9 @@ func NewGetAlertsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&sse, "live", false, "Enables real-time push alert notifications")
+	cmd.Flags().IntVar(&pageSize, "page-size", 25, "Size of items to be included in the list")
 
 	bite.CanPrintJSON(cmd)
-
-	return cmd
-}
-
-//NewRegisterAlertCommand creates the `alert register` command
-func NewRegisterAlertCommand() *cobra.Command {
-	var alert api.Alert
-
-	cmd := &cobra.Command{
-		Use:              "register",
-		Short:            "Register an alert",
-		Example:          `alert register ./alert.yml or alert register --alert=1000 --startsAt="2018-03-27T21:23:23.634+02:00" --endsAt=... --source="" --summary="Broker on 1 is down" --docs="" --category="Infrastructure" --severity="HIGH" --instance="instance101" --generator="https://lenses"`,
-		TraverseChildren: true,
-		SilenceErrors:    true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if alert.StartsAt == "" {
-				alert.StartsAt = time.Now().Format(time.RFC3339)
-			}
-
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": alert.AlertID, "severity": alert.Labels.Severity, "summary": alert.Annotations.Summary, "generatorURL": alert.GeneratorURL}); err != nil {
-				return err
-			}
-
-			err := config.Client.RegisterAlert(alert)
-			if err != nil {
-				golog.Errorf("Failed to register alert. [%s]", err.Error())
-				return err
-			}
-
-			return bite.PrintInfo(cmd, "Alert with ID [%d] registered", alert.AlertID)
-		},
-	}
-
-	cmd.Flags().IntVar(&alert.AlertID, "alert", 0, "Alert ID to register")
-	cmd.Flags().StringVar(&alert.StartsAt, "startsAt", "", `Alert start time .e.g. "2018-03-27T21:23:23.634+02:00"`)
-	cmd.Flags().StringVar(&alert.EndsAt, "endsAt", "", `Alert end time"`)
-	cmd.Flags().StringVar(&alert.Labels.Category, "category", "", `Category .e.g. "Infrastructure"`)
-	cmd.Flags().StringVar(&alert.Labels.Severity, "severity", "", `Severity .e.g. "HIGH"`)
-	cmd.Flags().StringVar(&alert.Labels.Instance, "instance", "", `Instance .e.g. "instance101"`)
-	cmd.Flags().StringVar(&alert.Annotations.Docs, "docs", "", `Documentation text`)
-	cmd.Flags().StringVar(&alert.Annotations.Source, "source", "", `Source of the alert`)
-	cmd.Flags().StringVar(&alert.Annotations.Summary, "summary", "", `Alert summary`)
-	cmd.Flags().StringVar(&alert.GeneratorURL, "generator", "", `Unique URL identifying the creator of this alert. It matches AlertManager requirements for providing this field`)
-
-	bite.Prepend(cmd, bite.FileBind(&alert))
-
-	bite.CanBeSilent(cmd)
 
 	return cmd
 }
@@ -254,11 +209,10 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 						golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", condition, err.Error())
 						return err
 					}
-					bite.PrintInfo(cmd, "Condition [%s] added", condition)
+					bite.PrintInfo(cmd, "Condition [id=%d] added", alertID)
 				}
 				return nil
 			}
-			fmt.Print(cond)
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
 				return err
 			}
@@ -269,7 +223,7 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Condition [%s] added", cond.Condition)
+			return bite.PrintInfo(cmd, "Condition [id=%d] added", cond.AlertID)
 		},
 	}
 
