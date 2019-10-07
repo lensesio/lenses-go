@@ -46,6 +46,7 @@ type ConfigurationManager struct {
 7. config home file not found, neither auth flags passed but command was one of "context" or "contexts" then show empty screen. (PASS)
   7.1 if "configure" command then must show the create configuration survey. (PASS)
 */
+
 //NewConfigurationManager creates a configuration
 func NewConfigurationManager(set *pflag.FlagSet) *ConfigurationManager {
 	m := &ConfigurationManager{

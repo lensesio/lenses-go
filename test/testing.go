@@ -20,6 +20,7 @@ var (
 		Username: "user",
 		Password: "pass",
 	}
+	//ClientConfig mocked for testing
 	ClientConfig = api.ClientConfig{
 		Authentication: auth,
 		Debug:          true,

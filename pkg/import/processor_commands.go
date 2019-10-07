@@ -27,7 +27,7 @@ func NewImportProcessorsCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			path = fmt.Sprintf("%s/%s", path, pkg.SqlPath)
+			path = fmt.Sprintf("%s/%s", path, pkg.SQLPath)
 			if err := loadProcessors(config.Client, cmd, path); err != nil {
 				golog.Errorf("Failed to load processors. [%s]", err.Error())
 				return err

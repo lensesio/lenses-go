@@ -15,7 +15,7 @@ import (
 	"github.com/landoop/lenses-go/pkg/utils"
 )
 
-var providerType SecretProvider
+var providerType Provider
 
 const (
 	// SecretPreFix for looking up env vars
@@ -36,16 +36,16 @@ const (
 	EnvAzureKeyVaultDNS = "AZURE_KEY_VAULT_DNS"
 )
 
-// SecretProvider secret provider type
-type SecretProvider string
+// Provider secret provider type
+type Provider string
 
 const (
 	// Vault Hashicorp Vault
-	Vault SecretProvider = "VAULT"
+	Vault Provider = "VAULT"
 	// AzureKV Azure KeyVault
-	AzureKV SecretProvider = "AZURE_KV"
+	AzureKV Provider = "AZURE_KV"
 	// Kubernetes Kubernetes secrets
-	Kubernetes SecretProvider = "KUBERNETES"
+	Kubernetes Provider = "KUBERNETES"
 )
 
 type vaultAppRoleCredentials struct {
