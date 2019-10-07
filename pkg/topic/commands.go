@@ -130,12 +130,6 @@ func NewTopicsMetadataSubgroupCommand() *cobra.Command {
 			client := config.Client
 			if topicName != "" {
 				// view single.
-				// it does not return error if topic does not exists, it returns status code 200, so we have to manually fetch for the topic first.
-				_, err := client.GetTopic(topicName)
-				if err != nil {
-					return err
-				}
-
 				meta, err := client.GetTopicMetadata(topicName)
 				if err != nil {
 					return err
@@ -226,12 +220,6 @@ func NewTopicMetadataCreateCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := config.Client
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": meta.TopicName}); err != nil {
-				return err
-			}
-
-			// older api does not make that check, so do it manually ^.
-			if _, err := client.GetTopic(meta.TopicName); err != nil {
-				golog.Errorf("Failed to find topic [%s]. [%s]", meta.TopicName, err.Error())
 				return err
 			}
 
