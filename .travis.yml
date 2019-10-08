@@ -25,11 +25,11 @@ jobs:
     script: make test
 
   - stage: Build docker
-    deploy: 
+    deploy:
       on:
         tags: false
       provider: script
-      script: VERSION=${TRAVIS_COMMIT} make build-docker
+      script: REVISION=${TRAVIS_COMMIT} make build-linux && VERSION=${TRAVIS_COMMIT} make build-docker
 
   - stage: Publish docker
     branches:

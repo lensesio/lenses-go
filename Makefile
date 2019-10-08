@@ -11,8 +11,12 @@ help:
 build: dep ## Build for development only
 	 go build -o ./${OUTPUT}/${EXECUTABLE} ./cmd/${EXECUTABLE}
 
+build-linux: dep ## Build binary for linux
+	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-amd64 ./cmd/${EXECUTABLE}
+
 build-docker: ## Builds Docker with linux lenses-cli
 	docker build -t landoop/lenses-cli:${VERSION} .
+	docker build -t lensesio/lenses-cli:${VERSION} .
 
 dep: ## Ensure dependencies
 	go mod tidy
