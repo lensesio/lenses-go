@@ -39,7 +39,7 @@ jobs:
       on:
         tags: true
       provider: script
-      script: make publish-docker
+      script: make publish
 
   - stage: Release
     branches:
