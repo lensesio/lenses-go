@@ -39,7 +39,7 @@ jobs:
       on:
         tags: true
       provider: script
-      script: make publish
+      script: REVISION=${TRAVIS_COMMIT} VERSION=${TRAVIS_TAG} make build-linux && make publish
 
   - stage: Release
     branches:

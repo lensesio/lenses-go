@@ -39,7 +39,7 @@ lint: ## Linting the codebase
 	golint -set_exit_status ${PKG_LIST}
 
 publish: ## Publish lenses CLI as docker
-	bash -c "./publish-docker ${VERSION}"
+	bash -c "./publish-docker"
 
 race: dep ## Run data race detector
 	go test -race -short ${PKG_LIST}
