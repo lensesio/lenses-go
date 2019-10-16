@@ -1143,6 +1143,8 @@ func (c *Client) DeleteTopicMetadata(topicName string) error {
 	return resp.Body.Close()
 }
 
+const topicsCreatePath = "api/topics"
+
 // CreateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
 type CreateTopicPayload struct {
 	TopicName   string `json:"topicName" yaml:"name"`
@@ -1177,7 +1179,7 @@ func (c *Client) CreateTopic(topicName string, replication, partitions int, conf
 		return err
 	}
 
-	resp, err := c.Do(http.MethodPost, topicsPath, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPost, topicsCreatePath, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}
@@ -1255,7 +1257,7 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 		return errRequired("topicName")
 	}
 
-	var kvs []KeyVal
+	kvs := make([]KeyVal, 0)
 
 	for _, c := range configsSlice {
 		for k, v := range c {

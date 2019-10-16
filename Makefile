@@ -19,7 +19,7 @@ build-docker: ## Builds Docker with linux lenses-cli
 	docker build -t lensesio/lenses-cli:${VERSION} .
 
 dep: ## Ensure dependencies
-	go mod tidy
+	go mod verify
 
 clean: dep ## Clean
 	go clean
