@@ -12,7 +12,7 @@ build: dep ## Build for development only
 	 go build -o ./${OUTPUT}/${EXECUTABLE} ./cmd/${EXECUTABLE}
 
 build-linux: dep ## Build binary for linux
-	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-amd64 ./cmd/${EXECUTABLE}
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-amd64 ./cmd/${EXECUTABLE}
 
 build-docker: ## Builds Docker with linux lenses-cli
 	docker build -t landoop/lenses-cli:${VERSION} .
@@ -27,13 +27,13 @@ clean: dep ## Clean
 	rm -f cover.out
 
 cross-build: dep ## Build the app for multiple os/arch
-	GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-darwin-amd64 ./cmd/${EXECUTABLE}
-	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-amd64 ./cmd/${EXECUTABLE}
-	GOOS=linux GOARCH=386 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-386 ./cmd/${EXECUTABLE}
-	GOOS=linux GOARCH=arm64 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-arm64 ./cmd/${EXECUTABLE}
-	GOOS=linux GOARCH=arm go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-arm ./cmd/${EXECUTABLE}
-	GOOS=windows GOARCH=386 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-windows-386.exe ./cmd/${EXECUTABLE}
-	GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-windows-amd64.exe ./cmd/${EXECUTABLE}
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-darwin-amd64 ./cmd/${EXECUTABLE}
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-amd64 ./cmd/${EXECUTABLE}
+	GOOS=linux GOARCH=386 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-386 ./cmd/${EXECUTABLE}
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-arm64 ./cmd/${EXECUTABLE}
+	GOOS=linux GOARCH=arm CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-arm ./cmd/${EXECUTABLE}
+	GOOS=windows GOARCH=386 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-windows-386.exe ./cmd/${EXECUTABLE}
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-windows-amd64.exe ./cmd/${EXECUTABLE}
 
 lint: ## Linting the codebase
 	golint -set_exit_status ${PKG_LIST}
