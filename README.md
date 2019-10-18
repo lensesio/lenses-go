@@ -2,14 +2,14 @@
 
 The [Lenses's](http://www.lenses.io) [REST API](https:/api.lenses.io) client written in Go.
 
-[![Build Status](https://travis-ci.org/Landoop/lenses-go.svg?branch=master)](https://travis-ci.org/Landoop/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/Landoop/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/lenses-community)
+[![Build Status](https://travis-ci.org/lensesio/lenses-go.svg?branch=master)](https://travis-ci.org/lensesio/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/lensesio/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/lensesio)
 
 ## Installation
 
 The only requirement is the [Go Programming Language](https://golang.org/dl) version **1.10+** and a [Lenses Box](https://lenses.io/box/) of version **2.0 at least**.
 
 ```sh
-$ go get -u github.com/landoop/lenses-go/cmd/lenses-cli
+$ go get -u github.com/lensesio/lenses-go/cmd/lenses-cli
 ```
 
 > This command will install both the client library for development usage and the CLI in $PATH ([setup your $GOPATH/bin](https://github.com/golang/go/wiki/SettingGOPATH) if you didn't already).
@@ -71,7 +71,7 @@ make clean
 ### Getting started
 
 ```go
-import "github.com/landoop/lenses-go"
+import "github.com/lensesio/lenses-go"
 ```
 
 ### Authentication
