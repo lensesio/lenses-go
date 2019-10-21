@@ -88,8 +88,8 @@ func writeTopics(cmd *cobra.Command, client *api.Client, topicName string) error
 
 		if topicName != "" && topicName == topic.TopicName {
 			overrides := getTopicConfigOverrides(topic.Configs)
-			requests = append(requests, topic.GetTopicAsRequest(overrides))
-			break
+			request := topic.GetTopicAsRequest(overrides)
+			return writeTopicsAsRequest(cmd, []api.CreateTopicPayload{request})
 		}
 
 		overrides := getTopicConfigOverrides(topic.Configs)
