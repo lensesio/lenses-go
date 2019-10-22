@@ -13,6 +13,7 @@ import (
 	"github.com/landoop/lenses-go/pkg/audit"
 	config "github.com/landoop/lenses-go/pkg/configs"
 	"github.com/landoop/lenses-go/pkg/connector"
+	"github.com/landoop/lenses-go/pkg/consumers"
 	"github.com/landoop/lenses-go/pkg/export"
 	imports "github.com/landoop/lenses-go/pkg/import"
 	"github.com/landoop/lenses-go/pkg/logs"
@@ -146,6 +147,9 @@ func main() {
 	//Connectors
 	app.AddCommand(connector.NewConnectorsCommand())
 	app.AddCommand(connector.NewConnectorGroupCommand())
+
+	//Consumers
+	app.AddCommand(consumers.NewRootCommand())
 
 	//Export
 	app.AddCommand(export.NewExportGroupCommand())
