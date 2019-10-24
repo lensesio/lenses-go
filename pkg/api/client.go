@@ -979,7 +979,7 @@ var errRequired = func(field string) error {
 }
 
 const topicsPath = "api/v1/kafka/topics"
-const topicsPath = "api/topics"
+const topicsWithConfigPath = "api/topics"
 
 // GetTopics returns the list of topics.
 func (c *Client) GetTopics() (topics []Topic, err error) {
