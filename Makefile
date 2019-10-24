@@ -1,4 +1,4 @@
-.PHONY: all
+.PHONY: build clean
 
 PKG_LIST:=$(shell go list ./... | grep -v /vendor/)
 EXECUTABLE:=lenses-cli
