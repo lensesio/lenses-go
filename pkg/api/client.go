@@ -995,7 +995,7 @@ func (c *Client) GetTopics() (topics []Topic, err error) {
 	return
 }
 
-// GetTopics returns the list of topics.
+// GetTopicsWithConfigs returns the list of topics.
 func (c *Client) GetTopicsWithConfigs() (topics []Topic, err error) {
 	// # List of topics
 	// GET /api/topics
