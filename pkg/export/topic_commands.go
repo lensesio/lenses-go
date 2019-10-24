@@ -45,7 +45,7 @@ func NewExportTopicsCommand() *cobra.Command {
 func writeTopics(cmd *cobra.Command, client *api.Client, topicName string) error {
 	var requests []api.CreateTopicPayload
 
-	raw, err := client.GetTopics()
+	raw, err := client.GetTopicsWithConfigs()
 
 	if err != nil {
 		return err
