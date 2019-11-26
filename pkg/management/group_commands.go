@@ -230,7 +230,7 @@ func validateCreateUpdate(cmd *cobra.Command, namespacesRaw *string, group *api.
 func addCreateUpdateFlags(cmd *cobra.Command, namespacesRaw *string, group *api.Group) {
 	cmd.Flags().StringVar(&group.Name, "name", "", "Group name")
 	cmd.Flags().StringVar(&group.Description, "description", "", "Group description")
-	cmd.Flags().StringArrayVar(&group.ScopedPermissions, "applicationPermissions", []string{}, "Group scoped permissions")
+	cmd.Flags().StringArrayVar(&group.ScopedPermissions, "applicationPermissions", []string{}, "Group application permissions")
 	cmd.Flags().StringArrayVar(&group.AdminPermissions, "adminPermissions", []string{}, "Group admin permissions")
 	cmd.Flags().StringVar(namespacesRaw, "dataNamespaces", "", `Group data namespaces: "[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewSchema","InsertData","DeleteData","UpdateSchema"],"system":"Kafka","instance":"Dev"}]"`)
 
