@@ -4252,22 +4252,6 @@ func (c *Client) GetPolicyImpacts() ([]DataImpactType, error) {
 	return impactTypes, nil
 }
 
-// GetPolicyFields retrieves data policy fields
-func (c *Client) GetPolicyFields() (DataPolicyFields, error) {
-	var response DataPolicyFields
-
-	resp, err := c.Do(http.MethodGet, "/api/protection/static/table/fields", "", nil)
-	if err != nil {
-		return response, err
-	}
-
-	if err = c.ReadJSON(resp, &response); err != nil {
-		return response, err
-	}
-
-	return response, nil
-}
-
 // CreatePolicy create a data policy
 func (c *Client) CreatePolicy(policy DataPolicyRequest) error {
 
