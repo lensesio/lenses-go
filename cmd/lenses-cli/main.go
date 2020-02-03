@@ -26,6 +26,8 @@ import (
 	"github.com/landoop/lenses-go/pkg/sql"
 	"github.com/landoop/lenses-go/pkg/topic"
 	"github.com/landoop/lenses-go/pkg/user"
+	"github.com/landoop/lenses-go/pkg/connection"
+	"github.com/landoop/lenses-go/pkg/conntemplate"
 	"github.com/spf13/cobra"
 )
 
@@ -195,6 +197,12 @@ func main() {
 	app.AddCommand(management.NewGroupsCommand())
 	app.AddCommand(management.NewUsersCommand())
 	app.AddCommand(management.NewServiceAccountsCommand())
+
+        // Connection
+	app.AddCommand(connection.NewConnectionGroupCommand())
+
+	// Connection Template
+	app.AddCommand(conntemplate.NewConnectionTemplateGroupCommand())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)

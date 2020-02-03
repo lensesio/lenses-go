@@ -24,4 +24,8 @@ const (
 	SchemasPath       = "schemas"
 	AlertSettingsPath = "alert-settings"
 	PoliciesPath      = "policies"
+
+	ConnectionsFilePath   = "connections"
+	ConnectionsAPIPath = "v1/connection"
+	ConnectionTemplatesAPIPath = "v1/connection-template"
 )
