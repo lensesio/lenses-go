@@ -67,7 +67,7 @@ func loadConnections(client *api.Client, cmd *cobra.Command, loadpath string) er
 			if currentConn.Name == connection.Name {
 				found = true
 				golog.Infof("Updating connection [%s]", connection.Name)
-				if err := config.Client.UpdateConnection(currentConn.Name, connection.Name, "", connection.Config, connection.Tags); err != nil {
+				if err := config.Client.UpdateConnection(currentConn.Name, connection.Name, "", connection.Configuration, connection.Tags); err != nil {
 					golog.Errorf("Error updating connection [%s]. [%s]", connection.Name, err.Error())
 					return err
 				}
@@ -88,7 +88,7 @@ func loadConnections(client *api.Client, cmd *cobra.Command, loadpath string) er
 				golog.Errorf("Connection template %s for connection %s not found [%s]", connection.TemplateName, connection.Name, err.Error())
 				return err
 			}
-			if err := config.Client.CreateConnection(connection.Name, connTemplateName, "", connection.Config, connection.Tags); err != nil {
+			if err := config.Client.CreateConnection(connection.Name, connTemplateName, "", connection.Configuration, connection.Tags); err != nil {
 				golog.Errorf("Error creating connection [%s] from [%s] [%s]", connection.Name, loadpath, err.Error())
 				return err
 			}

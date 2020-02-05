@@ -92,7 +92,7 @@ func NewConnectionCreateCommand() *cobra.Command {
 connections create --name connection1 \
                    --tag t1 \
                    --template-name Cassandra \
-                   --connection-config '[{"name":"port","value":["9042"]},{"name":"contact-points","value":["cassandra-host"]},{"name":"ssl-client-cert-auth","value":true}]'
+                   --connection-config '[{"key":"port","value":["9042"]},{"key":"contact-points","value":["cassandra-host"]},{"key":"ssl-client-cert-auth","value":true}]'
                 `,
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -131,7 +131,7 @@ func NewConnectionUpdateCommand() *cobra.Command {
 connections update --name connection1 \
                    --new-name newConnection \
                    --tag t1 \
-                   --connection-config '[{"name":"port","value":["444"]},{"name":"contact-points","value":["myhost"]},{"name":"ssl-client-cert-auth","value":true}]'
+                   --connection-config '[{"key":"port","value":["444"]},{"key":"contact-points","value":["myhost"]},{"key":"ssl-client-cert-auth","value":true}]'
                 `,
 		SilenceErrors:    true,
 		TraverseChildren: true,
