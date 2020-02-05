@@ -11,7 +11,7 @@ go:
 - go1.12
 go_import_path: github.com/landoop/lenses-go
 install:
-  go get -x golang.org/x/lint/golint
+  go get -u golang.org/x/lint/golint
 
 jobs:
   include:
