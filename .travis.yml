@@ -11,7 +11,8 @@ go:
 - go1.12
 go_import_path: github.com/landoop/lenses-go
 install:
-  go get -u golang.org/x/lint/golint
+  - go get -x github.com/golang/lint/golint
+  - eval "$(gimme 1.10.x)"; go get -x github.com/golang/lint/golint
 
 jobs:
   include:
