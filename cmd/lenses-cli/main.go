@@ -12,8 +12,11 @@ import (
 	"github.com/landoop/lenses-go/pkg/api"
 	"github.com/landoop/lenses-go/pkg/audit"
 	config "github.com/landoop/lenses-go/pkg/configs"
+	"github.com/landoop/lenses-go/pkg/connection"
 	"github.com/landoop/lenses-go/pkg/connector"
+	"github.com/landoop/lenses-go/pkg/conntemplate"
 	"github.com/landoop/lenses-go/pkg/consumers"
+	"github.com/landoop/lenses-go/pkg/elasticsearch"
 	"github.com/landoop/lenses-go/pkg/export"
 	imports "github.com/landoop/lenses-go/pkg/import"
 	"github.com/landoop/lenses-go/pkg/logs"
@@ -27,8 +30,6 @@ import (
 	"github.com/landoop/lenses-go/pkg/sql"
 	"github.com/landoop/lenses-go/pkg/topic"
 	"github.com/landoop/lenses-go/pkg/user"
-	"github.com/landoop/lenses-go/pkg/connection"
-	"github.com/landoop/lenses-go/pkg/conntemplate"
 	"github.com/spf13/cobra"
 )
 
@@ -172,6 +173,10 @@ func main() {
 	app.AddCommand(topic.NewTopicsGroupCommand())
 	app.AddCommand(topic.NewTopicGroupCommand())
 
+	//Elasticsearch Indexes
+	app.AddCommand(elasticsearch.IndexesCommand())
+	app.AddCommand(elasticsearch.IndexCommand())
+
 	//Quotas
 	app.AddCommand(quota.NewGetQuotasCommand())
 	app.AddCommand(quota.NewQuotaGroupCommand())
@@ -202,7 +207,7 @@ func main() {
 	app.AddCommand(management.NewUsersCommand())
 	app.AddCommand(management.NewServiceAccountsCommand())
 
-        // Connection
+	// Connection
 	app.AddCommand(connection.NewConnectionGroupCommand())
 
 	// Connection Template
