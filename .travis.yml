@@ -8,10 +8,10 @@ cache:
     - $GOPATH/.cache/go-build
     - $GOPATH/pkg/mod
 go:
-- go1.12
+- go1.13
 go_import_path: github.com/landoop/lenses-go
 install:
-  go get -x golang.org/x/lint/golint
+  go get golang.org/x/lint/golint
 
 jobs:
   include:

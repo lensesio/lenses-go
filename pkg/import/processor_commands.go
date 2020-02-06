@@ -74,26 +74,26 @@ func loadProcessors(client *api.Client, cmd *cobra.Command, loadpath string) err
 						return err
 					}
 					golog.Infof("Scaled processor [%s] from file [%s/%s] from [%d] to [%d]", p.ID, loadpath, file.Name(), p.Runners, processor.Runners)
+					return nil
 				}
 				golog.Warnf("Processor [%s] from file [%s/%s] already exists", p.ID, loadpath, file.Name())
-				break
 			}
-
-			if err := client.CreateProcessor(
-				processor.Name,
-				processor.SQL,
-				processor.Runners,
-				processor.ClusterName,
-				processor.Namespace,
-				processor.Pipeline); err != nil {
-
-				golog.Errorf("Error creating processor from file [%s/%s]. [%s]", loadpath, file.Name(), err.Error())
-				return err
-			}
-
-			golog.Infof("Created processor from [%s/%s]", loadpath, file.Name())
-
 		}
+
+		if err := client.CreateProcessor(
+			processor.Name,
+			processor.SQL,
+			processor.Runners,
+			processor.ClusterName,
+			processor.Namespace,
+			processor.Pipeline); err != nil {
+
+			golog.Errorf("Error creating processor from file [%s/%s]. [%s]", loadpath, file.Name(), err.Error())
+			return err
+		}
+
+		golog.Infof("Created processor from [%s/%s]", loadpath, file.Name())
 	}
+
 	return nil
 }
