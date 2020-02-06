@@ -10,17 +10,17 @@ cache:
 go:
 - go1.12
 go_import_path: github.com/landoop/lenses-go
-install:
-  - go get -x github.com/golang/lint/golint
-  - eval "$(gimme 1.10.x)"; go get -x github.com/golang/lint/golint
+# install:
+  # - go get -x github.com/golang/lint/golint
+  # - eval "$(gimme 1.10.x)"; go get -x github.com/golang/lint/golint
 
 jobs:
   include:
   - stage: Build
     script: REVISION=${TRAVIS_COMMIT} VERSION=${TRAVIS_COMMIT} make cross-build
 
-  - stage: Lint
-    script: make lint
+  # - stage: Lint
+  #   script: make lint
 
   - stage: Tests
     script: make test
