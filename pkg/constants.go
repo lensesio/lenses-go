@@ -25,7 +25,7 @@ const (
 	AlertSettingsPath = "alert-settings"
 	PoliciesPath      = "policies"
 
-	ConnectionsFilePath   = "connections"
-	ConnectionsAPIPath = "v1/connection"
-	ConnectionTemplatesAPIPath = "v1/connection-template"
+	ConnectionsFilePath        = "connections"
+	ConnectionsAPIPath         = "v1/connection/connections"
+	ConnectionTemplatesAPIPath = "v1/connection/connection-templates"
 )
