@@ -1,8 +1,6 @@
 package alert
 
 import (
-	"fmt"
-
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/landoop/lenses-go/pkg/api"
@@ -53,9 +51,6 @@ func NewGetAlertsCommand() *cobra.Command {
 				golog.Errorf("Failed to retrieve alerts. [%s]", err.Error())
 				return err
 			}
-			output := bite.GetOutPutFlag(cmd)
-			fmt.Print(output)
-			//return bite.PrintJSON(cmd, alerts)
 			return bite.PrintObject(cmd, alerts)
 		},
 	}
