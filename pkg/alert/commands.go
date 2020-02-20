@@ -1,6 +1,9 @@
 package alert
 
 import (
+	"errors"
+	"strconv"
+
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/landoop/lenses-go/pkg/api"
@@ -90,49 +93,86 @@ func NewGetAlertSettingsCommand() *cobra.Command {
 //NewAlertSettingGroupCommand creates the `alert setting` command
 func NewAlertSettingGroupCommand() *cobra.Command {
 	var (
-		id     int
-		enable bool
+		id         int
+		mustEnable bool
 	)
 
-	cmd := &cobra.Command{
+	root := &cobra.Command{
 		Use:              "setting",
-		Short:            "Print or enable a specific alert setting based on ID",
-		Example:          "alert setting --id=1001 [--enable]",
+		Short:            "Print an alert's settings",
+		Example:          "alert setting --id=1001",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if cmd.Flags().Changed("enable") {
-				if err := config.Client.EnableAlertSetting(id, enable); err != nil {
+			if mustEnable {
+				if err := config.Client.EnableAlertSetting(id, mustEnable); err != nil {
 					return err
 				}
 
-				if enable {
-					return bite.PrintInfo(cmd, "Alert setting [%d] enabled", id)
-				}
-				return bite.PrintInfo(cmd, "Alert setting [%d] disabled", id)
+				return bite.PrintInfo(cmd, "Alert setting [%d] enabled", id)
 			}
 
 			settings, err := config.Client.GetAlertSetting(id)
 			if err != nil {
-				golog.Errorf("Failed to retrieve alert [%d]. [%s]", id, err.Error())
 				return err
 			}
 
-			// force json, may contains conditions that are easier to be seen in json format.
 			return bite.PrintObject(cmd, settings)
 		},
 	}
 
-	cmd.Flags().IntVar(&id, "id", 0, "--id=1001")
-	cmd.MarkFlagRequired("id")
+	root.Flags().IntVar(&id, "id", 0, "--id=1001")
+	root.MarkFlagRequired("id")
 
-	cmd.Flags().BoolVar(&enable, "enable", false, "--enable")
+	root.Flags().BoolVar(&mustEnable, "enable", false, "--enable")
 
-	bite.CanPrintJSON(cmd)
-	bite.CanBeSilent(cmd)
+	bite.CanPrintJSON(root)
+	bite.CanBeSilent(root)
 
-	cmd.AddCommand(NewGetAlertSettingConditionsCommand())
-	cmd.AddCommand(NewAlertSettingConditionGroupCommand())
+	root.AddCommand(NewUpdateAlertSettingsCommand())
+	root.AddCommand(NewGetAlertSettingConditionsCommand())
+	root.AddCommand(NewAlertSettingConditionGroupCommand())
+
+	return root
+}
+
+// NewUpdateAlertSettingsCommand updates an alert's settings, e.g. channels, etc.
+func NewUpdateAlertSettingsCommand() *cobra.Command {
+	var alertSettings api.AlertSettingsPayload
+
+	cmd := &cobra.Command{
+		Use:              "set",
+		Short:            "Update an alert's settings or load from file. If `enable` parameter omitted, it defaults to true",
+		Example:          "alert setting set --alert=1001 --enable=true --channel='b83c862c-7e23-4fb4-863d-c03e04102f90' or alert setting set ./alert_sett.yml`",
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Limitation: If `enable` not set through YAML,
+			// then the default value will be used
+			// if !cmd.Flags().Changed("enable") {
+			// 	return errors.New("requires `enable` parameter")
+			// }
+
+			if alertSettings.AlertID == "" {
+				return errors.New("requires `id` parameter")
+			}
+			if alertSettings.Channels == nil {
+				return errors.New("requires `channels` parameter")
+			}
+
+			err := config.Client.UpdateAlertSettings(alertSettings)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&alertSettings.Enable, "enable", true, "Whether to enable a given alert's channel(s)")
+	cmd.Flags().StringArrayVar(&alertSettings.Channels, "channels", nil, "Channel UIDs")
+	cmd.Flags().StringVar(&alertSettings.AlertID, "id", "", "Alert ID")
+
+	bite.Prepend(cmd, bite.FileBind(&alertSettings))
 
 	return cmd
 }
@@ -150,11 +190,9 @@ func NewGetAlertSettingConditionsCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conds, err := config.Client.GetAlertSettingConditions(alertID)
 			if err != nil {
-				golog.Errorf("Failed to retrieve alert setting conditions for [%d]. [%s]", alertID, err.Error())
 				return err
 			}
 
-			// force-json
 			return bite.PrintObject(cmd, conds)
 		},
 	}
@@ -188,12 +226,15 @@ func NewAlertSettingConditionGroupCommand() *cobra.Command {
 func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 	var conds SettingConditionPayloads
 	var cond SettingConditionPayload
+	cmdExample := "# Create\nalert setting condition set --alert=1001 --condition=\"lag >= 100000\"\n" +
+		"# Update\nalert setting condition set --alert <id> --condition=<condition> --conditionID=<conditionID> --channels=<channelID> --channels=<channelID>\n" +
+		"# Using YAML\nalert setting condition set ./alert_cond.yml"
 
 	cmd := &cobra.Command{
 		Use:              "set",
 		Aliases:          []string{"create", "update"},
 		Short:            "Create or Update an alert setting's condition or load from file",
-		Example:          `alert setting condition set --alert=1001 --condition="lag >= 100000 or alert setting condition set ./alert_cond.yml`,
+		Example:          cmdExample,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -213,6 +254,14 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
 				return err
 			}
+			// Route to the new API
+			if cond.ConditionID != "" && cond.Channels != nil {
+				err := config.Client.UpdateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.ConditionID, cond.Channels)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
 
 			err := config.Client.CreateOrUpdateAlertSettingCondition(cond.AlertID, cond.Condition)
 			if err != nil {
@@ -226,6 +275,8 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&cond.AlertID, "alert", 0, "Alert ID")
 	cmd.Flags().StringVar(&cond.Condition, "condition", "", `Alert condition .e.g. "lag >= 100000 on group group and topic topicA"`)
+	cmd.Flags().StringVar(&cond.ConditionID, "conditionID", "", "Alert condition ID")
+	cmd.Flags().StringArrayVar(&cond.Channels, "channels", nil, "Channel UIDs")
 
 	bite.CanBeSilent(cmd)
 
