@@ -175,7 +175,6 @@ func TestConnectionUpdateCommandSuccess(t *testing.T) {
 	output, err := test.ExecuteCommand(cmd, "--name=TestConnection",
 		"--tag=t3",
 		"--connection-config=[{\"name\":\"webhookUrl\",\"value\":\"https://hooks.slack.com/\"}]",
-		"--new-name=TestConnection2",
 	)
 
 	assert.Nil(t, err)

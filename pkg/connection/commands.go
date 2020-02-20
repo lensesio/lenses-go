@@ -129,7 +129,6 @@ func NewConnectionUpdateCommand() *cobra.Command {
 		Short: `Update a Lenses connection. Check the associated connection template for required configuration values.`,
 		Example: `
 connections update --name connection1 \
-                   --new-name newConnection \
                    --tag t1 \
                    --connection-config '[{"key":"port","value":["444"]},{"key":"contact-points","value":["myhost"]},{"key":"ssl-client-cert-auth","value":true}]'
                 `,
@@ -146,7 +145,6 @@ connections update --name connection1 \
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "Name of the connection")
-	cmd.Flags().StringVar(&newName, "new-name", "", "Name of the connection")
 	cmd.Flags().StringVar(&connectionConfig, "connection-config", "", "configuration keys and values as json. Example: [{\"port\":444,\"host\":\"myhost\"}]")
 	cmd.Flags().StringArrayVar(&tags, "tag", []string{}, "tag assigned to the connection, can be defined multiple times")
 	cmd.MarkFlagRequired("name")
