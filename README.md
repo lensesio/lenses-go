@@ -55,7 +55,7 @@ make lint
 If you want to run the tests, use the following:
 
 ```
-make tests
+make test
 ```
 
 #### Clean

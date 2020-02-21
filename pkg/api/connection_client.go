@@ -196,7 +196,7 @@ func (c *Client) UpdateConnection(connectionName string, newName string, configS
 
 	path := fmt.Sprintf("api/%s/%s", pkg.ConnectionsAPIPath, connectionName)
 
-	resp, err := c.Do(http.MethodPatch, path, contentTypeJSON, jsonPayload)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, jsonPayload)
 	if err != nil {
 		return
 	}
