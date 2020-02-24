@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/landoop/lenses-go/pkg"
 )
@@ -206,12 +205,12 @@ func (c *Client) UpdateConnection(connectionName string, newName string, configS
 }
 
 // DeleteConnection deletes a new Lenses connection
-func (c *Client) DeleteConnection(connectionName string, removeFromProvider bool) (err error) {
+func (c *Client) DeleteConnection(connectionName string) (err error) {
 	if connectionName == "" {
 		return errRequired("Required argument connectionName not given")
 	}
 
-	path := fmt.Sprintf("api/%s/%s?removeFromSecretsProvider=%s", pkg.ConnectionsAPIPath, connectionName, strconv.FormatBool(removeFromProvider))
+	path := fmt.Sprintf("api/%s/%s", pkg.ConnectionsAPIPath, connectionName)
 
 	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
 	if err != nil {

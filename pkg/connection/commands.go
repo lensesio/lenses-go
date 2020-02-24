@@ -158,7 +158,6 @@ connections update --name connection1 \
 // NewConnectionDeleteCommand creates `connections delete` group command
 func NewConnectionDeleteCommand() *cobra.Command {
 	var name string
-	var removeFromProvider bool
 
 	cmd := &cobra.Command{
 		Use:   "delete",
@@ -169,7 +168,7 @@ connections delete --name connection-name
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := config.Client.DeleteConnection(name, removeFromProvider); err != nil {
+			if err := config.Client.DeleteConnection(name); err != nil {
 				golog.Errorf("Failed to delete connection. [%s]", err.Error())
 				return err
 			}
@@ -179,7 +178,6 @@ connections delete --name connection-name
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "connection name")
-	cmd.Flags().BoolVar(&removeFromProvider, "remove-from-provider", false, "Also delete from external secrets provider")
 
 	// Required for bite to send standard output to cmd execution buffer
 	_ = bite.CanBeSilent(cmd)
