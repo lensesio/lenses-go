@@ -9,7 +9,7 @@ import (
 	cobra "github.com/spf13/cobra"
 )
 
-// NewConnectionTemplateGroupCommand creates `connection` command
+// NewConnectionTemplateGroupCommand creates `connection-templates` command
 func NewConnectionTemplateGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -35,6 +35,8 @@ connection-templates
 			return bite.PrintObject(cmd, connectionTemplates)
 		},
 	}
+
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }

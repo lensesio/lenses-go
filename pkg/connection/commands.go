@@ -42,6 +42,8 @@ connections
 	cmd.AddCommand(NewConnectionDeleteCommand())
 	cmd.AddCommand(NewConnectionUpdateCommand())
 
+	bite.CanPrintJSON(cmd)
+
 	return cmd
 }
 
@@ -77,6 +79,7 @@ connections get --name connection-name
 	cmd.MarkFlagRequired("name")
 
 	bite.CanPrintJSON(cmd)
+
 	return cmd
 }
 
@@ -108,7 +111,7 @@ connections create --name connection1 \
 
 	cmd.Flags().StringVar(&name, "name", "", "Name of the connection")
 	cmd.Flags().StringVar(&templateName, "template-name", "", "Template connection name")
-	cmd.Flags().StringVar(&connectionConfig, "connection-config", "", "configuration keys and values as json. Example: [{\"port\":444,\"host\":\"myhost\"}]")
+	cmd.Flags().StringVar(&connectionConfig, "connection-config", "", "configuration keys and values as json. Example: [{\"key\":\"port\",\"value\":[\"9042\"]}]")
 	cmd.Flags().StringArrayVar(&tags, "tag", []string{}, "tag assigned to the connection, can be defined multiple times")
 	cmd.MarkFlagRequired("name")
 	cmd.MarkFlagRequired("template-name")
@@ -145,7 +148,7 @@ connections update --name connection1 \
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "Name of the connection")
-	cmd.Flags().StringVar(&connectionConfig, "connection-config", "", "configuration keys and values as json. Example: [{\"port\":444,\"host\":\"myhost\"}]")
+	cmd.Flags().StringVar(&connectionConfig, "connection-config", "", "configuration keys and values as json. Example: [{\"key\":\"port\",\"value\":[\"9042\"]}]")
 	cmd.Flags().StringArrayVar(&tags, "tag", []string{}, "tag assigned to the connection, can be defined multiple times")
 	cmd.MarkFlagRequired("name")
 	cmd.MarkFlagRequired("connection-config")
