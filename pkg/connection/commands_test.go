@@ -146,7 +146,7 @@ func TestConnectionCreateCommandSuccess(t *testing.T) {
 		"--tag=t1",
 		"--tag=t2",
 		"--template-name=Slack",
-		"--connection-config=[{\"name\":\"webhookUrl\",\"value\":\"https://hooks.slack.com/\"}]",
+		"--connection-config=[{\"key\":\"webhookUrl\",\"value\":\"https://hooks.slack.com/\"}]",
 	)
 
 	assert.Nil(t, err)
@@ -174,7 +174,7 @@ func TestConnectionUpdateCommandSuccess(t *testing.T) {
 	cmd := NewConnectionUpdateCommand()
 	output, err := test.ExecuteCommand(cmd, "--name=TestConnection",
 		"--tag=t3",
-		"--connection-config=[{\"name\":\"webhookUrl\",\"value\":\"https://hooks.slack.com/\"}]",
+		"--connection-config=[{\"key\":\"webhookUrl\",\"value\":\"https://hooks.slack.com/\"}]",
 	)
 
 	assert.Nil(t, err)

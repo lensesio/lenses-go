@@ -26,16 +26,16 @@ type ConnectionList struct {
 
 // Connection type
 type Connection struct {
-	Name           string             `json:"name" yaml:"name" header:"Name,text"`
-	TemplateName   string             `json:"templateName" yaml:"templateName" header:"Template Name,text"`
-	BuiltIn        bool               `json:"builtIn" yaml:"builtIn" header:"BuiltIn,text"`
-	ReadOnly       bool               `json:"readOnly" yaml:"readOnly" header:"Read only"`
-	Configuration  []ConnectionConfig `json:"configuration" yaml:"configuration"`
-	CreatedBy      string             `json:"createdBy" yaml:"createdBy" header:"Created By,text"`
-	CreatedAt      int64              `json:"createdAt" yaml:"createdAt" header:"Created At,text"`
-	ModifiedBy     string             `json:"modifiedBy" yaml:"modifiedBy" header:"Modified By,text"`
-	ModifiedAt     int64              `json:"modifiedAt" yaml:"modifiedAt" header:"Modified At,text"`
-	Tags           []string           `json:"tags" yaml:"tags" header:"Tags,text"`
+	Name          string             `json:"name" yaml:"name" header:"Name,text"`
+	TemplateName  string             `json:"templateName" yaml:"templateName" header:"Template Name,text"`
+	BuiltIn       bool               `json:"builtIn" yaml:"builtIn" header:"BuiltIn,text"`
+	ReadOnly      bool               `json:"readOnly" yaml:"readOnly" header:"Read only"`
+	Configuration []ConnectionConfig `json:"configuration" yaml:"configuration"`
+	CreatedBy     string             `json:"createdBy" yaml:"createdBy" header:"Created By,text"`
+	CreatedAt     int64              `json:"createdAt" yaml:"createdAt" header:"Created At,text"`
+	ModifiedBy    string             `json:"modifiedBy" yaml:"modifiedBy" header:"Modified By,text"`
+	ModifiedAt    int64              `json:"modifiedAt" yaml:"modifiedAt" header:"Modified At,text"`
+	Tags          []string           `json:"tags" yaml:"tags" header:"Tags,text"`
 }
 
 // GetConnections returns all connections
@@ -72,16 +72,16 @@ func (c *Client) GetConnection(name string) (response Connection, err error) {
 
 // ConnectionConfig type
 type ConnectionConfig struct {
-	Key  string      `json:"key" yaml:"key"`
+	Key   string      `json:"key" yaml:"key"`
 	Value interface{} `json:"value" yaml:"value"`
 }
 
 // CreateConnectionPayload type
 type CreateConnectionPayload struct {
-	Name           string             `json:"name" yaml:"name"`
-	TemplateName   string             `json:"templateName" yaml:"templateName"`
-	Configuration  []ConnectionConfig `json:"configuration" yaml:"configuration"`
-	Tags           []string           `json:"tags" yaml:"tags"`
+	Name          string             `json:"name" yaml:"name"`
+	TemplateName  string             `json:"templateName" yaml:"templateName"`
+	Configuration []ConnectionConfig `json:"configuration" yaml:"configuration"`
+	Tags          []string           `json:"tags" yaml:"tags"`
 }
 
 // parseConnectionConfigurationValues parses the config values given as a JSON array string
@@ -100,7 +100,7 @@ func parseConnectionConfigurationValues(configString string) (configKeyValueArra
 	configKeyValueArray = make([]ConnectionConfig, len(jsonConfig))
 
 	for i := range jsonConfig {
-		configKeyValueArray[i] = ConnectionConfig{jsonConfig[i]["name"].(string), jsonConfig[i]["value"]}
+		configKeyValueArray[i] = ConnectionConfig{jsonConfig[i]["key"].(string), jsonConfig[i]["value"]}
 	}
 
 	return
