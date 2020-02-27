@@ -14,7 +14,7 @@ func NewConnectionTemplateGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "connection-templates",
-		Short: `Manage Lenses connection templates`,
+		Short: `List the connection templates`,
 		Example: `
 connection-templates
 		`,
