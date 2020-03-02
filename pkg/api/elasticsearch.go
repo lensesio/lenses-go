@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/landoop/lenses-go/pkg"
 )
@@ -33,10 +35,20 @@ type Index struct {
 }
 
 // GetIndexes returns the list of elasticsearch indexes.
-func (c *Client) GetIndexes() (indexes []Index, err error) {
+func (c *Client) GetIndexes(connectionName string, includeSystemIndexes bool) (indexes []Index, err error) {
 	// # List of indexes
-	// GET /api/elastic
-	resp, respErr := c.Do(http.MethodGet, pkg.ElasticsearchIndexesPath, "", nil)
+	// GET /api/elastic/indexes?connectionName=$x&includeSystemIndexes=$y
+	url, err := url.Parse(pkg.ElasticsearchIndexesPath)
+	q := url.Query()
+
+	q.Add("includeSystemIndexes", strconv.FormatBool(includeSystemIndexes))
+
+	if connectionName != "" {
+		q.Add("connectionName", connectionName)
+	}
+	url.RawQuery = q.Encode()
+
+	resp, respErr := c.Do(http.MethodGet, url.String(), "", nil)
 	if respErr != nil {
 		err = respErr
 		return

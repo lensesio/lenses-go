@@ -8,15 +8,17 @@ import (
 
 // IndexesCommand displays available indexes
 func IndexesCommand() *cobra.Command {
+	var connectionName string
+	var includeSystemIndexes bool
 	cmd := &cobra.Command{
 		Use:           "elasticsearch-indexes",
 		Short:         "List all available elasticsearch indexes",
-		Example:       "elasticsearch-indexes",
+		Example:       `elasticsearch-indexes --connection="es-default" --include-system-indexes`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := config.Client
 
-			indexes, err := client.GetIndexes()
+			indexes, err := client.GetIndexes(connectionName, includeSystemIndexes)
 
 			if err != nil {
 				return err
@@ -26,6 +28,10 @@ func IndexesCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&connectionName, "connection", "", "Connection to use")
+	cmd.Flags().BoolVar(&includeSystemIndexes, "include-system-indexes", false, "Show system indexes")
+
+	bite.CanPrintJSON(cmd)
 	return cmd
 }
 
@@ -36,8 +42,8 @@ func IndexCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:           "elasticsearch-index",
-		Short:         "List all available elasticsearch indexes",
-		Example:       `elasticsearch-index --connection="connection" --name="index"`,
+		Short:         "Fetch an elasticsearch index",
+		Example:       `elasticsearch-index --connection="es-default" --name="index"`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := config.Client
@@ -56,6 +62,8 @@ func IndexCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&connectionName, "connection", "", "Connection to use")
 	cmd.Flags().StringVar(&indexName, "name", "", "Index to look for")
+
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
