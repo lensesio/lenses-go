@@ -1,7 +1,10 @@
 package elasticsearch
 
 import (
+	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/landoop/lenses-go/pkg/api"
@@ -10,18 +13,62 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const indexesOkResponse = `
-[{"indexName":"dev-complex","connectionName":"es6again","keyType":"STRING","valueType":"JSON","keySchema":"\"string\"","valueSchema":"{\"type\":\"record\",\"name\":\"lenses_record\",\"namespace\":\"lenses\",\"fields\":[{\"name\":\"Customer\",\"type\":{\"type\":\"record\",\"name\":\"Customer\",\"fields\":[{\"name\":\"contactInfo\",\"type\":{\"type\":\"record\",\"name\":\"contactInfo\",\"fields\":[{\"name\":\"phone1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"coordinates\",\"type\":{\"type\":\"record\",\"name\":\"coordinates\",\"fields\":[{\"name\":\"lat\",\"type\":\"float\",\"doc\":\"float\"},{\"name\":\"lng\",\"type\":\"float\",\"doc\":\"float\"}]}},{\"name\":\"email2\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"city\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"state\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"email1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"address2\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"postalCode\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"address1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"phone2\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"personalInfo\",\"type\":{\"type\":\"record\",\"name\":\"personalInfo\",\"fields\":[{\"name\":\"bankAccount\",\"type\":{\"type\":\"record\",\"name\":\"bankAccount\",\"fields\":[{\"name\":\"bankISOCode\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"branchIdentifier\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"bankIdentifier\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"accountNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"ibanCheckDigits\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"iban\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"bban\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"medicalInfo\",\"type\":{\"type\":\"record\",\"name\":\"medicalInfo\",\"fields\":[{\"name\":\"bloodType\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"notes\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"legalInfo\",\"type\":{\"type\":\"record\",\"name\":\"legalInfo\",\"fields\":[{\"name\":\"military\",\"type\":{\"type\":\"record\",\"name\":\"military\",\"fields\":[{\"name\":\"hasServed\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"info\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"passport\",\"type\":{\"type\":\"record\",\"name\":\"passport\",\"fields\":[{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"nationality\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"passportID\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"ssn\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"workInfo\",\"type\":{\"type\":\"record\",\"name\":\"workInfo\",\"fields\":[{\"name\":\"legalHQ\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"phoneNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"ein\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"job\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"company\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"conpanyCID\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"creditCards\",\"type\":{\"type\":\"record\",\"name\":\"creditCards\",\"fields\":[{\"name\":\"card1\",\"type\":{\"type\":\"record\",\"name\":\"card1\",\"fields\":[{\"name\":\"ccNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"provider\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"card2\",\"type\":{\"type\":\"record\",\"name\":\"card2\",\"fields\":[{\"name\":\"ccNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"provider\",\"type\":\"string\",\"doc\":\"string\"}]}}]}}]}},{\"name\":\"lastName\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"firstName\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"birthDate\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"gender\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"transactionsPortal\",\"type\":{\"type\":\"record\",\"name\":\"transactionsPortal\",\"fields\":[{\"name\":\"connectionInfo\",\"type\":{\"type\":\"record\",\"name\":\"connectionInfo\",\"fields\":[{\"name\":\"ipv4\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"lastLogin\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"macAddress\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"agent\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"usageInfo\",\"type\":{\"type\":\"record\",\"name\":\"usageInfo\",\"fields\":[{\"name\":\"idleTime\",\"type\":\"long\",\"doc\":\"long\"},{\"name\":\"mostVisitedPage\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"ipv6\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"transaction\",\"type\":{\"type\":\"record\",\"name\":\"transaction\",\"fields\":[{\"name\":\"ID\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"timestamp\",\"type\":\"float\",\"doc\":\"float\"},{\"name\":\"amount\",\"type\":\"long\",\"doc\":\"long\"},{\"name\":\"currency\",\"type\":{\"type\":\"record\",\"name\":\"currency\",\"fields\":[{\"name\":\"code\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"name\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"EAN\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"username\",\"type\":\"string\",\"doc\":\"string\"}]}}]}","size":4244452,"totalMessages":1001,"status":"yellow","shardsCount":5,"replicas":5,"permissions":["ShowTopic","QueryTopic","ViewSchema"]},{"indexName":"data-complex","connectionName":"es6again","keyType":"STRING","valueType":"JSON","keySchema":"\"string\"","valueSchema":"{\"type\":\"record\",\"name\":\"lenses_record\",\"namespace\":\"lenses\",\"fields\":[{\"name\":\"Customer\",\"type\":{\"type\":\"record\",\"name\":\"Customer\",\"fields\":[{\"name\":\"contactInfo\",\"type\":{\"type\":\"record\",\"name\":\"contactInfo\",\"fields\":[{\"name\":\"phone1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"coordinates\",\"type\":{\"type\":\"record\",\"name\":\"coordinates\",\"fields\":[{\"name\":\"lat\",\"type\":\"float\",\"doc\":\"float\"},{\"name\":\"lng\",\"type\":\"float\",\"doc\":\"float\"}]}},{\"name\":\"email2\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"city\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"state\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"email1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"address2\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"postalCode\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"address1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"phone2\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"personalInfo\",\"type\":{\"type\":\"record\",\"name\":\"personalInfo\",\"fields\":[{\"name\":\"bankAccount\",\"type\":{\"type\":\"record\",\"name\":\"bankAccount\",\"fields\":[{\"name\":\"bankISOCode\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"branchIdentifier\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"bankIdentifier\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"accountNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"ibanCheckDigits\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"iban\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"bban\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"medicalInfo\",\"type\":{\"type\":\"record\",\"name\":\"medicalInfo\",\"fields\":[{\"name\":\"bloodType\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"notes\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"legalInfo\",\"type\":{\"type\":\"record\",\"name\":\"legalInfo\",\"fields\":[{\"name\":\"military\",\"type\":{\"type\":\"record\",\"name\":\"military\",\"fields\":[{\"name\":\"hasServed\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"info\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"passport\",\"type\":{\"type\":\"record\",\"name\":\"passport\",\"fields\":[{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"nationality\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"passportID\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"ssn\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"workInfo\",\"type\":{\"type\":\"record\",\"name\":\"workInfo\",\"fields\":[{\"name\":\"legalHQ\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"phoneNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"ein\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"job\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"company\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"conpanyCID\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"creditCards\",\"type\":{\"type\":\"record\",\"name\":\"creditCards\",\"fields\":[{\"name\":\"card1\",\"type\":{\"type\":\"record\",\"name\":\"card1\",\"fields\":[{\"name\":\"ccNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"provider\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"card2\",\"type\":{\"type\":\"record\",\"name\":\"card2\",\"fields\":[{\"name\":\"ccNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"provider\",\"type\":\"string\",\"doc\":\"string\"}]}}]}}]}},{\"name\":\"lastName\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"firstName\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"birthDate\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"gender\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"transactionsPortal\",\"type\":{\"type\":\"record\",\"name\":\"transactionsPortal\",\"fields\":[{\"name\":\"connectionInfo\",\"type\":{\"type\":\"record\",\"name\":\"connectionInfo\",\"fields\":[{\"name\":\"ipv4\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"lastLogin\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"macAddress\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"agent\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"usageInfo\",\"type\":{\"type\":\"record\",\"name\":\"usageInfo\",\"fields\":[{\"name\":\"idleTime\",\"type\":\"long\",\"doc\":\"long\"},{\"name\":\"mostVisitedPage\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"ipv6\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"transaction\",\"type\":{\"type\":\"record\",\"name\":\"transaction\",\"fields\":[{\"name\":\"ID\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"timestamp\",\"type\":\"float\",\"doc\":\"float\"},{\"name\":\"amount\",\"type\":\"long\",\"doc\":\"long\"},{\"name\":\"currency\",\"type\":{\"type\":\"record\",\"name\":\"currency\",\"fields\":[{\"name\":\"code\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"name\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"EAN\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"username\",\"type\":\"string\",\"doc\":\"string\"}]}}]}","size":4141656,"totalMessages":1001,"status":"yellow","shardsCount":5,"replicas":5,"permissions":["ShowTopic","QueryTopic","ViewSchema"]}]
-`
+func index(name string, connection string) api.Index {
+	var shards []api.Shard
+	var permissions []string
+	return api.Index{
+		IndexName:      name,
+		ConnectionName: connection,
+		KeyType:        "STRING",
+		ValueType:      "JSON",
+		KeySchema:      "string",
+		ValueSchema:    "null",
+		Size:           4244452,
+		TotalRecords:   192910,
+		Status:         "yellow",
+		Shards:         shards,
+		ShardsCount:    0,
+		Replicas:       1,
+		Permission:     permissions,
+	}
+}
 
-const indexOkResponse = `
-	{"indexName":"dev-complex","connectionName":"es6again","keyType":"STRING","valueType":"JSON","keySchema":"\"string\"","valueSchema":"{\"type\":\"record\",\"name\":\"lenses_record\",\"namespace\":\"lenses\",\"fields\":[{\"name\":\"Customer\",\"type\":{\"type\":\"record\",\"name\":\"Customer\",\"fields\":[{\"name\":\"contactInfo\",\"type\":{\"type\":\"record\",\"name\":\"contactInfo\",\"fields\":[{\"name\":\"phone1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"coordinates\",\"type\":{\"type\":\"record\",\"name\":\"coordinates\",\"fields\":[{\"name\":\"lat\",\"type\":\"float\",\"doc\":\"float\"},{\"name\":\"lng\",\"type\":\"float\",\"doc\":\"float\"}]}},{\"name\":\"email2\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"city\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"state\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"email1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"address2\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"postalCode\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"address1\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"phone2\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"personalInfo\",\"type\":{\"type\":\"record\",\"name\":\"personalInfo\",\"fields\":[{\"name\":\"bankAccount\",\"type\":{\"type\":\"record\",\"name\":\"bankAccount\",\"fields\":[{\"name\":\"bankISOCode\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"branchIdentifier\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"bankIdentifier\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"accountNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"ibanCheckDigits\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"iban\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"bban\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"medicalInfo\",\"type\":{\"type\":\"record\",\"name\":\"medicalInfo\",\"fields\":[{\"name\":\"bloodType\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"notes\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"legalInfo\",\"type\":{\"type\":\"record\",\"name\":\"legalInfo\",\"fields\":[{\"name\":\"military\",\"type\":{\"type\":\"record\",\"name\":\"military\",\"fields\":[{\"name\":\"hasServed\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"info\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"passport\",\"type\":{\"type\":\"record\",\"name\":\"passport\",\"fields\":[{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"nationality\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"passportID\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"ssn\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"workInfo\",\"type\":{\"type\":\"record\",\"name\":\"workInfo\",\"fields\":[{\"name\":\"legalHQ\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"phoneNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"ein\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"job\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"company\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"conpanyCID\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"creditCards\",\"type\":{\"type\":\"record\",\"name\":\"creditCards\",\"fields\":[{\"name\":\"card1\",\"type\":{\"type\":\"record\",\"name\":\"card1\",\"fields\":[{\"name\":\"ccNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"provider\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"card2\",\"type\":{\"type\":\"record\",\"name\":\"card2\",\"fields\":[{\"name\":\"ccNumber\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"expiry\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"provider\",\"type\":\"string\",\"doc\":\"string\"}]}}]}}]}},{\"name\":\"lastName\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"firstName\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"birthDate\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"gender\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"transactionsPortal\",\"type\":{\"type\":\"record\",\"name\":\"transactionsPortal\",\"fields\":[{\"name\":\"connectionInfo\",\"type\":{\"type\":\"record\",\"name\":\"connectionInfo\",\"fields\":[{\"name\":\"ipv4\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"lastLogin\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"macAddress\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"agent\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"usageInfo\",\"type\":{\"type\":\"record\",\"name\":\"usageInfo\",\"fields\":[{\"name\":\"idleTime\",\"type\":\"long\",\"doc\":\"long\"},{\"name\":\"mostVisitedPage\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"ipv6\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"transaction\",\"type\":{\"type\":\"record\",\"name\":\"transaction\",\"fields\":[{\"name\":\"ID\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"timestamp\",\"type\":\"float\",\"doc\":\"float\"},{\"name\":\"amount\",\"type\":\"long\",\"doc\":\"long\"},{\"name\":\"currency\",\"type\":{\"type\":\"record\",\"name\":\"currency\",\"fields\":[{\"name\":\"code\",\"type\":\"string\",\"doc\":\"string\"},{\"name\":\"name\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"EAN\",\"type\":\"string\",\"doc\":\"string\"}]}},{\"name\":\"username\",\"type\":\"string\",\"doc\":\"string\"}]}}]}","size":4244452,"totalMessages":1001,"status":"yellow","shards":[{"shard":"0","records":197,"replicas":1,"availableReplicas":0},{"shard":"1","records":191,"replicas":1,"availableReplicas":0},{"shard":"2","records":211,"replicas":1,"availableReplicas":0},{"shard":"3","records":201,"replicas":1,"availableReplicas":0},{"shard":"4","records":201,"replicas":1,"availableReplicas":0}],"replicas":5,"permissions":["ShowTopic","QueryTopic","ViewSchema"]}
-`
+func esIndexHandler(t *testing.T, indexes []api.Index) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var filteredIndexes []api.Index
+		q := r.URL.Query()
+
+		includeSystemIndexes, err := strconv.ParseBool(q.Get("includeSystemIndexes"))
+		connectionName := q.Get("connectionName")
+		assert.Nil(t, err)
+
+		for _, index := range indexes {
+			if strings.HasPrefix(index.IndexName, ".") && includeSystemIndexes == false {
+				continue
+			}
+			if connectionName != "" && index.ConnectionName != connectionName {
+				continue
+			}
+
+			filteredIndexes = append(filteredIndexes, index)
+		}
+
+		resp, err := json.Marshal(filteredIndexes)
+		assert.Nil(t, err)
+		w.Write([]byte(resp))
+	}
+}
 
 func TestIndexesCommandSuccess(t *testing.T) {
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(indexesOkResponse))
-	})
+	var indexes, actual, expected []api.Index
+
+	internal := index(".internal", "es1")
+	indexA := index("indexA", "es1")
+	indexB := index("indexB", "es2")
+
+	indexes = append(indexes, internal, indexA, indexB)
+
+	h := http.HandlerFunc(esIndexHandler(t, indexes))
 
 	httpClient, teardown := test.TestingHTTPClient(h)
 	defer teardown()
@@ -36,9 +83,45 @@ func TestIndexesCommandSuccess(t *testing.T) {
 	cmd.PersistentFlags().StringVar(&outputValue, "output", "json", "")
 
 	output, err := test.ExecuteCommand(cmd)
-
 	assert.Nil(t, err)
-	assert.NotEmpty(t, output)
+
+	expected = append(expected, indexA, indexB)
+	err = json.Unmarshal([]byte(output), &actual)
+	assert.Nil(t, err)
+	assert.EqualValues(t, &expected, &actual)
+	config.Client = nil
+}
+
+func TestIndexesCommandWithParamsSuccess(t *testing.T) {
+	var indexes, actual, expected []api.Index
+
+	internal := index(".internal", "es1")
+	indexA := index("indexA", "es1")
+	indexB := index("indexB", "es2")
+
+	indexes = append(indexes, internal, indexA, indexB)
+
+	h := http.HandlerFunc(esIndexHandler(t, indexes))
+
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+
+	client, _ := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+
+	config.Client = client
+
+	var outputValue string
+	cmd := IndexesCommand()
+
+	cmd.PersistentFlags().StringVar(&outputValue, "output", "json", "")
+
+	output, err := test.ExecuteCommand(cmd, "--connection=es1", "--include-system-indexes")
+	assert.Nil(t, err)
+
+	expected = append(expected, internal, indexA)
+	err = json.Unmarshal([]byte(output), &actual)
+	assert.Nil(t, err)
+	assert.EqualValues(t, &expected, &actual)
 	config.Client = nil
 }
 
@@ -62,9 +145,15 @@ func TestIndexesCommandFail(t *testing.T) {
 	config.Client = nil
 }
 
-func TestIndexCommenad(t *testing.T) {
+func TestIndexCommand(t *testing.T) {
+	indexA := index("indexA", "es1")
+
+	resp, err := json.Marshal(indexA)
+
+	assert.Nil(t, err)
+
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(indexOkResponse))
+		w.Write([]byte(resp))
 	})
 
 	httpClient, teardown := test.TestingHTTPClient(h)
