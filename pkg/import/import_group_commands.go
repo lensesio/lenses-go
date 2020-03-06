@@ -14,6 +14,7 @@ func NewImportGroupCommand() *cobra.Command {
 import acls --landscape my-acls-dir
 import alert-settings --landscape my-acls-dir
 import connectors --landscape my-acls-dir
+import connections --landscape my-acls-dir
 import processors  --landscape my-acls-dir
 import quota --landscape my-acls-dir
 import schemas --landscape my-acls-dir
@@ -27,6 +28,7 @@ import serviceaccounts --dir serviceaccounts`,
 
 	cmd.AddCommand(NewImportAclsCommand())
 	cmd.AddCommand(NewImportAlertSettingsCommand())
+	cmd.AddCommand(NewImportConnectionsCommand())
 	cmd.AddCommand(NewImportConnectorsCommand())
 	cmd.AddCommand(NewImportProcessorsCommand())
 	cmd.AddCommand(NewImportQuotasCommand())
