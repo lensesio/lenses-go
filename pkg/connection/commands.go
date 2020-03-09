@@ -181,6 +181,7 @@ connections delete --name connection-name
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "connection name")
+	cmd.MarkFlagRequired("name")
 
 	// Required for bite to send standard output to cmd execution buffer
 	_ = bite.CanBeSilent(cmd)
