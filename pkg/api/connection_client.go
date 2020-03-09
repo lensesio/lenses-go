@@ -18,24 +18,26 @@ type ConnectionApp struct {
 
 // ConnectionList type
 type ConnectionList struct {
-	Name         string   `json:"name" yaml:"name" header:"Name,text"`
-	TemplateName string   `json:"templateName" yaml:"templateName" header:"Template Name,text"`
-	Tags         []string `json:"tags" yaml:"tags" header:"Tags,text"`
-	ReadOnly     bool     `json:"readOnly" yaml:"readOnly" header:"Read only"`
+	Name            string   `json:"name" yaml:"name" header:"Name,text"`
+	TemplateName    string   `json:"templateName" yaml:"templateName" header:"Template Name,text"`
+	TemplateVersion int      `json:"templateVersion" yaml:"templateVersion" header:"Template Version,int"`
+	Tags            []string `json:"tags" yaml:"tags" header:"Tags,text"`
+	ReadOnly        bool     `json:"readOnly" yaml:"readOnly" header:"Read only"`
 }
 
 // Connection type
 type Connection struct {
-	Name          string             `json:"name" yaml:"name" header:"Name,text"`
-	TemplateName  string             `json:"templateName" yaml:"templateName" header:"Template Name,text"`
-	BuiltIn       bool               `json:"builtIn" yaml:"builtIn" header:"BuiltIn,text"`
-	ReadOnly      bool               `json:"readOnly" yaml:"readOnly" header:"Read only"`
-	Configuration []ConnectionConfig `json:"configuration" yaml:"configuration"`
-	CreatedBy     string             `json:"createdBy" yaml:"createdBy" header:"Created By,text"`
-	CreatedAt     int64              `json:"createdAt" yaml:"createdAt" header:"Created At,text"`
-	ModifiedBy    string             `json:"modifiedBy" yaml:"modifiedBy" header:"Modified By,text"`
-	ModifiedAt    int64              `json:"modifiedAt" yaml:"modifiedAt" header:"Modified At,text"`
-	Tags          []string           `json:"tags" yaml:"tags" header:"Tags,text"`
+	Name            string             `json:"name" yaml:"name" header:"Name,text"`
+	TemplateName    string             `json:"templateName" yaml:"templateName" header:"Template Name,text"`
+	TemplateVersion int                `json:"templateVersion" yaml:"templateVersion" header:"Template Version,int"`
+	BuiltIn         bool               `json:"builtIn" yaml:"builtIn" header:"BuiltIn,text"`
+	ReadOnly        bool               `json:"readOnly" yaml:"readOnly" header:"Read only"`
+	Configuration   []ConnectionConfig `json:"configuration" yaml:"configuration"`
+	CreatedBy       string             `json:"createdBy" yaml:"createdBy" header:"Created By,text"`
+	CreatedAt       int64              `json:"createdAt" yaml:"createdAt" header:"Created At,text"`
+	ModifiedBy      string             `json:"modifiedBy" yaml:"modifiedBy" header:"Modified By,text"`
+	ModifiedAt      int64              `json:"modifiedAt" yaml:"modifiedAt" header:"Modified At,text"`
+	Tags            []string           `json:"tags" yaml:"tags" header:"Tags,text"`
 }
 
 // GetConnections returns all connections
