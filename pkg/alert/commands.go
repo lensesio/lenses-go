@@ -90,24 +90,26 @@ func NewGetAlertSettingsCommand() *cobra.Command {
 //NewAlertSettingGroupCommand creates the `alert setting` command
 func NewAlertSettingGroupCommand() *cobra.Command {
 	var (
-		id         int
-		mustEnable bool
+		id     int
+		enable bool
 	)
 
-	root := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:              "setting",
 		Short:            "Print or enable a specific alert setting based on ID",
 		Example:          "alert setting --id=1001 [--enable]",
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if mustEnable {
-				if err := config.Client.EnableAlertSetting(id, mustEnable); err != nil {
+			if cmd.Flags().Changed("enable") {
+				if err := config.Client.EnableAlertSetting(id, enable); err != nil {
 					return err
 				}
 
-				return bite.PrintInfo(cmd, "Alert setting [%d] enabled", id)
+				if enable {
+					return bite.PrintInfo(cmd, "Alert setting [%d] enabled", id)
+				}
+				return bite.PrintInfo(cmd, "Alert setting [%d] disabled", id)
 			}
 
 			settings, err := config.Client.GetAlertSetting(id)
@@ -121,18 +123,18 @@ func NewAlertSettingGroupCommand() *cobra.Command {
 		},
 	}
 
-	root.Flags().IntVar(&id, "id", 0, "--id=1001")
-	root.MarkFlagRequired("id")
+	cmd.Flags().IntVar(&id, "id", 0, "--id=1001")
+	cmd.MarkFlagRequired("id")
 
-	root.Flags().BoolVar(&mustEnable, "enable", false, "--enable")
+	cmd.Flags().BoolVar(&enable, "enable", false, "--enable")
 
-	bite.CanPrintJSON(root)
-	bite.CanBeSilent(root)
+	bite.CanPrintJSON(cmd)
+	bite.CanBeSilent(cmd)
 
-	root.AddCommand(NewGetAlertSettingConditionsCommand())
-	root.AddCommand(NewAlertSettingConditionGroupCommand())
+	cmd.AddCommand(NewGetAlertSettingConditionsCommand())
+	cmd.AddCommand(NewAlertSettingConditionGroupCommand())
 
-	return root
+	return cmd
 }
 
 //NewGetAlertSettingConditionsCommand creates `alert setting conditions`
