@@ -160,6 +160,12 @@ type jsonResourceError struct {
 	Message   string `json:"message"`
 }
 
+// jsonResourceErrorV2 is defined for the Connections API
+type jsonResourceErrorV2 struct {
+	Fields    []map[string]string `json:"fields"`
+	ErrorType string              `json:"error"`
+}
+
 // Do is the lower level of a client call, manually sends an HTTP request to the lenses box backend based on the `Client#Config`
 // and returns an HTTP response.
 func (c *Client) Do(method, path, contentType string, send []byte, options ...RequestOption) (*http.Response, error) {
@@ -224,8 +230,31 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 			strings.Contains(cType, contentTypeSchemaJSON) {
 			// read it, it's an error in JSON format.
 			var jsonErr jsonResourceError
-			c.ReadJSON(resp, &jsonErr)
+			bodyBytes, _ := ioutil.ReadAll(resp.Body)
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+			if err = c.ReadJSON(resp, &jsonErr); err != nil {
+				return nil, err
+			}
 			errBody = jsonErr.Message
+
+			// or it might be a V2 JSON Error message.
+			if jsonErr.Message == "" {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+				var jsonErr jsonResourceErrorV2
+				if err = c.ReadJSON(resp, &jsonErr); err != nil {
+					return nil, err
+				}
+
+				if jsonErr.ErrorType != "" {
+					errBody = fmt.Sprintf("%s ", jsonErr.ErrorType)
+				}
+				for i := range jsonErr.Fields {
+					for k, v := range jsonErr.Fields[i] {
+						errBody = fmt.Sprintf("%s%s:%s, ", errBody, k, v)
+					}
+				}
+				errBody = strings.TrimSuffix(errBody, ", ")
+			}
 		}
 
 		if errBody == "" {
@@ -236,6 +265,10 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 			} else {
 				errBody = string(b)
 			}
+		}
+
+		if errBody == "" {
+			errBody = fmt.Sprintf("Response returned status code %d", resp.StatusCode)
 		}
 
 		return nil, NewResourceError(resp.StatusCode, uri, method, errBody)
@@ -1143,8 +1176,6 @@ func (c *Client) DeleteTopicMetadata(topicName string) error {
 	return resp.Body.Close()
 }
 
-const topicsCreatePath = "api/topics"
-
 // CreateTopicPayload contains the data that the `CreateTopic` accepts, as a single structure.
 type CreateTopicPayload struct {
 	TopicName   string `json:"topicName" yaml:"name"`
@@ -1179,7 +1210,7 @@ func (c *Client) CreateTopic(topicName string, replication, partitions int, conf
 		return err
 	}
 
-	resp, err := c.Do(http.MethodPost, topicsCreatePath, contentTypeJSON, send)
+	resp, err := c.Do(http.MethodPost, topicsPath, contentTypeJSON, send)
 	if err != nil {
 		return err
 	}

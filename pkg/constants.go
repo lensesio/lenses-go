@@ -24,4 +24,10 @@ const (
 	SchemasPath       = "schemas"
 	AlertSettingsPath = "alert-settings"
 	PoliciesPath      = "policies"
+
+	ConnectionsFilePath        = "connections"
+	ConnectionsAPIPath         = "v1/connection/connections"
+	ConnectionTemplatesAPIPath = "v1/connection/connection-templates"
+	ConsumersGroupPath         = "api/consumers"
+	ElasticsearchIndexesPath   = "/api/elastic/indexes"
 )

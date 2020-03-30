@@ -12,7 +12,11 @@ import (
 	"github.com/landoop/lenses-go/pkg/api"
 	"github.com/landoop/lenses-go/pkg/audit"
 	config "github.com/landoop/lenses-go/pkg/configs"
+	"github.com/landoop/lenses-go/pkg/connection"
 	"github.com/landoop/lenses-go/pkg/connector"
+	"github.com/landoop/lenses-go/pkg/conntemplate"
+	"github.com/landoop/lenses-go/pkg/consumers"
+	"github.com/landoop/lenses-go/pkg/elasticsearch"
 	"github.com/landoop/lenses-go/pkg/export"
 	imports "github.com/landoop/lenses-go/pkg/import"
 	"github.com/landoop/lenses-go/pkg/logs"
@@ -145,6 +149,9 @@ func main() {
 	app.AddCommand(connector.NewConnectorsCommand())
 	app.AddCommand(connector.NewConnectorGroupCommand())
 
+	//Consumers
+	app.AddCommand(consumers.NewRootCommand())
+
 	//Export
 	app.AddCommand(export.NewExportGroupCommand())
 
@@ -165,6 +172,10 @@ func main() {
 	//Topics
 	app.AddCommand(topic.NewTopicsGroupCommand())
 	app.AddCommand(topic.NewTopicGroupCommand())
+
+	//Elasticsearch Indexes
+	app.AddCommand(elasticsearch.IndexesCommand())
+	app.AddCommand(elasticsearch.IndexCommand())
 
 	//Quotas
 	app.AddCommand(quota.NewGetQuotasCommand())
@@ -195,6 +206,12 @@ func main() {
 	app.AddCommand(management.NewGroupsCommand())
 	app.AddCommand(management.NewUsersCommand())
 	app.AddCommand(management.NewServiceAccountsCommand())
+
+	// Connection
+	app.AddCommand(connection.NewConnectionGroupCommand())
+
+	// Connection Template
+	app.AddCommand(conntemplate.NewConnectionTemplateGroupCommand())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
