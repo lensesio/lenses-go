@@ -30,4 +30,5 @@ const (
 	ConnectionTemplatesAPIPath = "v1/connection/connection-templates"
 	ConsumersGroupPath         = "api/consumers"
 	ElasticsearchIndexesPath   = "/api/elastic/indexes"
+	AlertsSettingsPath         = "api/v1/alerts/settings"
 )

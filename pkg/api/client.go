@@ -3300,15 +3300,40 @@ func (c *Client) DeleteQuotaForClient(clientID string, propertiesToRemove ...str
 type (
 	// AlertSetting describes the type of list entry of the `GetAlertSetting` and `CreateOrUpdateAlertSettingCondition`.
 	AlertSetting struct {
-		ID                int               `json:"id" header:"ID,text"`
-		Description       string            `json:"description" header:"Desc"`
-		Category          string            `json:"category" header:"Category"`
-		Enabled           bool              `json:"enabled" header:"Enabled"`
-		IsAvailable       bool              `json:"isAvailable" header:"Available"`
-		Docs              string            `json:"docs,omitempty" header:"Docs"`
-		ConditionTemplate string            `json:"conditionTemplate,omitempty" header:"Cond Tmpl"`
-		ConditionRegex    string            `json:"conditionRegex,omitempty" header:"Cond Regex"`
-		Conditions        map[string]string `json:"conditions,omitempty" header:"Conds"`
+		ID                int                              `json:"id,omitempty" header:"ID,text"`
+		Description       string                           `json:"description,omitempty" header:"Desc"`
+		Category          string                           `json:"category,omitempty" header:"Category"`
+		Enabled           bool                             `json:"enabled,omitempty" header:"Enabled"`
+		IsAvailable       bool                             `json:"isAvailable,omitempty" header:"Available"`
+		Docs              string                           `json:"docs,omitempty"`
+		ConditionTemplate string                           `json:"conditionTemplate,omitempty"`
+		ConditionRegex    string                           `json:"conditionRegex,omitempty"`
+		Conditions        map[string]string                `json:"conditions,omitempty" header:"Conds"`
+		Channels          []AlertChannel                   `json:"channels,omitempty" header:"Chan,count"`
+		ConditionDetails  map[string]AlertConditionDetails `json:"conditionDetails,omitempty"`
+	}
+
+	// AlertChannel contains the payload for the Alert channel's routing information
+	AlertChannel struct {
+		ID           string `json:"id" yaml:"id"`
+		Name         string `json:"name" yaml:"name"`
+		TemplateName string `json:"templateName" yaml:"templateName"`
+	}
+
+	// AlertConditionDsl contains the paylod for the condition's details
+	AlertConditionDsl struct {
+		Group     string `json:"group,omitempty"`
+		Threshold int    `json:"threshold,omitempty"`
+		Topic     string `json:"topic,omitempty"`
+	}
+	// AlertConditionDetails contains the payload for an alert's condition details
+	AlertConditionDetails struct {
+		CreatedAt    string            `json:"createdAt,omitempty"`
+		CreatedBy    string            `json:"createdBy,omitempty"`
+		ModifiedAt   string            `json:"modifiedAt,omitempty"`
+		ModifiedBy   string            `json:"modifiedBy,omitempty"`
+		Channels     []AlertChannel    `json:"channels,omitempty"`
+		ConditionDsl AlertConditionDsl `json:"conditionDsl,omitempty"`
 	}
 
 	// AlertSettings describes the type of list entry of the `GetAlertSettings`.
