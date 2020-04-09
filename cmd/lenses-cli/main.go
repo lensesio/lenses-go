@@ -137,6 +137,7 @@ func main() {
 	//Alert
 	app.AddCommand(alert.NewAlertGroupCommand())
 	app.AddCommand(alert.NewGetAlertsCommand())
+	app.AddCommand(alert.NewGetAlertChannelsCommand())
 
 	//Audit
 	app.AddCommand(audit.NewGetAuditEntriesCommand())

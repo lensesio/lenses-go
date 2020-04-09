@@ -3313,13 +3313,6 @@ type (
 		ConditionDetails  map[string]AlertConditionDetails `json:"conditionDetails,omitempty"`
 	}
 
-	// AlertChannel contains the payload for the Alert channel's routing information
-	AlertChannel struct {
-		ID           string `json:"id" yaml:"id"`
-		Name         string `json:"name" yaml:"name"`
-		TemplateName string `json:"templateName" yaml:"templateName"`
-	}
-
 	// AlertConditionDsl contains the paylod for the condition's details
 	AlertConditionDsl struct {
 		Group     string `json:"group,omitempty"`
