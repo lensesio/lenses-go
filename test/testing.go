@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/landoop/lenses-go/pkg/api"
+	config "github.com/landoop/lenses-go/pkg/configs"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -56,6 +57,21 @@ func ExecuteCommand(root *cobra.Command, args ...string) (output string, err err
 //ResetCommandLineFlagSet resets the flagset
 func ResetCommandLineFlagSet() {
 	pflag.CommandLine = pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
+}
+
+//SetupMasterContext add a new context named "master" in Config
+func SetupMasterContext() {
+	SetupContext(api.DefaultContextKey, ClientConfig, auth)
+}
+
+//SetupContext add a new context in Config
+func SetupContext(contextName string, clientConfig api.ClientConfig, basicAuth api.BasicAuthentication) {
+	if config.Manager == nil {
+		config.Manager = config.NewEmptyConfigManager()
+	}
+	config.Manager.Config.AddContext(contextName, &clientConfig)
+	config.Manager.Config.SetCurrent(contextName)
+	config.Manager.Config.GetCurrent().Authentication = basicAuth
 }
 
 //TestingHTTPClient tests an http client

@@ -56,7 +56,7 @@ func NewConfigurationContextCommand() *cobra.Command {
 			if !config.Manager.Config.CurrentContextExists() {
 				return fmt.Errorf("current context does not exist, please use the `configure` command first")
 			}
-			name := config.Manager.CurrentContext
+			name := config.Manager.Config.CurrentContext
 			if !printConfigurationContext(cmd, name) {
 				if !bite.GetSilentFlag(cmd) {
 					showOptionsForConfigurationContext(cmd, name)
@@ -217,9 +217,9 @@ func NewConfigureCommand(name string) *cobra.Command {
 					fmt.Fprint(cmd.OutOrStdout(), `
     __                                 ________    ____
    / /   ___  ____  ________  _____   / ____/ /   /  _/
-  / /   / _ \/ __ \/ ___/ _ \/ ___/  / /   / /    / /  
- / /___/  __/ / / (__  )  __(__  )  / /___/ /____/ /   
-/_____/\___/_/ /_/____/\___/____/   \____/_____/___/   
+  / /   / _ \/ __ \/ ___/ _ \/ ___/  / /   / /    / /
+ / /___/  __/ / / (__  )  __(__  )  / /___/ /____/ /
+/_____/\___/_/ /_/____/\___/____/   \____/_____/___/
 Docs at https://docs.lenses.io
 `)
 				}
