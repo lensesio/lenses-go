@@ -238,3 +238,21 @@ func TestServerFailures(t *testing.T) {
 		})
 	}
 }
+
+func TestContextCommands(t *testing.T) {
+	scenarios := make(map[string]test.CommandTest)
+
+	scenarios["Run `offsets update-single-partition` subcommand without params should throw error"] =
+		test.CommandTest{
+			Cmd:     NewRootCommand,
+			CmdArgs: []string{"offsets", "update-single-partition"},
+			ShouldContainErrors: []string{
+				`required flag(s) "group", "partition" not set`,
+			},
+			ShouldContain: []string{
+				`required flag(s) "group", "partition" not set`,
+			},
+		}
+
+	test.RunCommandTests(t, scenarios)
+}

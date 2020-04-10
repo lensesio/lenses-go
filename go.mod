@@ -23,6 +23,7 @@ require (
 	github.com/landoop/tableprinter v0.0.0-20200104100433-ae9249991eb1
 	github.com/mattn/go-runewidth v0.0.8 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
