@@ -231,7 +231,7 @@ func NewLiveLSQLCommand() *cobra.Command {
 			client := config.Client
 
 			if len(args) < 1 {
-				golog.Errorf(`sql query is missing, the correct form is: sql "your query"`)
+				golog.Errorf(`sql query is missing, the correct form is: query "your query"`)
 				return nil
 			}
 
