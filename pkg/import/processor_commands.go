@@ -62,7 +62,7 @@ func loadProcessors(client *api.Client, cmd *cobra.Command, loadpath string) err
 			return err
 		}
 
-		for _, p := range processors.Streams {
+		for _, p := range processors {
 			if processor.Name == p.Name &&
 				processor.ClusterName == p.ClusterName &&
 				processor.Namespace == p.Namespace {

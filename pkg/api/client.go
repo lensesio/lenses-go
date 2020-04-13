@@ -1432,6 +1432,7 @@ func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 // Processor API
 
 const processorsPath = "api/v1/streams"
+const deploymentTargetPath = "api/v1/deployment/targets"
 
 // CreateProcessorPayload holds the data to be sent from `CreateProcessor`.
 type CreateProcessorPayload struct {
@@ -1511,24 +1512,25 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 }
 
 type (
-	//ProcessorRequests describes the requests required to create the current processors
-	ProcessorRequests struct {
-		Targets []ProcessorTarget        `json:"targets"`
-		Streams []CreateProcessorPayload `json:"streams"`
+
+	// DeploymentTargets describes the deployment cluster targets
+	DeploymentTargets struct {
+		Kubernetes []KubernetesTarget   `json:"kubernetes"`
+		Connect    []KafkaConnectTarget `json:"connect"`
+
 	}
 
-	// ProcessorsResult describes the data that are being received from the `GetProcessors`.
-	ProcessorsResult struct {
-		Targets []ProcessorTarget `json:"targets"`
-		Streams []ProcessorStream `json:"streams"`
-	}
-
-	// ProcessorTarget describes the processor target,
-	// see `ProcessorResult`.
-	ProcessorTarget struct {
+	// KubernetesTarget describes a kubernetes deployment target
+	KubernetesTarget struct {
 		Cluster    string   `json:"cluster"`
-		Version    string   `json:"version,omitempty"`
 		Namespaces []string `json:"namespaces"`
+		Version    string   `json:"version,omitempty"`
+	}
+
+	// KafkaConnectTarget describes a Kafka Connect deployment target
+	KafkaConnectTarget struct {
+		Cluster string `json:"cluster"`
+		Version string `json:"version,omitempty"`
 	}
 
 	// ProcessorStream describes the processor stream,
@@ -1590,10 +1592,26 @@ type (
 )
 
 // GetProcessors returns a list of all available LSQL processors.
-func (c *Client) GetProcessors() (ProcessorsResult, error) {
-	var res ProcessorsResult
+func (c *Client) GetProcessors() ([]ProcessorStream, error) {
+	var res []ProcessorStream
 
 	resp, err := c.Do(http.MethodGet, processorsPath, "", nil)
+	if err != nil {
+		return res, err
+	}
+
+	if err = c.ReadJSON(resp, &res); err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
+// GetDeploymentTargets returns a list of all deployment target clusters
+func (c *Client) GetDeploymentTargets() (DeploymentTargets, error) {
+	var res DeploymentTargets
+
+	resp, err := c.Do(http.MethodGet, deploymentTargetPath, "", nil)
 	if err != nil {
 		return res, err
 	}
@@ -1648,12 +1666,12 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 			identifier = id
 		} else if name != "" {
 			// get the id by looping over all available processors.
-			result, err := c.GetProcessors()
+			streams, err := c.GetProcessors()
 			if err != nil {
 				return "", err
 			}
 
-			for _, processor := range result.Streams {
+			for _, processor := range streams {
 				if processor.Name == name && processor.ClusterName == clusterName {
 					identifier = processor.ID
 					break

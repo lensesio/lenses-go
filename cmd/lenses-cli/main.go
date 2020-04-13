@@ -30,6 +30,7 @@ import (
 	"github.com/landoop/lenses-go/pkg/sql"
 	"github.com/landoop/lenses-go/pkg/topic"
 	"github.com/landoop/lenses-go/pkg/user"
+	"github.com/landoop/lenses-go/pkg/initcontainer"
 	"github.com/spf13/cobra"
 )
 
@@ -213,6 +214,9 @@ func main() {
 
 	// Connection Template
 	app.AddCommand(conntemplate.NewConnectionTemplateGroupCommand())
+
+	// Add init container command for kubernetes
+	app.AddCommand(initcontainer.NewInitConCommand())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)

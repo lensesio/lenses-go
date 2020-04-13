@@ -3,6 +3,7 @@ package processor
 import (
 	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
@@ -10,6 +11,14 @@ import (
 	config "github.com/landoop/lenses-go/pkg/configs"
 	"github.com/landoop/lenses-go/pkg/utils"
 	"github.com/spf13/cobra"
+)
+
+type (
+	result struct {
+		Type		string	`json:"type" header:"Type"`
+		ClusterName string	`json:"clusterName" header:"Cluster"`
+		Namespace	string	`json:"namespace" header:"Namespace"`
+	}
 )
 
 //NewGetProcessorsCommand creates `processors` command
@@ -23,7 +32,7 @@ func NewGetProcessorsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result, err := config.Client.GetProcessors()
+			streams, err := config.Client.GetProcessors()
 			if err != nil {
 				golog.Errorf("Failed to retrieve processors. [%s]", err.Error())
 				return err
@@ -34,13 +43,13 @@ func NewGetProcessorsCommand() *cobra.Command {
 				return err
 			}
 
-			sort.Slice(result.Streams, func(i, j int) bool {
-				return result.Streams[i].Name < result.Streams[j].Name
+			sort.Slice(streams, func(i, j int) bool {
+				return streams[i].Name < streams[j].Name
 			})
 
 			var final []api.ProcessorStream
 
-			for _, processor := range result.Streams {
+			for _, processor := range streams {
 				if mode == api.ExecutionModeConnect || mode == api.ExecutionModeKubernetes {
 					if name != "" && processor.Name != name {
 						continue
@@ -71,6 +80,7 @@ func NewGetProcessorsCommand() *cobra.Command {
 	bite.CanPrintJSON(cmd)
 
 	cmd.AddCommand(NewProcessorsLogsCommand())
+	cmd.AddCommand(NewListDeploymentTargetsCommand())
 
 	return cmd
 }
@@ -364,3 +374,72 @@ func NewProcessorDeleteCommand() *cobra.Command {
 
 	return cmd
 }
+
+type (
+	// ListTargetsResult output for listing
+	ListTargetsResult struct {
+		Type		string	`json:"type" header:"Type"`
+		ClusterName string	`json:"clusterName" header:"Cluster"`
+		Namespace	string	`json:"namespace" header:"Namespace"`
+		Version		string  `json:"version" header:"Version"`
+	}
+)
+
+
+
+//NewListDeploymentTargetsCommand lists the available deployment targets
+func NewListDeploymentTargetsCommand() *cobra.Command {
+	var clusterName, targetType string
+
+	cmd := &cobra.Command{
+		Use:              "targets",
+		Short:            "List available target clusters to deploy to. kubernetes or connect",
+		Example:          `
+processors targets --target-type kubernetes --cluster-name="clusterName"
+processors targets --target-type connect
+		`,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			targets, err := config.Client.GetDeploymentTargets()
+			if err != nil {
+				return err
+			}
+
+			var results []ListTargetsResult
+			targetType = strings.ToLower(targetType)
+
+			if (targetType == "" || targetType == "kubernetes") {
+				for _, kt := range targets.Kubernetes {
+					if (clusterName != "" && clusterName != kt.Cluster) {
+						continue
+					}
+
+					for _, ns := range kt.Namespaces {
+						results = append(results, ListTargetsResult{"Kubernetes", kt.Cluster, ns, kt.Version})
+					}
+				}
+			}
+
+			if (targetType == "" || targetType == "connect") {
+				for _, connect := range targets.Connect {
+					if (clusterName != "" && clusterName != connect.Cluster) {
+						continue
+					}
+
+					results = append(results, ListTargetsResult{"Connect", connect.Cluster, "", connect.Version})
+				}
+			}
+
+			return bite.PrintObject(cmd, results)
+		},
+	}
+
+	cmd.Flags().StringVar(&targetType, "target-type", "", `Target type to filter by. kubernetes or connect`)
+	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Cluster name to filter by`)
+	bite.CanBeSilent(cmd)
+	bite.CanPrintJSON(cmd)
+
+	return cmd
+}
+
