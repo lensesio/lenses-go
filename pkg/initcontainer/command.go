@@ -1,13 +1,14 @@
 package initcontainer
 
 import (
+	"encoding/base64"
+	"fmt"
 	"os"
 	"strings"
-	"fmt"
-	"encoding/base64"
-	"github.com/spf13/cobra"
+
 	golog "github.com/kataras/golog"
 	"github.com/landoop/lenses-go/pkg/utils"
+	"github.com/spf13/cobra"
 )
 
 var secretPrefix = "SECRET_"
@@ -17,11 +18,12 @@ var mountedStr = "mounted"
 var envPrefix = "ENV"
 
 type (
-	appVar struct {
-		Prefix	string
-		EnvKey	string
-		Key	string
-		Value	string
+	// AppVar describe an env variable
+	AppVar struct {
+		Prefix string
+		EnvKey string
+		Key    string
+		Value  string
 	}
 )
 
@@ -69,7 +71,7 @@ variable names are converted to lower case and any "_" are converted to "." .
 	my.app.config.key=my-nonsensitive-value
 `,
 		Example: `
-init-container app-config --dir=. --file=app-config --output=props"
+init-container --dir=. --file=app-config --output=props"
 		`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -86,14 +88,12 @@ init-container app-config --dir=. --file=app-config --output=props"
 		},
 	}
 
-
 	cmd.Flags().StringVar(&appFile, "file", "app-config", "The name of the file to write the app config and secrets to")
 	cmd.Flags().StringVar(&appDir, "dir", ".", "The directory to write files to (for both string and base64 secrets")
 	cmd.Flags().StringVar(&output, "output", "props", "Output type for contents of file. ENV for env files to be source, PROPS for props. Default is props")
 
 	return cmd
 }
-
 
 func decodeBase64(data string, key string) string {
 	golog.Infof("Decoding base64 variable [%s]", key)
@@ -105,7 +105,7 @@ func decodeBase64(data string, key string) string {
 	return strings.TrimSuffix(string(decodedValue), "\n")
 }
 
-func write(vars []appVar, file, dir string, output string) error {
+func write(vars []AppVar, file, dir string, output string) error {
 	var data []string
 
 	for _, s := range vars {
@@ -119,12 +119,12 @@ func write(vars []appVar, file, dir string, output string) error {
 		valueMetadata := strings.SplitN(value[0], "-", 3)
 		provider := strings.ToUpper(valueMetadata[0])
 
-		if (len(valueMetadata) > 0 && provider != envPrefix) {
+		if len(valueMetadata) > 0 && provider != envPrefix {
 			golog.Warnf("Env value format metadata must being with [%s] for [%s], discarding", envPrefix, s.EnvKey)
 			continue
 		}
 
-		if (len(value) > 1) {
+		if len(value) > 1 {
 			content = value[1]
 		} else {
 			content = value[0]
@@ -150,10 +150,12 @@ func write(vars []appVar, file, dir string, output string) error {
 			continue
 		}
 
-		if (strings.ToLower(output) == "env") {
-			data = append(data, fmt.Sprintf("export %s=%s", s.Key, content))
+		if strings.ToLower(output) == "env" {
+			data = append(data, fmt.Sprintf("export %s=%s", s.Key, encodeForExport(content)))
 		} else {
-			data = append(data, fmt.Sprintf("%s=%s", strings.ToLower(strings.ReplaceAll(s.Key, "_", ".")), content))
+			key := strings.ToLower(strings.ReplaceAll(s.Key, "_", "."))
+			content := strings.ReplaceAll(content, "\"", "")
+			data = append(data, fmt.Sprintf("%s=%s", key, content))
 		}
 	}
 
@@ -168,7 +170,6 @@ func write(vars []appVar, file, dir string, output string) error {
 	return nil
 }
 
-
 func getVars(prefix string) []string {
 	// get secret vars
 	var results []string
@@ -176,13 +177,13 @@ func getVars(prefix string) []string {
 	vars := os.Environ()
 
 	for _, v := range vars {
-		if (strings.HasPrefix(v, prefix)) {
+		if strings.HasPrefix(v, prefix) {
 			golog.Infof("Found environment variable [%s]", strings.SplitN(v, "=", 2)[0])
 			results = append(results, v)
 		}
 	}
 
-	if (len(results) == 0) {
+	if len(results) == 0 {
 		golog.Warnf("No environment variables found for prefix [%s]", prefix)
 	}
 
@@ -190,9 +191,9 @@ func getVars(prefix string) []string {
 }
 
 // AppConfigLoader retrieves secrets and app config key values from environment variables
-func AppConfigLoader() ([]appVar, error) {
+func AppConfigLoader() ([]AppVar, error) {
 
-	var results []appVar
+	var results []AppVar
 
 	// load secrets from environment or file
 	sVars := getVars(secretPrefix)
@@ -202,18 +203,31 @@ func AppConfigLoader() ([]appVar, error) {
 		split := strings.SplitN(v, "=", 2)
 		envKey := split[0]
 		key := strings.Replace(envKey, secretPrefix, "", 1)
-		value := split[1]
-		results = append(results, appVar{Prefix: secretPrefix, EnvKey: envKey, Key: key, Value: value})
+		// replace quoted values
+		value := trimEnvValues(split[1])
+		results = append(results, AppVar{Prefix: secretPrefix, EnvKey: envKey, Key: key, Value: value})
 	}
 
 	for _, v := range aVars {
 		split := strings.SplitN(v, "=", 2)
 		envKey := split[0]
 		key := strings.Replace(envKey, lensesPrefix, "", 1)
-		value := split[1]
-		results = append(results, appVar{Prefix: lensesPrefix, EnvKey: envKey, Key: key, Value: value})
+		value := trimEnvValues(split[1])
+		results = append(results, AppVar{Prefix: lensesPrefix, EnvKey: envKey, Key: key, Value: value})
 	}
 
 	return results, nil
 }
 
+func encodeForExport(s string) string {
+	return "'" + strings.Replace(s, "'", "'\"'\"'", -1) + "'"
+}
+
+func trimEnvValues(value string) string {
+	if strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'") {
+		value = strings.TrimSuffix(strings.TrimPrefix(value, "'"), "'")
+	} else if strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"") {
+		value = strings.TrimSuffix(strings.TrimPrefix(value, "\""), "\"")
+	}
+	return value
+}

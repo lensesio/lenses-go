@@ -62,7 +62,7 @@ func setup(cmd *cobra.Command, args []string) error {
 	// Note that if clientConfig is valid and we are inside the configure command
 	// then the configure will normally continue and save the valid configuration (that normally came from flags).
 	topLevelSubCmd := strings.Split(cmd.CommandPath(), " ")[1]
-	if name := topLevelSubCmd; name == "configure" || name == "version" || name == "context" || name == "contexts" || strings.Contains(cmd.CommandPath(), " secrets ") {
+	if name := topLevelSubCmd; name == "configure" || name == "version" || name == "context" || name == "contexts" || name == "init-container" || strings.Contains(cmd.CommandPath(), " secrets ") {
 		return nil
 	}
 
