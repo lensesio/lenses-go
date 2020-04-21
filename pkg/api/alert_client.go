@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/landoop/lenses-go/pkg"
 )
@@ -72,23 +74,27 @@ type AlertSettingsConditionPayload struct {
 }
 
 func constructQueryString(page int, pageSize int, sortField, sortOrder, templateName, channelName string) (query string) {
-	path := fmt.Sprintf("%s?pageSize=%d", pkg.AlertChannelsPath, pageSize)
+	v := url.Values{}
+	v.Add("pageSize", strconv.Itoa(pageSize))
+
 	if page != 0 {
-		path = path + fmt.Sprintf("&page=%d", page)
+		v.Add("page", strconv.Itoa(page))
 	}
 	if sortField != "" {
-		path = path + fmt.Sprintf("&sortField=%s", sortField)
+		v.Add("sortField", sortField)
 	}
 	if sortOrder != "" {
-		path = path + fmt.Sprintf("&sortOrder=%s", sortOrder)
+		v.Add("sortOrder", sortOrder)
 	}
 	if templateName != "" {
-		path = path + fmt.Sprintf("&templateName=%s", templateName)
+		v.Add("templateName", templateName)
 	}
 	if channelName != "" {
-		path = path + fmt.Sprintf("&channelName=%s", channelName)
+		v.Add("channelName", channelName)
 	}
-	return path
+
+	query = fmt.Sprintf("%s?%s", pkg.AlertChannelsPath, v.Encode())
+	return
 }
 
 // GetAlertChannels handles the API call get the list of alert channels
