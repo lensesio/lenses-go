@@ -398,7 +398,7 @@ func NewDeleteAlertChannelCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&channelID, "channelID", "", "Channel ID")
+	cmd.Flags().StringVar(&channelID, "channelID", "", "The alert channel id, e.g. d15-4960-9ea6-2ccb4d26ebb4")
 	cmd.MarkFlagRequired("channelID")
 	bite.CanBeSilent(cmd)
 
@@ -422,7 +422,6 @@ func NewCreateAlertChannelCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			// TO-DO: refactor bite to use cobra
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": channel.Name, "connectionName": channel.ConnectionName, "templateName": channel.TemplateName, "properties": channel.Properties}); err != nil {
 				return err
 			}
@@ -450,7 +449,6 @@ func NewCreateAlertChannelCommand() *cobra.Command {
 	cmd.Flags().StringVar(&channel.TemplateName, "templateName", "", "Alert channel template name")
 	cmd.Flags().StringVar(&propertiesRaw, "properties", "", `Alert channel properties .e.g. "[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]"`)
 
-	// TO-DO: If we are not supporting YAML are these required?
 	bite.CanBeSilent(cmd)
 	bite.Prepend(cmd, bite.FileBind(&channel))
 
@@ -495,7 +493,7 @@ func NewUpdateAlertChannelCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&channelID, "id", "", "Alert channel id")
+	cmd.Flags().StringVar(&channelID, "id", "", "The alert channel id, e.g. d15-4960-9ea6-2ccb4d26ebb4")
 	cmd.Flags().StringVar(&channel.Name, "name", "", "Alert channel name")
 	cmd.Flags().StringVar(&channel.ConnectionName, "connectionName", "", "Alert channel connection name")
 	cmd.Flags().StringVar(&channel.TemplateName, "templateName", "", "Alert channel template name")
