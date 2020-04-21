@@ -358,12 +358,12 @@ func NewGetAlertChannelsCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&page, "page", 1, "--page=1")
-	cmd.Flags().IntVar(&pageSize, "pageSize", 10, "--pageSize=10")
-	cmd.Flags().StringVar(&sortField, "sortField", "", `--sortField="name"`)
-	cmd.Flags().StringVar(&sortOrder, "sortOrder", "", `--sortOrder="asc"`)
-	cmd.Flags().StringVar(&templateName, "templateName", "", `--templateName="test"`)
-	cmd.Flags().StringVar(&channelName, "channelName", "", `--channelName="slack"`)
+	cmd.Flags().IntVar(&page, "page", 1, "The page number to be fetched, must be greater than zero. Defaults to 1")
+	cmd.Flags().IntVar(&pageSize, "pageSize", 10, "The amount of items to return in a single page, must be greater than zero.")
+	cmd.Flags().StringVar(&sortField, "sortField", "", `The field to sort channel results by. Defaults to createdAt`)
+	cmd.Flags().StringVar(&sortOrder, "sortOrder", "", `Choices: "asc" or "desc"`)
+	cmd.Flags().StringVar(&templateName, "templateName", "", `Filter channels by template name.`)
+	cmd.Flags().StringVar(&channelName, "channelName", "", `Filter channels whith a name matching the supplied string (e.g. kafka-prd would match kafka-prd-pagerduty and kafka-prd-slack).`)
 	cmd.Flags().BoolVar(&details, "details", false, `--details`)
 
 	bite.CanBeSilent(cmd)
@@ -420,6 +420,7 @@ func NewCreateAlertChannelCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			// TO-DO: refactor bite to use cobra
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": channel.Name, "connectionName": channel.ConnectionName, "templateName": channel.TemplateName, "properties": channel.Properties}); err != nil {
 				return err
 			}
@@ -446,6 +447,8 @@ func NewCreateAlertChannelCommand() *cobra.Command {
 	cmd.Flags().StringVar(&channel.ConnectionName, "connectionName", "", "Alert channel connection name")
 	cmd.Flags().StringVar(&channel.TemplateName, "templateName", "", "Alert channel template name")
 	cmd.Flags().StringVar(&propertiesRaw, "properties", "", `Alert channel properties .e.g. "[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]"`)
+
+	// TO-DO: If we are not supporting YAML are these required?
 	bite.CanBeSilent(cmd)
 	bite.Prepend(cmd, bite.FileBind(&channel))
 
