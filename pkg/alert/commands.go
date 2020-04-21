@@ -352,7 +352,7 @@ func NewGetAlertChannelsCommand() *cobra.Command {
 			}
 
 			if !details {
-				return bite.PrintObject(cmd, alertchannels)
+				return bite.PrintObject(cmd, alertchannels.Values)
 			}
 			return bite.PrintObject(cmd, alertchannelsWithDetails.Values)
 		},
