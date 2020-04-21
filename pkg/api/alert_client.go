@@ -98,6 +98,7 @@ func (c *Client) GetAlertChannels(page int, pageSize int, sortField, sortOrder, 
 	if err != nil {
 		return
 	}
+	defer resp.Body.Close()
 	err = c.ReadJSON(resp, &response)
 	return
 }
@@ -109,6 +110,7 @@ func (c *Client) GetAlertChannelsWithDetails(page int, pageSize int, sortField, 
 	if err != nil {
 		return
 	}
+	defer resp.Body.Close()
 	err = c.ReadJSON(resp, &response)
 	return
 }
