@@ -132,12 +132,12 @@ func (c *Client) DeleteAlertChannel(channelID string) error {
 }
 
 // CreateAlertChannel handles the creation of a channel
-func (c *Client) CreateAlertChannel(name string, connectionName string, templateName string, properties []KV) error {
+func (c *Client) CreateAlertChannel(chnl AlertChannelPayload) error {
 	var channel = AlertChannelPayload{
-		Name:           name,
-		ConnectionName: connectionName,
-		TemplateName:   templateName,
-		Properties:     properties,
+		Name:           chnl.Name,
+		ConnectionName: chnl.ConnectionName,
+		TemplateName:   chnl.TemplateName,
+		Properties:     chnl.Properties,
 	}
 	payload, err := json.Marshal(channel)
 	if err != nil {
@@ -151,12 +151,13 @@ func (c *Client) CreateAlertChannel(name string, connectionName string, template
 }
 
 // UpdateAlertChannel handles...take a guess
-func (c *Client) UpdateAlertChannel(channelID, name, connectionName, templateName string, properties []KV) error {
+func (c *Client) UpdateAlertChannel(chnl AlertChannelPayload, channelID string) error {
+
 	var channel = AlertChannelPayload{
-		Name:           name,
-		ConnectionName: connectionName,
-		TemplateName:   templateName,
-		Properties:     properties,
+		Name:           chnl.Name,
+		ConnectionName: chnl.ConnectionName,
+		TemplateName:   chnl.TemplateName,
+		Properties:     chnl.Properties,
 	}
 	path := fmt.Sprintf("%s/%s", pkg.AlertChannelsPath, channelID)
 	payload, err := json.Marshal(channel)

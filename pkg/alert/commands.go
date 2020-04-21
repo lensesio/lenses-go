@@ -435,7 +435,7 @@ func NewCreateAlertChannelCommand() *cobra.Command {
 				}
 			}
 
-			if err := config.Client.CreateAlertChannel(channel.Name, channel.ConnectionName, channel.TemplateName, channel.Properties); err != nil {
+			if err := config.Client.CreateAlertChannel(channel); err != nil {
 				golog.Errorf("Failed to create alert channel [%s]. [%s]", channel.Name, err.Error())
 				return err
 			}
@@ -484,7 +484,7 @@ func NewUpdateAlertChannelCommand() *cobra.Command {
 				}
 			}
 
-			if err := config.Client.UpdateAlertChannel(channelID, channel.Name, channel.ConnectionName, channel.TemplateName, channel.Properties); err != nil {
+			if err := config.Client.UpdateAlertChannel(channel, channelID); err != nil {
 				golog.Errorf("Failed to update alert channel [%s]. [%s]", channelID, err.Error())
 				return err
 			}
