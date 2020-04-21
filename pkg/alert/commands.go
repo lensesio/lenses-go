@@ -411,11 +411,13 @@ func NewCreateAlertChannelCommand() *cobra.Command {
 		propertiesRaw string
 		channel       = api.AlertChannelPayload{}
 	)
+	cmdExample := "\nalertchannels create --name=\"kafka-prd-health\" --templateName=\"Slack\" --connectionName=\"slack-connection\" --properties=\"[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]\"\n" +
+		"\n# or using YAML\nalertchannels create ./alert_chan.yml"
 
 	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Create a new alert channel",
-		Example:          `alertchannels create --name="kafka-prd-health" --templateName="Slack" --connectionName="slack-connection" --properties="[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]"`,
+		Example:          cmdExample,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
