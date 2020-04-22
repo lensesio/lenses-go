@@ -336,25 +336,21 @@ func NewGetAlertChannelsCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var (
-				alertchannels            api.AlertChannelResponse
-				alertchannelsWithDetails api.AlertChannelResponseWithDetails
-				err                      error
-			)
 			if details {
-				alertchannelsWithDetails, err = config.Client.GetAlertChannelsWithDetails(page, pageSize, sortField, sortOrder, templateName, channelName)
-			} else {
-				alertchannels, err = config.Client.GetAlertChannels(page, pageSize, sortField, sortOrder, templateName, channelName)
+				alertchannelsWithDetails, err := config.Client.GetAlertChannelsWithDetails(page, pageSize, sortField, sortOrder, templateName, channelName)
+				if err != nil {
+					golog.Errorf("Failed to retrieve alert channels. [%s]", err.Error())
+					return err
+				}
+				return bite.PrintObject(cmd, alertchannelsWithDetails.Values)
 			}
+
+			alertchannels, err := config.Client.GetAlertChannels(page, pageSize, sortField, sortOrder, templateName, channelName)
 			if err != nil {
 				golog.Errorf("Failed to retrieve alert channels. [%s]", err.Error())
 				return err
 			}
-
-			if !details {
-				return bite.PrintObject(cmd, alertchannels.Values)
-			}
-			return bite.PrintObject(cmd, alertchannelsWithDetails.Values)
+			return bite.PrintObject(cmd, alertchannels.Values)
 		},
 	}
 
