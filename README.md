@@ -6,7 +6,7 @@ The [Lenses's](http://www.lenses.io) [REST API](https:/api.lenses.io) client wri
 
 ## Installation
 
-The only requirement is the [Go Programming Language](https://golang.org/dl) version **1.10+** and a [Lenses Box](https://lenses.io/box/) of version **2.0 at least**.
+The only requirement is the [Go Programming Language](https://golang.org/dl) version **1.13+** and a [Lenses Box](https://lenses.io/box/) of version **2.0 at least**.
 
 ```sh
 $ go get -u github.com/lensesio/lenses-go/cmd/lenses-cli
