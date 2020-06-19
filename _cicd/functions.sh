@@ -80,11 +80,22 @@ archive() {
     # Archive and calculate sha256 for each file
     mkdir -p bin/bucket
     pushd bin/
+    cp ${WORKSPACE}/{LICENSE,README.md,NOTICE} .
     for GOOS in linux darwin windows; do
+        local _BIN_SUFFIX=""
+        if [[ $GOOS == 'windows' ]]; then
+                _BIN_SUFFIX=".exe"
+            else
+                _BIN_SUFFIX=""
+            fi
+        mv lenses-cli-$GOOS-amd64 "lenses-cli${_BIN_SUFFIX}"
         tar --create --gzip --file bucket/lenses-cli-$GOOS-amd64.tar.gz \
-            --owner=root --group=root lenses-cli-$GOOS-amd64
+            --owner=root --group=root \
+            "lenses-cli${_BIN_SUFFIX}" \
+            {LICENSE,README.md,NOTICE}
         sha256sum bucket/lenses-cli-$GOOS-amd64.tar.gz > \
             bucket/lenses-cli-$GOOS-amd64.tar.gz.sha256
+        mv "lenses-cli${_BIN_SUFFIX}" lenses-cli-$GOOS-amd64
     done
     popd
 
