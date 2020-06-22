@@ -45,7 +45,6 @@ race: dep ## Run data race detector
 	go test -race -short ${PKG_LIST}
 
 setup: ## Get all the necessary dependencies 
-	go get -u github.com/golang/dep/cmd/dep
 	go get -u golang.org/x/lint/golint
 
 test: dep ## Run tests
