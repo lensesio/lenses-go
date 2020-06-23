@@ -60,7 +60,7 @@ func writeProcessors(cmd *cobra.Command, client *api.Client, id, cluster, namesp
 		return err
 	}
 
-	for _, processor := range processors {
+	for _, processor := range processors.Streams {
 		if id != "" && id != processor.ID {
 			continue
 		} else {

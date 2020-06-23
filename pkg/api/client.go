@@ -1512,12 +1512,19 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 }
 
 type (
+	//ProcessorRequests describes the requests required to create the current processors
+	ProcessorRequests struct {
+		Streams []CreateProcessorPayload `json:"streams"`
+	}
+
+	// ProcessorsResult describes the data that are being received from the `GetProcessors`.
+	ProcessorsResult struct {
+		Streams []ProcessorStream `json:"streams"`
+	}
 
 	// DeploymentTargets describes the deployment cluster targets
 	DeploymentTargets struct {
-		Kubernetes []KubernetesTarget   `json:"kubernetes"`
-		Connect    []KafkaConnectTarget `json:"connect"`
-
+		Kubernetes []KubernetesTarget `json:"kubernetes"`
 	}
 
 	// KubernetesTarget describes a kubernetes deployment target
@@ -1525,12 +1532,6 @@ type (
 		Cluster    string   `json:"cluster"`
 		Namespaces []string `json:"namespaces"`
 		Version    string   `json:"version,omitempty"`
-	}
-
-	// KafkaConnectTarget describes a Kafka Connect deployment target
-	KafkaConnectTarget struct {
-		Cluster string `json:"cluster"`
-		Version string `json:"version,omitempty"`
 	}
 
 	// ProcessorStream describes the processor stream,
@@ -1592,8 +1593,8 @@ type (
 )
 
 // GetProcessors returns a list of all available LSQL processors.
-func (c *Client) GetProcessors() ([]ProcessorStream, error) {
-	var res []ProcessorStream
+func (c *Client) GetProcessors() (ProcessorsResult, error) {
+	var res ProcessorsResult
 
 	resp, err := c.Do(http.MethodGet, processorsPath, "", nil)
 	if err != nil {
@@ -1666,12 +1667,12 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 			identifier = id
 		} else if name != "" {
 			// get the id by looping over all available processors.
-			streams, err := c.GetProcessors()
+			result, err := c.GetProcessors()
 			if err != nil {
 				return "", err
 			}
 
-			for _, processor := range streams {
+			for _, processor := range result.Streams {
 				if processor.Name == name && processor.ClusterName == clusterName {
 					identifier = processor.ID
 					break
@@ -1723,7 +1724,7 @@ func (c *Client) ResumeProcessor(processorID string) error {
 		return errRequired("processorID")
 	}
 
-	path := fmt.Sprintf(processorPath + "/start", processorID)
+	path := fmt.Sprintf(processorPath+"/start", processorID)
 	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
@@ -1742,7 +1743,7 @@ func (c *Client) UpdateProcessorRunners(processorID string, numberOfRunners int)
 		numberOfRunners = 1
 	}
 
-	path := fmt.Sprintf(processorPath + "/scale/%d", processorID, numberOfRunners)
+	path := fmt.Sprintf(processorPath+"/scale/%d", processorID, numberOfRunners)
 	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
