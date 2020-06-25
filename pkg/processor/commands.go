@@ -122,7 +122,7 @@ func NewProcessorsLogsCommand() *cobra.Command {
 func NewProcessorGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "processor",
-		Short:            "Manage a processor based on the processor id; pause, resume, update runners, delete or create a new processor",
+		Short:            "Manage a processor based on the processor id; stop, start, update runners, delete or create a new processor",
 		Example:          `processor pause --id="existing_processor_id" or processor create --name="processor_name" --sql="" --runners=1 --cluster-name="" --namespace="" pipeline=""`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -175,9 +175,9 @@ func NewProcessorCreateCommand() *cobra.Command {
 	var processor api.CreateProcessorPayload
 
 	cmd := &cobra.Command{
-		Use:              "create",
+		Use:              `create`,
 		Short:            "Create a processor",
-		Example:          `processor create --name="processor_name" --sql="" --runners=1 --cluster-name="" --namespace="" pipeline=""`,
+		Example:          `processor create --name="processor_name" --sql="" --runners=1 --cluster-name="" --namespace="" pipeline="" --id=""`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -185,7 +185,7 @@ func NewProcessorCreateCommand() *cobra.Command {
 				return err
 			}
 
-			err := config.Client.CreateProcessor(processor.Name, processor.SQL, processor.Runners, processor.ClusterName, processor.Namespace, processor.Pipeline)
+			err := config.Client.CreateProcessor(processor.Name, processor.SQL, processor.Runners, processor.ClusterName, processor.Namespace, processor.Pipeline, processor.AppID)
 
 			if err != nil {
 				golog.Errorf("Failed to create processor [%s]. [%s]", processor.Name, err.Error())
@@ -202,6 +202,7 @@ func NewProcessorCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&processor.SQL, "sql", "", `Lenses SQL to run .e.g. sql="SET autocreate=true;INSERT INTO topic1 SELECT * FROM topicA"`)
 	cmd.Flags().IntVar(&processor.Runners, "runners", 1, "Number of runners/instance to deploy")
 	cmd.Flags().StringVar(&processor.Pipeline, "pipeline", "", `A label to apply to kubernetes processors, defaults to processor name`)
+	cmd.Flags().StringVar(&processor.AppID, "id", "", `The processor identifier, it is used as the underlying Kafka consumer group`)
 
 	bite.Prepend(cmd, bite.FileBind(&processor))
 	bite.CanBeSilent(cmd)
@@ -214,9 +215,9 @@ func NewProcessorPauseCommand() *cobra.Command {
 	var processorID, processorName, clusterName, namespace string
 
 	cmd := &cobra.Command{
-		Use:              "pause",
-		Short:            "Pause a processor",
-		Example:          `processor pause --id="processor_id" (or --name="processor_name") --cluster-name="clusterName" --namespace="namespace"`,
+		Use:              "stop",
+		Short:            "Stop a processor",
+		Example:          `processor stop --id="processor_id" (or --name="processor_name") --cluster-name="clusterName" --namespace="namespace"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -225,17 +226,17 @@ func NewProcessorPauseCommand() *cobra.Command {
 				return err
 			}
 
-			if err := config.Client.PauseProcessor(identifier); err != nil {
-				golog.Errorf("Failed to pause processor [%s]. [%s]", identifier, err.Error())
+			if err := config.Client.StopProcessor(identifier); err != nil {
+				golog.Errorf("Failed to stop processor [%s]. [%s]", identifier, err.Error())
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Processor [%s] paused", identifier)
+			return bite.PrintInfo(cmd, "Processor [%s] stopped", identifier)
 		},
 	}
 
-	cmd.Flags().StringVar(&processorID, "id", "", "Processor ID to pause")
-	cmd.Flags().StringVar(&processorName, "name", "", "Processor name to pause")
+	cmd.Flags().StringVar(&processorID, "id", "", "Processor ID to stop")
+	cmd.Flags().StringVar(&processorName, "name", "", "Processor name to stop")
 	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Cluster name the processor is in`)
 	cmd.Flags().StringVar(&namespace, "namespace", "", `Namespace the processor is in`)
 	bite.CanBeSilent(cmd)
@@ -248,9 +249,9 @@ func NewProcessorResumeCommand() *cobra.Command {
 	var processorID, processorName, clusterName, namespace string
 
 	cmd := &cobra.Command{
-		Use:              "resume",
-		Short:            "Resume a processor",
-		Example:          `processor resume --id="processor_id" (or --name="processor_name") --cluster-name="clusterName" --namespace="namespace"`,
+		Use:              "start",
+		Short:            "Start a processor",
+		Example:          `processor start --id="processor_id" (or --name="processor_name") --cluster-name="clusterName" --namespace="namespace"`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -260,16 +261,16 @@ func NewProcessorResumeCommand() *cobra.Command {
 			}
 
 			if err := config.Client.ResumeProcessor(identifier); err != nil {
-				golog.Errorf("Failed to resume processor [%s]. [%s]", identifier, err.Error())
+				golog.Errorf("Failed to start processor [%s]. [%s]", identifier, err.Error())
 				return err
 			}
 
-			return bite.PrintInfo(cmd, "Processor [%s] resumed", identifier)
+			return bite.PrintInfo(cmd, "Processor [%s] started", identifier)
 		},
 	}
 
-	cmd.Flags().StringVar(&processorID, "id", "", "Processor ID to resume")
-	cmd.Flags().StringVar(&processorName, "name", "", "Processor name to resume")
+	cmd.Flags().StringVar(&processorID, "id", "", "Processor ID to start")
+	cmd.Flags().StringVar(&processorName, "name", "", "Processor name to start")
 	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Cluster name the processor is in`)
 	cmd.Flags().StringVar(&namespace, "namespace", "", `Namespace the processor is in`)
 	bite.CanBeSilent(cmd)

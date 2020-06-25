@@ -536,8 +536,9 @@ func MatchExecutionMode(modeStr string) (ExecutionMode, bool) {
 	switch modeStr {
 	case "IN_PROC":
 		return ExecutionModeInProcess, true
-	case "CONNECT":
-		return ExecutionModeConnect, true
+	// TODO: add it back once connect mode is added back
+	/*case "CONNECT":
+	return ExecutionModeConnect, true*/
 	case "KUBERNETES":
 		return ExecutionModeKubernetes, true
 	default:
@@ -1430,16 +1431,17 @@ func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 
 // Processor API
 
-const processorsPath = "api/streams"
+const processorsPath = "api/v1/streams"
 
 // CreateProcessorPayload holds the data to be sent from `CreateProcessor`.
 type CreateProcessorPayload struct {
 	Name        string `json:"name" yaml:"name"` // required
 	SQL         string `json:"sql" yaml:"sql"`   // required
-	Runners     int    `json:"runners" yaml:"runners"`
-	ClusterName string `json:"clusterName" yaml:"clusterName"`
+	Runners     int    `json:"runnerCount" yaml:"runnerCount"`
+	ClusterName string `json:"cluster" yaml:"cluster"`
 	Namespace   string `json:"namespace" yaml:"namespace"`
-	Pipeline    string `json:"pipeline" yaml:"pipeline"` // defaults to Name if not set.
+	Pipeline    string `json:"pipeline" yaml:"pipeline"`     // defaults to Name if not set.
+	AppID       string `json:"appId,omitempty" yaml:"appId"` //not required
 }
 
 // ProcessorAsRequest returns a proccessor as a CreateProcessorPayload
@@ -1451,11 +1453,12 @@ func (p *ProcessorStream) ProcessorAsRequest() CreateProcessorPayload {
 		ClusterName: p.ClusterName,
 		Namespace:   p.Namespace,
 		Pipeline:    p.Pipeline,
+		AppID:       p.ID,
 	}
 }
 
 // CreateProcessor creates a new LSQL processor.
-func (c *Client) CreateProcessor(name string, sql string, runners int, clusterName, namespace, pipeline string) error {
+func (c *Client) CreateProcessor(name string, sql string, runners int, clusterName, namespace, pipeline string, appID string) error {
 	if name == "" {
 		return errRequired("name")
 	}
@@ -1472,13 +1475,26 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 		pipeline = name
 	}
 
-	payload := CreateProcessorPayload{
-		Name:        name,
-		SQL:         sql,
-		Runners:     runners,
-		ClusterName: clusterName,
-		Namespace:   namespace,
-		Pipeline:    pipeline,
+	var payload CreateProcessorPayload
+	if appID == "" {
+		payload = CreateProcessorPayload{
+			Name:        name,
+			SQL:         sql,
+			Runners:     runners,
+			ClusterName: clusterName,
+			Namespace:   namespace,
+			Pipeline:    pipeline,
+		}
+	} else {
+		payload = CreateProcessorPayload{
+			Name:        name,
+			SQL:         sql,
+			Runners:     runners,
+			ClusterName: clusterName,
+			Namespace:   namespace,
+			Pipeline:    pipeline,
+			AppID:       appID,
+		}
 	}
 
 	send, err := json.Marshal(payload)
@@ -1532,25 +1548,44 @@ type (
 
 		SQL string `json:"sql"` // header:"SQL"`
 
-		TopicKeyDecoder   string `json:"topicKeyDecoder"`
-		TopicValueDecoder string `json:"topicValueDecoder"` // header:"Topic Decoder"`
-		Pipeline          string `json:"pipeline"`          // header:"Pipeline"`
+		InputTopics  []TopicDecoders `json:"inputTopics"`
+		OutputTopics []TopicDecoders `json:"outputTopics"` // header:"Topic Decoder"`
+		Pipeline     string          `json:"pipeline"`     // header:"Pipeline"`
 
-		ToTopics               []string `json:"toTopics,omitempty"` // header:"To Topics"`
-		FromTopics             []string `json:"fromTopics,omitempty"`
-		LastAction             string   `json:"lastAction"`
-		LastActionMessage      string   `json:"lastActionMsg,omitempty"`      // header:"Last Action"`
-		DeploymentErrorMessage string   `json:"deploymentErrorMsg,omitempty"` // header:"Depl Error"`
+		ToTopics   []string            `json:"toTopics,omitempty"` // header:"To Topics"`
+		FromTopics []string            `json:"fromTopics,omitempty"`
+		LastAction ProcessorLastAction `json:"lastAction,omitempty"`
 
-		RunnerState map[string]ProcessorRunnerState `json:"runnerState"`
+		RunnerState ProcessorAppState `json:"state"`
+		Settings    map[string]string `json:"settings"`
 	}
+
+	// TopicDecoders contains the information about the topic storage format
+	TopicDecoders struct {
+		Name  string `json:"name"`
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}
+	// ProcessorLastAction contains the information about the last change on the SQL processor
+	ProcessorLastAction struct {
+		Action  string `json:"action"`
+		Message string `json:"msg"`
+	}
+
+	// ProcessorAppState contains the details about the processor deployment
+	ProcessorAppState struct {
+		DeploymentStatus string                          `json:"deploymentStatus"`
+		DeploymentError  string                          `json:"deploymentError,omitempty"`
+		RunnerStataus    map[string]ProcessorRunnerState `json:"runnerStatus"`
+	}
+
 	// ProcessorRunnerState describes the processor stream,
 	// see `ProcessorStream` and `ProcessorResult.
 	ProcessorRunnerState struct {
 		ID           string `json:"id"`
 		Worker       string `json:"worker"`
-		State        string `json:"state"`
-		ErrorMessage string `json:"errorMsg"`
+		State        string `json:"status"`
+		ErrorMessage string `json:"errorMsg,omitempty"`
 	}
 )
 
@@ -1588,7 +1623,7 @@ func (c *Client) GetProcessor(processorID string) (ProcessorStream, error) {
 }
 
 // LookupProcessorIdentifier is not a direct API call, although it fires requests to get the result.
-// It's a helper which can be used as an input argument of the `DeleteProcessor` and `PauseProcessor` and `ResumeProcessor` and `UpdateProcessorRunners` functions.
+// It's a helper which can be used as an input argument of the `DeleteProcessor` and `StopProcessor` and `ResumeProcessor` and `UpdateProcessorRunners` functions.
 //
 // Fill the id or name in any case.
 // Fill the clusterName and namespace when in KUBERNETES execution mode.
@@ -1648,24 +1683,20 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 
 const processorPath = processorsPath + "/%s"
 
-const processorPausePath = processorPath + "/pause"
-
-// PauseProcessor pauses a processor.
+// StopProcessor stops a running processor.
 // See `LookupProcessorIdentifier`.
-func (c *Client) PauseProcessor(processorID string) error {
+func (c *Client) StopProcessor(processorID string) error {
 	if processorID == "" {
 		return errRequired("processorID")
 	}
 
-	path := fmt.Sprintf(processorPath+"/pause", processorID)
+	path := fmt.Sprintf(processorPath+"/stop", processorID)
 	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
 	}
 	return resp.Body.Close()
 }
-
-const processorResumePath = processorPath + "/resume"
 
 // ResumeProcessor resumes a processor.
 // See `LookupProcessorIdentifier`.
@@ -1674,15 +1705,13 @@ func (c *Client) ResumeProcessor(processorID string) error {
 		return errRequired("processorID")
 	}
 
-	path := fmt.Sprintf(processorResumePath, processorID)
+	path := fmt.Sprintf(processorPath + "/start", processorID)
 	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
 	}
 	return resp.Body.Close()
 }
-
-const processorUpdateRunnersPath = processorPath + "/scale/%d"
 
 // UpdateProcessorRunners scales a processor to "numberOfRunners".
 // See `LookupProcessorIdentifier`.
@@ -1695,7 +1724,7 @@ func (c *Client) UpdateProcessorRunners(processorID string, numberOfRunners int)
 		numberOfRunners = 1
 	}
 
-	path := fmt.Sprintf(processorUpdateRunnersPath, processorID, numberOfRunners)
+	path := fmt.Sprintf(processorPath + "/scale/%d", processorID, numberOfRunners)
 	resp, err := c.Do(http.MethodPut, path, "", nil)
 	if err != nil {
 		return err
