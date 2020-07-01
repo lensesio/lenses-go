@@ -604,29 +604,6 @@ func NewLoginCommand(app *bite.Application) *cobra.Command {
 	return cmd
 }
 
-//NewGetLicenseInfoCommand creates `license` command
-func NewGetLicenseInfoCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:              "license",
-		Short:            "Print the license information for the connected lenses box",
-		Example:          "license",
-		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			lc, err := config.Client.GetLicenseInfo()
-			if err != nil {
-				return err
-			}
-
-			// return printJSON(cmd, lc)
-			return bite.PrintObject(cmd, lc)
-		},
-	}
-
-	bite.CanPrintJSON(cmd)
-
-	return cmd
-}
-
 func isValidConfigurationContext(name string) bool {
 	currentContext := config.Manager.Config.CurrentContext
 	config.Manager.Config.SetCurrent(name)

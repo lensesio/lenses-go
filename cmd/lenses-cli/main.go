@@ -19,6 +19,8 @@ import (
 	"github.com/landoop/lenses-go/pkg/elasticsearch"
 	"github.com/landoop/lenses-go/pkg/export"
 	imports "github.com/landoop/lenses-go/pkg/import"
+	"github.com/landoop/lenses-go/pkg/initcontainer"
+	"github.com/landoop/lenses-go/pkg/license"
 	"github.com/landoop/lenses-go/pkg/logs"
 	"github.com/landoop/lenses-go/pkg/management"
 	"github.com/landoop/lenses-go/pkg/policy"
@@ -30,7 +32,6 @@ import (
 	"github.com/landoop/lenses-go/pkg/sql"
 	"github.com/landoop/lenses-go/pkg/topic"
 	"github.com/landoop/lenses-go/pkg/user"
-	"github.com/landoop/lenses-go/pkg/initcontainer"
 	"github.com/spf13/cobra"
 )
 
@@ -160,6 +161,9 @@ func main() {
 	//Import
 	app.AddCommand(imports.NewImportGroupCommand())
 
+	//License
+	app.AddCommand(license.NewLicenseGroupCommand())
+
 	//Logs
 	app.AddCommand(logs.NewLogsCommandGroup())
 
@@ -201,7 +205,6 @@ func main() {
 	app.AddCommand(user.NewConfigurationContextCommand())
 	app.AddCommand(user.NewConfigureCommand(""))
 	app.AddCommand(user.NewLoginCommand(app))
-	app.AddCommand(user.NewGetLicenseInfoCommand())
 	app.AddCommand(user.NewUserGroupCommand())
 
 	//Management
