@@ -11,6 +11,9 @@ help:
 build: dep ## Build for development only
 	 go build -o ./${OUTPUT}/${EXECUTABLE} ./cmd/${EXECUTABLE}
 
+build-fast: ## Build for development only without verifying dependencies
+	 go build -o ./${OUTPUT}/${EXECUTABLE} ./cmd/${EXECUTABLE}
+
 build-linux: dep ## Build binary for linux
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-amd64 ./cmd/${EXECUTABLE}
 
