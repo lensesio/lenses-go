@@ -5,8 +5,10 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/landoop/lenses-go/pkg/api"
 	config "github.com/landoop/lenses-go/pkg/configs"
@@ -15,6 +17,8 @@ import (
 )
 
 func TestLicenseGetCommand(t *testing.T) {
+	sixMonthExpirtyLicense := time.Now().AddDate(0, 6, 0).UnixNano() / int64(time.Millisecond)
+
 	testsLicenseGetCmd := []struct {
 		name        string
 		args        []string
@@ -24,7 +28,7 @@ func TestLicenseGetCommand(t *testing.T) {
 		{
 			"license get command",
 			[]string{""},
-			`{"clientId":"Studio Beta","isRespected":true,"maxBrokers":69,"expiry":1612137598000,"monthsToExpire":7}`,
+			`{"clientId":"Studio Beta","isRespected":true,"maxBrokers":69,"expiry":` + strconv.FormatInt(sixMonthExpirtyLicense, 10) + `,"monthsToExpire":6}`,
 			errors.New(""),
 		},
 	}
@@ -34,7 +38,7 @@ func TestLicenseGetCommand(t *testing.T) {
 		IsRespected: true,
 		MaxBrokers:  69,
 		MaxMessages: 0,
-		Expiry:      1612137598000,
+		Expiry:      sixMonthExpirtyLicense,
 	}
 	json, _ := json.Marshal(sampleLicense)
 	for _, tt := range testsLicenseGetCmd {
