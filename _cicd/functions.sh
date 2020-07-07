@@ -46,6 +46,20 @@ lint() {
     golint -set_exit_status $(go list ./... | grep -v /vendor/)
 }
 
+format-check() {
+    go get -u golang.org/x/tools/cmd/goimports
+
+    export PATH=$PATH:$GOPATH/bin
+    GOFORMATOUT=$(goimports -l cmd/ pkg/ test/)
+    if [[ -z $GOFORMATOUT ]]; then
+        echo "Go code format-check complete!"
+    else
+        echo "The following files contain formatting issues:"
+        echo $GOFORMATOUT
+        exit 1
+    fi
+}
+
 # Builds lenses-cli
 build() {
     go build -v -o ./bin/lenses-cli ./cmd/lenses-cli
