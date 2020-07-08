@@ -252,6 +252,15 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 				return err
 			}
 			// Route to the new API
+			if cond.ConditionID == "" && cond.Channels != nil {
+				err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.Channels)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), "Create rule with channels attached succeeded")
+				return nil
+			}
+
 			if cond.ConditionID != "" && cond.Channels != nil {
 				err := config.Client.UpdateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.ConditionID, cond.Channels)
 				if err != nil {
