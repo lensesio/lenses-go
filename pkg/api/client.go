@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -3314,12 +3313,12 @@ type (
 	}
 	// AlertConditionDetails contains the payload for an alert's condition details
 	AlertConditionDetails struct {
-		CreatedAt    string            `json:"createdAt,omitempty"`
-		CreatedBy    string            `json:"createdBy,omitempty"`
-		ModifiedAt   string            `json:"modifiedAt,omitempty"`
-		ModifiedBy   string            `json:"modifiedBy,omitempty"`
-		Channels     []AlertChannel    `json:"channels,omitempty"`
-		ConditionDsl AlertConditionDsl `json:"conditionDsl,omitempty"`
+		CreatedAt    string                 `json:"createdAt,omitempty"`
+		CreatedBy    string                 `json:"createdBy,omitempty"`
+		ModifiedAt   string                 `json:"modifiedAt,omitempty"`
+		ModifiedBy   string                 `json:"modifiedBy,omitempty"`
+		Channels     []AlertChannel         `json:"channels,omitempty"`
+		ConditionDsl map[string]interface{} `json:"conditionDsl,omitempty"`
 	}
 
 	// AlertSettings describes the type of list entry of the `GetAlertSettings`.
@@ -3331,77 +3330,9 @@ type (
 	AlertSettingsCategoryMap struct {
 		Infrastructure []AlertSetting `json:"infrastructure" header:"Infrastructure"`
 		Consumers      []AlertSetting `json:"consumers" header:"Consumers"`
+		Producers      []AlertSetting `json:"producers" header:"Producers"`
 	}
 )
-
-const (
-	alertsPath                 = "api/alerts"
-	alertSettingsPath          = alertsPath + "/settings"
-	alertSettingPath           = alertSettingsPath + "/%d"
-	alertSettingConditionsPath = alertSettingPath + "/condition"
-	alertSettingConditionPath  = alertSettingConditionsPath + "/%s" // UUID for condition.
-)
-
-// GetAlertSettings returns all the configured alert settings.
-// Alerts are divided into two categories:
-//
-// * Infrastructure - These are out of the box alerts that be toggled on and offset.
-// * Consumer group - These are user-defined alerts on consumer groups.
-//
-// Alert notifications are the result of an `AlertSetting` Condition being met on an `AlertSetting`.
-func (c *Client) GetAlertSettings() (AlertSettings, error) {
-	resp, err := c.Do(http.MethodGet, alertSettingsPath, "", nil)
-	if err != nil {
-		return AlertSettings{}, err
-	}
-
-	var settings AlertSettings
-	err = c.ReadJSON(resp, &settings)
-	return settings, err
-}
-
-// GetAlertSetting returns a specific alert setting based on its "id".
-func (c *Client) GetAlertSetting(id int) (setting AlertSetting, err error) {
-	path := fmt.Sprintf(alertSettingPath, id)
-	resp, respErr := c.Do(http.MethodGet, path, "", nil)
-	if respErr != nil {
-		err = respErr
-		return
-	}
-
-	err = c.ReadJSON(resp, &setting)
-	return
-}
-
-// EnableAlertSetting enables a specific alert setting based on its "id".
-func (c *Client) EnableAlertSetting(id int, enable bool) error {
-	path := fmt.Sprintf(alertSettingPath, id)
-	payload := strconv.FormatBool(enable)
-	resp, err := c.Do(http.MethodPut, path, "", []byte(payload))
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// AlertSettingConditions map with UUID as key and the condition as value, used on `GetAlertSettingConditions`.
-type AlertSettingConditions map[string]string
-
-// GetAlertSettingConditions returns alert setting's conditions as a map of strings.
-func (c *Client) GetAlertSettingConditions(id int) (AlertSettingConditions, error) {
-	path := fmt.Sprintf(alertSettingConditionsPath, id)
-	resp, err := c.Do(http.MethodGet, path, "", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var conds AlertSettingConditions
-	if err = c.ReadJSON(resp, &conds); err != nil {
-		return nil, err
-	}
-	return conds, nil
-}
 
 type (
 	//AlertResult  alerts in a paging format
@@ -3425,130 +3356,6 @@ type (
 		Map     map[string]interface{} `json:"map,omitempty" yaml:"map,omitempty" header:"Map,empty"`
 	}
 )
-
-// RegisterAlert registers an Alert, returns an error on failure.
-func (c *Client) RegisterAlert(alert Alert) error {
-	if alert.Severity == "" {
-		return errRequired("Severity")
-	}
-
-	alert.Severity = strings.ToUpper(alert.Severity)
-
-	send, err := json.Marshal(alert)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.Do(http.MethodPost, alertsPath, contentTypeJSON, send)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// GetAlerts returns the registered alerts.
-func (c *Client) GetAlerts(pageSize int) (alerts []Alert, err error) {
-	path := fmt.Sprintf("%s?pageSize=%d", alertsPath, pageSize)
-
-	var results AlertResult
-	resp, respErr := c.Do(http.MethodGet, path, "", nil)
-	if respErr != nil {
-		err = respErr
-		return
-	}
-
-	err = c.ReadJSON(resp, &results)
-	alerts = results.Alerts
-
-	return
-}
-
-// CreateOrUpdateAlertSettingCondition sets a condition(expression text) for a specific alert setting.
-func (c *Client) CreateOrUpdateAlertSettingCondition(alertSettingID int, condition string) error {
-	path := fmt.Sprintf(alertSettingConditionsPath, alertSettingID)
-	resp, err := c.Do(http.MethodPost, path, "text/plain", []byte(condition))
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-// DeleteAlertSettingCondition deletes a condition from an alert setting.
-func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID string) error {
-	path := fmt.Sprintf(alertSettingConditionPath, alertSettingID, conditionUUID)
-	resp, err := c.Do(http.MethodDelete, path, "", nil)
-	if err != nil {
-		return err
-	}
-
-	return resp.Body.Close()
-}
-
-const (
-	alertsPathSSE = "api/sse/alerts"
-)
-
-// AlertHandler is the type of func that can be registered to receive alerts via the `GetAlertsLive`.
-type AlertHandler func(Alert) error
-
-// GetAlertsLive receives alert notifications in real-time from the server via a Send Server Event endpoint.
-func (c *Client) GetAlertsLive(handler AlertHandler) error {
-	resp, err := c.Do(http.MethodGet, alertsPathSSE, contentTypeJSON, nil, func(r *http.Request) error {
-		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
-		return nil
-	}, schemaAPIOption)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	reader, err := c.acquireResponseBodyStream(resp)
-	if err != nil {
-		return err
-	}
-
-	streamReader := bufio.NewReader(reader)
-
-	for {
-		line, err := streamReader.ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				return nil // we read until the the end, exit with no error here.
-			}
-			return err // exit on first failure.
-		}
-
-		if len(line) < shiftN+1 { // even more +1 for the actual event.
-			// almost empty or totally invalid line,
-			// empty message maybe,
-			// we don't care, we ignore them at any way.
-			continue
-		}
-
-		if !bytes.HasPrefix(line, dataPrefix) {
-			return fmt.Errorf("client: see: fail to read the event, the incoming message has no [%s] prefix", string(dataPrefix))
-		}
-
-		message := line[shiftN:] // we need everything after the 'data:'.
-
-		if len(message) < 2 {
-			continue // do NOT stop here, let the connection active.
-		}
-
-		alert := Alert{}
-
-		if err = json.Unmarshal(message, &alert); err != nil {
-			// exit on first error here as well.
-			return err
-		}
-
-		if err = handler(alert); err != nil {
-			return err // stop on first error by the caller.
-		}
-	}
-}
 
 const processorsLogsPathSSE = "api/sse/k8/logs/%s/%s/%s"
 

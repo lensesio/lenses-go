@@ -2,6 +2,7 @@ package imports
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
@@ -74,7 +75,7 @@ func loadAlertSettings(client *api.Client, cmd *cobra.Command, loadpath string) 
 				continue
 			}
 
-			if err := client.CreateOrUpdateAlertSettingCondition(alertID, condition); err != nil {
+			if err := client.CreateAlertSettingsCondition(strconv.Itoa(alertID), condition, []string{}); err != nil {
 				golog.Errorf("Error creating/updating alert setting from [%d] [%s] [%s]", alertID, loadpath, err.Error())
 				return err
 			}

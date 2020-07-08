@@ -239,7 +239,7 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 			if len(conds.Conditions) > 0 {
 				alertID := conds.AlertID
 				for _, condition := range conds.Conditions {
-					err := config.Client.CreateOrUpdateAlertSettingCondition(alertID, condition)
+					err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(alertID), condition, []string{})
 					if err != nil {
 						golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", condition, err.Error())
 						return err
@@ -251,9 +251,22 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
 				return err
 			}
-			// Route to the new API
-			if cond.ConditionID != "" && cond.Channels != nil {
-				err := config.Client.UpdateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.ConditionID, cond.Channels)
+
+			if cond.ConditionID == "" && cond.Channels != nil {
+				err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.Channels)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), "Create rule with channels attached succeeded")
+				return nil
+			}
+
+			if cond.ConditionID != "" {
+				var channels = cond.Channels
+				if channels == nil {
+					channels = []string{}
+				}
+				err := config.Client.UpdateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.ConditionID, channels)
 				if err != nil {
 					return err
 				}
@@ -261,7 +274,7 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 				return nil
 			}
 
-			err := config.Client.CreateOrUpdateAlertSettingCondition(cond.AlertID, cond.Condition)
+			err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, []string{})
 			if err != nil {
 				golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", cond.Condition, err.Error())
 				return err
