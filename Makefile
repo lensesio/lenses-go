@@ -41,6 +41,9 @@ cross-build: dep ## Build the app for multiple os/arch
 lint: ## Linting the codebase
 	golint -set_exit_status ${PKG_LIST}
 
+format-check: ## Check format of source code according to Go's best practices
+	@goimports -l cmd/ pkg/ test/
+
 publish: ## Publish lenses CLI as docker
 	bash -c "./publish-docker"
 
@@ -49,6 +52,7 @@ race: dep ## Run data race detector
 
 setup: ## Get all the necessary dependencies 
 	go get -u golang.org/x/lint/golint
+	go get -u golang.org/x/tools/cmd/goimports
 
 test: dep ## Run tests
 	go test -coverprofile=cover.out ./...

@@ -100,6 +100,7 @@ pipeline {
             steps {
                 sh '_cicd/functions.sh setup'
                 sh '_cicd/functions.sh lint'
+                sh '_cicd/functions.sh format-check'
                 // The following only builds for the platform found at runtime
                 // It's used for quick iterations during local developemnt
                 // sh '_cicd/functions.sh build'
