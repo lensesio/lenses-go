@@ -90,6 +90,43 @@ func TestCreateOrUpdateAlertSettingConditionCommand(t *testing.T) {
 			"Update rule's channels succeeded",
 			errors.New(""),
 		},
+		//"Data produced" tests
+		{
+			"Missing topic flag",
+			[]string{"--alert=5000"},
+			"",
+			errors.New(`required flag "topic" not set`),
+		},
+		{
+			`Flags "more-than" or "less-than" not set`,
+			[]string{"--alert=5000", "--topic=foo"},
+			"",
+			errors.New(`required flag "more-than" or "less-than" not set`),
+		},
+		{
+			`Setting both flags "more-than" and "less-than"`,
+			[]string{"--alert=5000", "--topic=foo", "--more-than=5", "--less-than=6"},
+			"",
+			errors.New(`only one flag of "more-than" or "less-than" is supported`),
+		},
+		{
+			`Seting wrong value for flag "more-than"`,
+			[]string{"--alert=5000", "--topic=foo", "--more-than=-5", "--duration=PT2H"},
+			"",
+			errors.New(`"more-than" flag should be greater than zero`),
+		},
+		{
+			`Seting wrong value for flag "less-than"`,
+			[]string{"--alert=5000", "--topic=foo", "--less-than=-5", "--duration=PT2H"},
+			"",
+			errors.New(`"less-than" flag should be greater than zero`),
+		},
+		{
+			`Missing "duration" flag"`,
+			[]string{"--alert=5000", "--topic=foo", "--more-than=5"},
+			"",
+			errors.New(`required flag "duration" not set`),
+		},
 	}
 
 	for _, tt := range testsAlertSettingConditionSetCmd {
@@ -103,7 +140,7 @@ func TestCreateOrUpdateAlertSettingConditionCommand(t *testing.T) {
 		config.Client = client
 
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := NewCreateOrUpdateAlertSettingConditionCommand()
+			cmd := NewSetAlertSettingConditionCommand()
 			out, err := test.ExecuteCommand(cmd, tt.args...)
 
 			test.CheckStringContains(t, out, tt.expectOut)

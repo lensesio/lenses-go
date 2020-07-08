@@ -213,19 +213,38 @@ func NewAlertSettingConditionGroupCommand() *cobra.Command {
 		SilenceErrors:    true,
 	}
 
-	rootSub.AddCommand(NewCreateOrUpdateAlertSettingConditionCommand())
+	rootSub.AddCommand(NewSetAlertSettingConditionCommand())
 	rootSub.AddCommand(NewDeleteAlertSettingConditionCommand())
 
 	return rootSub
 }
 
-//NewCreateOrUpdateAlertSettingConditionCommand creates `alert condition set` command
-func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
-	var conds SettingConditionPayloads
-	var cond SettingConditionPayload
-	cmdExample := "\n# Create\nalert setting condition set --alert=1001 --condition=\"lag >= 100000\"\n" +
-		"# Update\nalert setting condition set --alert <id> --condition=<condition> --conditionID=<conditionID> --channels=<channelID> --channels=<channelID>\n" +
-		"# Using YAML\nalert setting condition set ./alert_cond.yml"
+//NewSetAlertSettingConditionCommand creates `alert condition set` command
+func NewSetAlertSettingConditionCommand() *cobra.Command {
+
+	var (
+		conds     SettingConditionPayloads
+		cond      SettingConditionPayload
+		threshold api.Threshold
+	)
+
+	cmdExample := `
+# Create
+alert setting condition set --alert=2000 --condition="lag >= 200000 on group groupA and topic topicA"
+
+# Update
+alert setting condition set --alert=<id> --condition=<condition> --conditionID=<conditionID> --channels=<channelID> --channels=<channelID>
+
+# Producer type of alert category
+lenses-cli alert setting condition set --alert=5000 --topic=my-topic --duration=PT6H --more-than=5
+
+# optional channels can be used more than once
+lenses-cli alert setting condition set --alert=5000 --topic=my-topic --duration=PT6H --more-than=5 \
+	--channels="9176c428-be0e-4c36-aa1e-8b8a66782232" \
+	--channels="7b184b13-f37c-4eee-9c0a-17dec2fd7bf5"
+
+# Using YAML
+alert setting condition set ./alert_cond.yml`
 
 	cmd := &cobra.Command{
 		Use:              "set",
@@ -235,52 +254,101 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			alertID := cond.AlertID
 
-			if len(conds.Conditions) > 0 {
-				alertID := conds.AlertID
-				for _, condition := range conds.Conditions {
-					err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(alertID), condition, []string{})
+			switch alertID {
+			case 5000: // Handling of Producer's type of alert settings condition
+				if cond.Topic == "" {
+					return errors.New(`required flag "topic" not set`)
+				}
+
+				if cond.MoreThan == 0 && cond.LessThan == 0 {
+					return errors.New(`required flag "more-than" or "less-than" not set`)
+				}
+
+				if cond.MoreThan > 0 && cond.LessThan > 0 {
+					return errors.New(`only one flag of "more-than" or "less-than" is supported`)
+				}
+
+				if cond.Duration == "" {
+					return errors.New(`required flag "duration" not set`)
+				}
+
+				if cond.MoreThan != 0 {
+					if cond.MoreThan <= 0 {
+						return errors.New(`"more-than" flag should be greater than zero`)
+					}
+					threshold.Type = "more_than"
+					threshold.Messages = cond.MoreThan
+				}
+
+				if cond.LessThan != 0 {
+					if cond.LessThan <= 0 {
+						return errors.New(`"less-than" flag should be greater than zero`)
+					}
+					threshold.Type = "less_than"
+					threshold.Messages = cond.LessThan
+				}
+
+				err := config.Client.SetAlertSettingsProducerCondition(strconv.Itoa(alertID), cond.ConditionID, cond.Topic, threshold, cond.Duration, cond.Channels)
+				if err != nil {
+					return err
+				}
+				if cond.ConditionID != "" {
+					fmt.Fprintln(cmd.OutOrStdout(), "rule with condition ID \""+cond.ConditionID+"\" updated successfully")
+					return nil
+				}
+
+				fmt.Fprintln(cmd.OutOrStdout(), "new rule created successfully")
+				return nil
+			default:
+				if len(conds.Conditions) > 0 {
+					alertID := conds.AlertID
+					for _, condition := range conds.Conditions {
+						err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(alertID), condition, []string{})
+						if err != nil {
+							golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", condition, err.Error())
+							return err
+						}
+						bite.PrintInfo(cmd, "Condition [id=%d] added", alertID)
+					}
+					return nil
+				}
+
+				if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
+					return err
+				}
+
+				if cond.ConditionID == "" && cond.Channels != nil {
+					err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.Channels)
 					if err != nil {
-						golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", condition, err.Error())
 						return err
 					}
-					bite.PrintInfo(cmd, "Condition [id=%d] added", alertID)
+					fmt.Fprintln(cmd.OutOrStdout(), "Create rule with channels attached succeeded")
+					return nil
 				}
-				return nil
-			}
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
-				return err
-			}
 
-			if cond.ConditionID == "" && cond.Channels != nil {
-				err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.Channels)
+				if cond.ConditionID != "" {
+					var channels = cond.Channels
+					if channels == nil {
+						channels = []string{}
+					}
+					err := config.Client.UpdateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.ConditionID, channels)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(cmd.OutOrStdout(), "Update rule's channels succeeded")
+					return nil
+				}
+
+				err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, []string{})
 				if err != nil {
+					golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", cond.Condition, err.Error())
 					return err
 				}
-				fmt.Fprintln(cmd.OutOrStdout(), "Create rule with channels attached succeeded")
-				return nil
-			}
 
-			if cond.ConditionID != "" {
-				var channels = cond.Channels
-				if channels == nil {
-					channels = []string{}
-				}
-				err := config.Client.UpdateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.ConditionID, channels)
-				if err != nil {
-					return err
-				}
-				fmt.Fprintln(cmd.OutOrStdout(), "Update rule's channels succeeded")
-				return nil
+				return bite.PrintInfo(cmd, "Condition [id=%d] added", cond.AlertID)
 			}
-
-			err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, []string{})
-			if err != nil {
-				golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", cond.Condition, err.Error())
-				return err
-			}
-
-			return bite.PrintInfo(cmd, "Condition [id=%d] added", cond.AlertID)
 		},
 	}
 
@@ -288,6 +356,12 @@ func NewCreateOrUpdateAlertSettingConditionCommand() *cobra.Command {
 	cmd.Flags().StringVar(&cond.Condition, "condition", "", `Alert condition .e.g. "lag >= 100000 on group group and topic topicA"`)
 	cmd.Flags().StringVar(&cond.ConditionID, "conditionID", "", "Alert condition ID")
 	cmd.Flags().StringArrayVar(&cond.Channels, "channels", nil, "Channel UIDs")
+
+	// Flags for "Producers" alert category
+	cmd.Flags().StringVar(&cond.Topic, "topic", "", "Topic name")
+	cmd.Flags().IntVar(&cond.MoreThan, "more-than", 0, "Threshold value of messages")
+	cmd.Flags().IntVar(&cond.LessThan, "less-than", 0, "Threshold value of messages")
+	cmd.Flags().StringVar(&cond.Duration, "duration", "", "ISO_8601 duration string - e.g. 1 minute = “PT1M”, 6 hours = “PT6H")
 
 	bite.CanBeSilent(cmd)
 
@@ -372,7 +446,7 @@ func NewGetAlertChannelsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&sortField, "sortField", "", `The field to sort channel results by. Defaults to createdAt`)
 	cmd.Flags().StringVar(&sortOrder, "sortOrder", "", `Choices: "asc" or "desc"`)
 	cmd.Flags().StringVar(&templateName, "templateName", "", `Filter channels by template name.`)
-	cmd.Flags().StringVar(&channelName, "channelName", "", `Filter channels whith a name matching the supplied string (e.g. kafka-prd would match kafka-prd-pagerduty and kafka-prd-slack).`)
+	cmd.Flags().StringVar(&channelName, "channelName", "", `Filter channels with a name matching the supplied string (e.g. kafka-prd would match kafka-prd-pagerduty and kafka-prd-slack).`)
 	cmd.Flags().BoolVar(&details, "details", false, `--details`)
 
 	bite.CanBeSilent(cmd)

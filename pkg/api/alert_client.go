@@ -70,10 +70,30 @@ type AlertSettingsPayload struct {
 
 // AlertSettingsConditionPayload is the payload for creating alert conditions
 type AlertSettingsConditionPayload struct {
-	AlertID     string   `json:"alert" yaml:"alert"`
+	AlertID     string   `json:"alert,omitempty" yaml:"alert"`
 	ConditionID string   `json:"conditionID,omitempty" yaml:"conditionID"`
 	Condition   string   `json:"condition" yaml:"condition"`
 	Channels    []string `json:"channels" yaml:"channels"`
+}
+
+// AlertConditionRequestv1 represents the schema of /api/v1/alert/settings/{alert_setting_id}/conditions payload
+type AlertConditionRequestv1 struct {
+	Condition DataProduced `json:"condition"`
+	Channels  []string     `json:"channels"`
+}
+
+// DataProduced is the payload for Producer's alert type category
+type DataProduced struct {
+	ConnectionName string    `json:"connectionName"`
+	DatasetName    string    `json:"datasetName"`
+	Threshold      Threshold `json:"threshold"`
+	Duration       string    `json:"duration"`
+}
+
+// Threshold corresponds to AlertSettingCondition DataProduced Threshold data structure
+type Threshold struct {
+	Type     string `json:"type"`
+	Messages int    `json:"messages"`
 }
 
 func constructQueryString(page int, pageSize int, sortField, sortOrder, templateName, channelName string) (query string) {
@@ -208,6 +228,43 @@ func (c *Client) CreateAlertSettingsCondition(alertID, condition string, channel
 
 	jsonPayload, err := json.Marshal(AlertSettingsConditionPayload{Condition: condition, Channels: channels})
 	_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetAlertSettingsProducerCondition handles both POST to `/api/v1/alert/settings/{alert_setting_id}/conditions` and
+// PUT to `/api/v1/alert/settings/{alert_setting_id}/conditions/{condition_id}` that handles Producer type of alert category payloads
+func (c *Client) SetAlertSettingsProducerCondition(alertID, conditionID, topic string, threshold Threshold, duration string, channels []string) error {
+	if channels == nil {
+		channels = []string{}
+	}
+
+	payload := AlertConditionRequestv1{
+		Condition: DataProduced{
+			ConnectionName: "kafka",
+			DatasetName:    topic,
+			Threshold: Threshold{
+				Type:     threshold.Type,
+				Messages: threshold.Messages,
+			},
+			Duration: duration,
+		},
+		Channels: channels,
+	}
+	jsonPayload, err := json.Marshal(payload)
+
+	var path string
+	if conditionID != "" {
+		path = fmt.Sprintf("%s/%s/conditions/%s", pkg.AlertsSettingsPath, alertID, conditionID)
+		_, err = c.Do(http.MethodPut, path, contentTypeJSON, jsonPayload)
+	} else {
+		path = fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
+		_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
+	}
 
 	if err != nil {
 		return err
