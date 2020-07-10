@@ -7,4 +7,5 @@ connector.props
 secrets.props
 worker.props
 cover.out
+cover.html
 _cicd/local.env

@@ -6,7 +6,7 @@ set -o errexit  # exit when a command fails
 set -o nounset  # exit when try to use undefined variable
 set -o pipefail # return exit code of the last piped command
 
-VERSION="${LENSES_VERSION:-$(git describe --tags)}"
+VERSION="${LENSES_CLI_CUR_VERSION}"
 REVISION="${GIT_COMMIT:=$(git rev-parse HEAD)}"
 LDFLAGS="-s -w -X main.buildVersion=${VERSION} -X main.buildRevision=${REVISION} -X main.buildTime=$(date +%s)"
 
@@ -88,66 +88,101 @@ cross-build() {
 test() {
     go test -coverprofile=cover.out ./...
     go tool cover -func=cover.out
+    go tool cover -html=cover.out -o cover.html
 }
 
+# Builds the archives. In release mode we add the version to the archive
+# name. We expect it to run in a directory containing the binaries
 archive() {
-    # Archive and calculate sha256 for each file
-    mkdir -p bin/bucket
-    pushd bin/
-    cp ${WORKSPACE}/{LICENSE,README.md,NOTICE} .
+    # Args: [build mode] → $1, [version] → $2
+
+    # If we are in release mode, we append the version to the archive filename
+    local _ARCHIVE_VERSION=""
+    if [[ "$1" == "release" ]]; then
+        _ARCHIVE_VERSION="-${2}"
+    fi
+
     for GOOS in linux darwin windows; do
-        local _BIN_SUFFIX=""
-        if [[ $GOOS == 'windows' ]]; then
-                _BIN_SUFFIX=".exe"
-            else
-                _BIN_SUFFIX=""
-            fi
-        mv lenses-cli-$GOOS-amd64 "lenses-cli${_BIN_SUFFIX}"
-        tar --create --gzip --file bucket/lenses-cli-$GOOS-amd64.tar.gz \
-            --owner=root --group=root \
-            "lenses-cli${_BIN_SUFFIX}" \
-            {LICENSE,README.md,NOTICE}
-        sha256sum bucket/lenses-cli-$GOOS-amd64.tar.gz > \
-            bucket/lenses-cli-$GOOS-amd64.tar.gz.sha256
-        mv "lenses-cli${_BIN_SUFFIX}" lenses-cli-$GOOS-amd64
+        local _ARCHIVE_DIRECTORY=lenses-cli-$GOOS-amd64-${2}
+
+        mkdir ${_ARCHIVE_DIRECTORY}
+        cp ${WORKSPACE}/{LICENSE,README.md,NOTICE} ${_ARCHIVE_DIRECTORY}
+
+        case $GOOS in
+            linux|darwin)
+                mv lenses-cli-$GOOS-amd64 ${_ARCHIVE_DIRECTORY}/lenses-cli
+                tar czf lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.tar.gz --owner=root --group=root ${_ARCHIVE_DIRECTORY}
+                sha256sum lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.tar.gz > lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.tar.gz.sha256
+                ;;
+            windows)
+                mv lenses-cli-$GOOS-amd64 ${_ARCHIVE_DIRECTORY}/lenses-cli.exe
+                zip -r lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.zip ${_ARCHIVE_DIRECTORY}
+                sha256sum lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.zip > lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.zip.sha256
+                ;;
+            *)
+                echo "Unexepected GOOS: $GOOS"
+                exit 1
+                ;;
+        esac
+
+        rm -rf ${_ARCHIVE_DIRECTORY}
     done
-    popd
 
-    # Copy go test artifacts
-    cp cover.out bin/bucket
+    find .
+}
 
-    # Persist env. vars of job
-    cp environment bin/bucket
+# This converts a branch name to a name for a docker tag.
+# For now it replaces slashes / with hyphens but we can adjust the logic if we discover other
+# breaking characters
+branchNameToDockerTag() {
+    # Args: [branch name] → $1
+    # Out: [docker tag name]
 
-    # Gcloud setup and upload all contents from bucket folder
-    gcloud auth activate-service-account --key-file=$GCLOUD_SA_KEY_PATH \
-        --project=$GCLOUD_PROJECT
-    gsutil -m cp bin/bucket/* gs://$GCLOUD_BUCKET_PATH/
+    # Yes we could use 'echo ${1//\//-}' but let's be friendly
+    echo "$1" | tr / -
 }
 
 build-docker-img() {
-    # gcloud authentication
-    gcloud auth activate-service-account --key-file=$GCLOUD_SA_KEY_PATH \
-        --project=$GCLOUD_PROJECT
+    # Args: [image name] → 1, [image tag] → 2, [branch_name] → $3
 
     # Prepare a folder with the necssary files for the gcloud builder
-    mkdir -p bin/cloud/bin
-    cp bin/lenses-cli-linux-amd64 bin/cloud/bin
-    cp Dockerfile bin/cloud/
-
+    mkdir -p cli-docker/bin
+    cp lenses-cli-linux-amd64 cli-docker/bin
+    cp ${WORKSPACE}/Dockerfile cli-docker/
 
     # Submit the build job to gcloud builder
-    gcloud builds submit bin/cloud \
-        --timeout=3m \
-        --tag eu.gcr.io/lenses-ci/lenses-cli:${BRANCH_NAME//\//-}
-    gcloud container images add-tag eu.gcr.io/lenses-ci/lenses-cli:${BRANCH_NAME//\//-} \
-        eu.gcr.io/lenses-ci/lenses-cli:v${VERSION}
+    gcloud builds submit cli-docker \
+        --timeout=5m \
+        --tag ${1}:${3}
+    gcloud container images add-tag ${1}:${3} ${1}:${2}
 }
 
 clean() {
     rm -rf bin/
     rm environment
     rm cover.out
+}
+
+# Activates GCloud Account
+activateGCloudAccount() {
+    # Args: GCLOUD_PROJECT → $1
+    # Vars: GLOUD_KEY_PATH
+
+    set +o xtrace
+    cat "${GLOUD_KEY_PATH}" | gcloud auth activate-service-account --key-file=- --project "${1}"
+}
+
+# Deactivates GCloud Account
+revokeGCloudAccount() {
+    gcloud auth revoke
+}
+
+# Upload Artifacts to GCloud
+gcloudUploadArtifacts() {
+    # Args: [files] → $1, GGLOUD_BUCKET_PATH → $2
+
+    gsutil --version
+    gsutil -m cp -r $1 "gs://${2}/"
 }
 
 # Run the function at $1, pass the rest of the args
