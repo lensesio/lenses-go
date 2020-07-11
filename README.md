@@ -1,6 +1,6 @@
 # Lenses Client (Go)
 
-The [Lenses's](http://www.lenses.io) [REST API](https:/api.lenses.io) client written in Go.
+The [Lenses's](http://www.lenses.io) [REST API](https://api.lenses.io) client written in Go.
 
 [![Build Status](https://travis-ci.org/lensesio/lenses-go.svg?branch=master)](https://travis-ci.org/lensesio/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/lensesio/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/lensesio)
 
