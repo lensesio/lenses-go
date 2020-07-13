@@ -182,6 +182,10 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 	}
 	// before sending requests here.
 
+	// Set `host` header
+	u, err := url.Parse(c.Config.Host)
+	req.Header.Set("Host", u.Host)
+
 	// set the token header.
 	if c.Config.Token != "" {
 		req.Header.Set(xKafkaLensesTokenHeaderKey, c.Config.Token)
