@@ -72,8 +72,7 @@ func NewGetUserCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			user, err := config.Client.GetUser(userName)
 			if err != nil {
-				golog.Errorf("Failed to find user. [%s]", err.Error())
-				return err
+				return fmt.Errorf("Failed to find user. [%s]", err.Error())
 			}
 			return bite.PrintObject(cmd, user)
 		},
@@ -107,8 +106,7 @@ users create --username john --password secretpass --security basic --groups MyG
 			}
 
 			if err := config.Client.CreateUser(&user); err != nil {
-				golog.Errorf("Failed to create user [%s]. [%s]", user.Username, err.Error())
-				return err
+				return fmt.Errorf("Failed to create user [%s]. [%s]", user.Username, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "User [%s] created", user.Username)
@@ -152,8 +150,7 @@ users update --username john --email johndoe@mail.com --groups MyGroup
 			}
 
 			if err := config.Client.UpdateUser(&user); err != nil {
-				golog.Errorf("Failed to update user [%s]. [%s]", user.Username, err.Error())
-				return err
+				return fmt.Errorf("Failed to update user [%s]. [%s]", user.Username, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "User [%s] updated", user.Username)
@@ -186,8 +183,7 @@ func NewDeleteUserCommand() *cobra.Command {
 			}
 
 			if err := config.Client.DeleteUser(username); err != nil {
-				golog.Errorf("Failed to delete user [%s]. [%s]", username, err.Error())
-				return err
+				return fmt.Errorf("Failed to delete user [%s]. [%s]", username, err.Error())
 			}
 			return bite.PrintInfo(cmd, "User [%s] deleted.", username)
 		},
@@ -218,8 +214,7 @@ func NewPasswordUserCommand() *cobra.Command {
 			}
 
 			if err := config.Client.UpdateUserPassword(username, password); err != nil {
-				golog.Errorf("Failed to update user's password [%s]. [%s]", username, err.Error())
-				return err
+				return fmt.Errorf("Failed to update user's password [%s]. [%s]", username, err.Error())
 			}
 			return bite.PrintInfo(cmd, "User password [%s] updated.", username)
 		},

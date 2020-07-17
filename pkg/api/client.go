@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/kataras/golog"
+	"github.com/mitchellh/mapstructure"
 )
 
 // User represents the user of the client.
@@ -154,15 +155,16 @@ func NewResourceError(statusCode int, uri, method, body string) ResourceError {
 	}
 }
 
+// jsonResourceError is defined for the groups/serviceaccounts/users
 type jsonResourceError struct {
-	ErrorCode int    `json:"error_code"`
-	Message   string `json:"message"`
+	Field     string `json:"field"`
+	ErrorType string `json:"error" mapstructure:"error"`
 }
 
 // jsonResourceErrorV2 is defined for the Connections API
 type jsonResourceErrorV2 struct {
 	Fields    []map[string]string `json:"fields"`
-	ErrorType string              `json:"error"`
+	ErrorType string              `json:"error" mapstructure:"error"`
 }
 
 // Do is the lower level of a client call, manually sends an HTTP request to the lenses box backend based on the `Client#Config`
@@ -228,31 +230,38 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 		if cType := resp.Header.Get(contentTypeHeaderKey); strings.Contains(cType, contentTypeJSON) ||
 			strings.Contains(cType, contentTypeSchemaJSON) {
 			// read it, it's an error in JSON format.
-			var jsonErr jsonResourceError
 			bodyBytes, _ := ioutil.ReadAll(resp.Body)
 			resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+			var jsonErr interface{}
 			if err = c.ReadJSON(resp, &jsonErr); err != nil {
 				return nil, err
 			}
-			errBody = jsonErr.Message
-
-			// or it might be a V2 JSON Error message.
-			if jsonErr.Message == "" {
-				resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-				var jsonErr jsonResourceErrorV2
-				if err = c.ReadJSON(resp, &jsonErr); err != nil {
+			errFieldsMap, ok := jsonErr.(map[string]interface{})
+			if ok {
+				var jsonErrResp jsonResourceErrorV2
+				err = mapstructure.Decode(errFieldsMap, &jsonErrResp)
+				if err != nil {
 					return nil, err
 				}
-
-				if jsonErr.ErrorType != "" {
-					errBody = fmt.Sprintf("%s ", jsonErr.ErrorType)
+				if jsonErrResp.ErrorType != "" {
+					errBody = fmt.Sprintf("%s ", jsonErrResp.ErrorType)
 				}
-				for i := range jsonErr.Fields {
-					for k, v := range jsonErr.Fields[i] {
+				for i := range jsonErrResp.Fields {
+					for k, v := range jsonErrResp.Fields[i] {
 						errBody = fmt.Sprintf("%s%s:%s, ", errBody, k, v)
 					}
 				}
 				errBody = strings.TrimSuffix(errBody, ", ")
+			} else {
+				var jsonErrResp []jsonResourceError
+				err = mapstructure.Decode(jsonErr, &jsonErrResp)
+				for _, jsonError := range jsonErrResp {
+					if jsonError.ErrorType != "" {
+						errBody = fmt.Sprintf("%s", jsonError.ErrorType)
+					}
+					errBody = fmt.Sprintf("%s", errBody)
+				}
 			}
 		}
 
