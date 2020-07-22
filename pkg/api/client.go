@@ -18,6 +18,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// BuildVersion is the version that gets set at build time and which we need
+// to pass to the `Agent` header
+var BuildVersion string
+
 // User represents the user of the client.
 type User struct {
 	Token                string   `json:"token"`
@@ -182,6 +186,13 @@ func (c *Client) Do(method, path, contentType string, send []byte, options ...Re
 		return nil, err
 	}
 	// before sending requests here.
+
+	// Set explicit host and user-agent header
+	u, err := url.Parse(c.Config.Host)
+	hostHeader := u.Host
+	userAgentHeader := "lenses-cli/" + BuildVersion
+	req.Header.Set("Host", hostHeader)
+	req.Header.Set("User-Agent", userAgentHeader)
 
 	// set the token header.
 	if c.Config.Token != "" {

@@ -125,6 +125,8 @@ func main() {
 		}
 	}
 
+	api.BuildVersion = buildVersion
+
 	if len(os.Args) == 1 || (string(os.Args[1]) != "secrets" && string(os.Args[1]) != "version") {
 		app.PersistentFlags = config.SetupConfigManager
 	} else {
