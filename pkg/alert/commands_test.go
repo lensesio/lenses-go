@@ -167,19 +167,19 @@ func TestServerFailures(t *testing.T) {
 			"Server failure for updating alert's settings",
 			[]string{"set", "--id=1000", "--channels='143315dd-80bf-4833-a13a-394be06dda87'"},
 			"",
-			errors.New("response returned status code 400"),
+			errors.New("failed to update an alert's settings. Error: [response returned status code 400]"),
 		},
 		{
 			"Server failure for updating alert's settings condition",
 			[]string{"condition", "set", "--alert=2000", "--condition='69'"},
 			"",
-			errors.New("response returned status code 400"),
+			errors.New("failed to create or update an alert's condition. Error: [response returned status code 400]"),
 		},
 		{
 			"Server failure for updating alert's settings condition with the new flags",
 			[]string{"condition", "set", "--alert=2000", "--condition='69'", "--conditionID='6969'", "--channels='1234'"},
 			"",
-			errors.New("response returned status code 400"),
+			errors.New("failed to update alert's condition. Error: [response returned status code 400]"),
 		},
 	}
 

@@ -256,6 +256,9 @@ func (c *Client) SetAlertSettingsProducerCondition(alertID, conditionID, topic s
 		Channels: channels,
 	}
 	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
 
 	var path string
 	if conditionID != "" {

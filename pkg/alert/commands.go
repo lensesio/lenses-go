@@ -53,8 +53,7 @@ func NewGetAlertsCommand() *cobra.Command {
 			}
 			alerts, err := config.Client.GetAlerts(pageSize)
 			if err != nil {
-				golog.Errorf("Failed to retrieve alerts. [%s]", err.Error())
-				return err
+				return fmt.Errorf("failed to retrieve alerts. Error: [%s]", err.Error())
 			}
 			return bite.PrintObject(cmd, alerts)
 		},
@@ -79,7 +78,7 @@ func NewGetAlertSettingsCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			settings, err := config.Client.GetAlertSettings()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to retrieve alerts' settings. Error: [%s]", err.Error())
 			}
 
 			// force json, may contains conditions that are easier to be seen in json format.
@@ -108,7 +107,7 @@ func NewAlertSettingGroupCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if mustEnable {
 				if err := config.Client.EnableAlertSetting(id, mustEnable); err != nil {
-					return err
+					return fmt.Errorf("failed to enable an alert's condition. Error: [%s]", err.Error())
 				}
 
 				return bite.PrintInfo(cmd, "Alert setting [%d] enabled", id)
@@ -116,7 +115,7 @@ func NewAlertSettingGroupCommand() *cobra.Command {
 
 			settings, err := config.Client.GetAlertSetting(id)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to retrieve alert's settings. Error: [%s]", err.Error())
 			}
 
 			return bite.PrintObject(cmd, settings)
@@ -158,7 +157,7 @@ func NewUpdateAlertSettingsCommand() *cobra.Command {
 
 			err := config.Client.UpdateAlertSettings(alertSettings)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to update an alert's settings. Error: [%s]", err.Error())
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), "Update alert's setting has succeeded")
 			return nil
@@ -187,7 +186,7 @@ func NewGetAlertSettingConditionsCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			conds, err := config.Client.GetAlertSettingConditions(alertID)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to retrieve alerts' setting conditions. Error: [%s]", err.Error())
 			}
 
 			return bite.PrintObject(cmd, conds)
@@ -292,7 +291,7 @@ alert setting condition set ./alert_cond.yml`
 
 				err := config.Client.SetAlertSettingsProducerCondition(strconv.Itoa(alertID), cond.ConditionID, cond.Topic, threshold, cond.Duration, cond.Channels)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to create or update an alert's setting conditions. Error: [%s]", err.Error())
 				}
 				if cond.ConditionID != "" {
 					fmt.Fprintln(cmd.OutOrStdout(), "rule with condition ID \""+cond.ConditionID+"\" updated successfully")
@@ -307,8 +306,7 @@ alert setting condition set ./alert_cond.yml`
 					for _, condition := range conds.Conditions {
 						err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(alertID), condition, []string{})
 						if err != nil {
-							golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", condition, err.Error())
-							return err
+							return fmt.Errorf("failed to create or update an alert's condition. Error: [%s]", err.Error())
 						}
 						bite.PrintInfo(cmd, "Condition [id=%d] added", alertID)
 					}
@@ -322,7 +320,7 @@ alert setting condition set ./alert_cond.yml`
 				if cond.ConditionID == "" && cond.Channels != nil {
 					err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.Channels)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to create an alert condition. Error: [%s]", err.Error())
 					}
 					fmt.Fprintln(cmd.OutOrStdout(), "Create rule with channels attached succeeded")
 					return nil
@@ -335,7 +333,7 @@ alert setting condition set ./alert_cond.yml`
 					}
 					err := config.Client.UpdateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.ConditionID, channels)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to update alert's condition. Error: [%s]", err.Error())
 					}
 					fmt.Fprintln(cmd.OutOrStdout(), "Update rule's channels succeeded")
 					return nil
@@ -344,7 +342,7 @@ alert setting condition set ./alert_cond.yml`
 				err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, []string{})
 				if err != nil {
 					golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", cond.Condition, err.Error())
-					return err
+					return fmt.Errorf("failed to create or update an alert's condition. Error: [%s]", err.Error())
 				}
 
 				return bite.PrintInfo(cmd, "Condition [id=%d] added", cond.AlertID)
@@ -387,8 +385,7 @@ func NewDeleteAlertSettingConditionCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := config.Client.DeleteAlertSettingCondition(alertID, conditionUUID)
 			if err != nil {
-				golog.Errorf("Failed to deleting alert setting condition [%s]. [%s]", conditionUUID, err.Error())
-				return err
+				return fmt.Errorf("failed to delete an alert's setting condition. Error: [%s]", err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "Condition [%s] for alert setting [%d] deleted", conditionUUID, alertID)
@@ -426,16 +423,14 @@ func NewGetAlertChannelsCommand() *cobra.Command {
 			if details {
 				alertchannelsWithDetails, err := config.Client.GetAlertChannelsWithDetails(page, pageSize, sortField, sortOrder, templateName, channelName)
 				if err != nil {
-					golog.Errorf("Failed to retrieve alert channels. [%s]", err.Error())
-					return err
+					return fmt.Errorf("failed to retrieve alerts' channels. Error: [%s]", err.Error())
 				}
 				return bite.PrintObject(cmd, alertchannelsWithDetails.Values)
 			}
 
 			alertchannels, err := config.Client.GetAlertChannels(page, pageSize, sortField, sortOrder, templateName, channelName)
 			if err != nil {
-				golog.Errorf("Failed to retrieve alert channels. [%s]", err.Error())
-				return err
+				return fmt.Errorf("failed to retrieve alerts' channels. Error: [%s]", err.Error())
 			}
 			return bite.PrintObject(cmd, alertchannels.Values)
 		},
@@ -474,8 +469,7 @@ func NewDeleteAlertChannelCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := config.Client.DeleteAlertChannel(channelID)
 			if err != nil {
-				golog.Errorf("Failed to delete alert channel [%s]. [%s]", channelID, err.Error())
-				return err
+				return fmt.Errorf("failed to delete alert channel [%s]. [%s]", channelID, err.Error())
 			}
 			return bite.PrintInfo(cmd, "Alert channel [%s] deleted", channelID)
 		},
@@ -513,17 +507,16 @@ func NewCreateAlertChannelCommand() *cobra.Command {
 				if err := bite.TryReadFile(propertiesRaw, &channel.Properties); err != nil {
 					// from flag as json.
 					if err = json.Unmarshal([]byte(propertiesRaw), &channel.Properties); err != nil {
-						return fmt.Errorf("Unable to unmarshal the properties: [%v]", err)
+						return fmt.Errorf("unable to unmarshal the properties: [%v]", err)
 					}
 				}
 			}
 
 			if err := config.Client.CreateAlertChannel(channel); err != nil {
-				golog.Errorf("Failed to create alert channel [%s]. [%s]", channel.Name, err.Error())
-				return err
+				return fmt.Errorf("failed to create alert channel [%s]. [%s]", channel.Name, err.Error())
 			}
 
-			return bite.PrintInfo(cmd, "Alert channel [%s] created", channel.Name)
+			return bite.PrintInfo(cmd, "alert channel [%s] created", channel.Name)
 		},
 	}
 
@@ -562,17 +555,16 @@ func NewUpdateAlertChannelCommand() *cobra.Command {
 				if err := bite.TryReadFile(propertiesRaw, &channel.Properties); err != nil {
 					// from flag as json.
 					if err = json.Unmarshal([]byte(propertiesRaw), &channel.Properties); err != nil {
-						return fmt.Errorf("Unable to unmarshal the properties: [%v]", err)
+						return fmt.Errorf("unable to unmarshal the properties: [%v]", err)
 					}
 				}
 			}
 
 			if err := config.Client.UpdateAlertChannel(channel, channelID); err != nil {
-				golog.Errorf("Failed to update alert channel [%s]. [%s]", channelID, err.Error())
-				return err
+				return fmt.Errorf("failed to update alert channel [%s]. [%s]", channelID, err.Error())
 			}
 
-			return bite.PrintInfo(cmd, "Alert channel [%s] updated", channelID)
+			return bite.PrintInfo(cmd, "alert channel [%s] updated", channelID)
 		},
 	}
 
