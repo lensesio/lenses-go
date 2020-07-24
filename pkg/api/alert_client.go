@@ -199,7 +199,7 @@ func (c *Client) UpdateAlertSettingsCondition(alertID, condition, conditionID st
 	return nil
 }
 
-// UpdateAlertSettingsCondition corresponds to `/api/v1/alerts/settings/{alert_setting_id}/condition/{condition_id}`
+// CreateAlertSettingsCondition corresponds to `/api/v1/alerts/settings/{alert_setting_id}/condition/{condition_id}`
 func (c *Client) CreateAlertSettingsCondition(alertID, condition string, channels []string) error {
 	path := fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
 
