@@ -9,7 +9,7 @@ cache:
     - $GOPATH/pkg/mod
 go:
 - go1.13
-go_import_path: github.com/landoop/lenses-go
+go_import_path: github.com/lensesio/lenses-go
 install:
   go get golang.org/x/lint/golint
 

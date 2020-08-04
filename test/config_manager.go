@@ -1,8 +1,8 @@
 package test
 
 import (
-	"github.com/landoop/lenses-go/pkg/api"
-	config "github.com/landoop/lenses-go/pkg/configs"
+	"github.com/lensesio/lenses-go/pkg/api"
+	config "github.com/lensesio/lenses-go/pkg/configs"
 )
 
 //SetupMasterContext add a new context named "master" in Config

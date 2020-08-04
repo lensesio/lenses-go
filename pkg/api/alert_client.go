@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/landoop/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/pkg"
 )
 
 // AlertChannelPayload describes a channel of an alert payload for create/update

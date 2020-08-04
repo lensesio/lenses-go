@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/kataras/golog"
-	"github.com/landoop/lenses-go/pkg/api"
+	"github.com/lensesio/lenses-go/pkg/api"
 	"gopkg.in/yaml.v2"
 )
 

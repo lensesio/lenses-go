@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/landoop/bite"
-	"github.com/landoop/lenses-go/pkg/api"
+	"github.com/lensesio/bite"
+	"github.com/lensesio/lenses-go/pkg/api"
 	"github.com/spf13/cobra"
 )
 

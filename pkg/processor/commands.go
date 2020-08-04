@@ -5,10 +5,10 @@ import (
 	"sort"
 
 	"github.com/kataras/golog"
-	"github.com/landoop/bite"
-	"github.com/landoop/lenses-go/pkg/api"
-	config "github.com/landoop/lenses-go/pkg/configs"
-	"github.com/landoop/lenses-go/pkg/utils"
+	"github.com/lensesio/bite"
+	"github.com/lensesio/lenses-go/pkg/api"
+	config "github.com/lensesio/lenses-go/pkg/configs"
+	"github.com/lensesio/lenses-go/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

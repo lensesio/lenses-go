@@ -91,7 +91,7 @@ func WithContext(contextName string) ConnectionOption {
 	}
 }
 
-// OpenConnection creates & returns a new Landoop's Lenses API bridge interface
+// OpenConnection creates & returns a new Lenses API bridge interface
 // based on the passed `ClientConfig` and the (optional) options.
 // OpenConnection authenticates the user and returns a valid ready-to-use `*lenses.Client`.
 // If failed to communicate with the server then it returns a nil client and a non-nil error.
