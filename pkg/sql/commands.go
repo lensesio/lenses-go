@@ -12,9 +12,9 @@ import (
 	"syscall"
 
 	"github.com/kataras/golog"
-	"github.com/landoop/bite"
-	config "github.com/landoop/lenses-go/pkg/configs"
-	"github.com/landoop/lenses-go/pkg/websocket"
+	"github.com/lensesio/bite"
+	config "github.com/lensesio/lenses-go/pkg/configs"
+	"github.com/lensesio/lenses-go/pkg/websocket"
 	"github.com/spf13/cobra"
 )
 

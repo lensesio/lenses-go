@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/landoop/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/pkg"
 )
 
 // Connection Templates API

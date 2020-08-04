@@ -175,7 +175,7 @@
 //
 // END OF TERMS AND CONDITIONS
 //
-// Copyright 2018 Landoop
+// Copyright 2020 Lenses.io Ltd.
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -184,11 +184,11 @@
 // limitations under the License.
 
 /*
-Package lenses is the Landoop's Lenses client API for Gophers.
+Package lenses is the Lenses' client API for Gophers.
 
 Source code and other details for the project are available at GitHub:
 
-   https://github.com/landoop/lenses-go
+   https://github.com/lensesio/lenses-go
 
 Current Version
 
@@ -198,7 +198,7 @@ Installation
 
 The only requirement is the Go Programming Language.
 
-    $ go get -u github.com/landoop/lenses-go/cmd/lenses-cli
+    $ go get -u github.com/lensesio/lenses-go/cmd/lenses-cli
 
 Example code:
 

@@ -3,7 +3,7 @@ package elasticsearch
 import (
 	"testing"
 
-	"github.com/landoop/lenses-go/pkg/api"
+	"github.com/lensesio/lenses-go/pkg/api"
 	"github.com/stretchr/testify/assert"
 )
 

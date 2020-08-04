@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/landoop/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/pkg"
 )
 
 // Shard type for elasticsearch shards

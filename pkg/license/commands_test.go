@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/landoop/lenses-go/pkg/api"
-	config "github.com/landoop/lenses-go/pkg/configs"
-	"github.com/landoop/lenses-go/test"
+	"github.com/lensesio/lenses-go/pkg/api"
+	config "github.com/lensesio/lenses-go/pkg/configs"
+	"github.com/lensesio/lenses-go/test"
 	"github.com/stretchr/testify/assert"
 )
 
