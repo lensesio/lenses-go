@@ -1,6 +1,8 @@
 package management
 
 import (
+	"fmt"
+
 	"github.com/kataras/golog"
 	"github.com/landoop/bite"
 	"github.com/landoop/lenses-go/pkg/api"
@@ -53,8 +55,7 @@ serviceaccounts get --name=svcacc
 			}
 			svcacc, err := config.Client.GetServiceAccount(name)
 			if err != nil {
-				golog.Errorf("Failed to find service account. [%s]", err.Error())
-				return err
+				return fmt.Errorf("Failed to find service account. [%s]", err.Error())
 			}
 			return bite.PrintObject(cmd, svcacc)
 		},
@@ -83,8 +84,7 @@ serviceaccounts create --name john --owner admin --groups MyGroup1 --groups MyGr
 			}
 			payload, err := config.Client.CreateServiceAccount(&svcacc)
 			if err != nil {
-				golog.Errorf("Failed to create service account [%s]. [%s]", svcacc.Name, err.Error())
-				return err
+				return fmt.Errorf("Failed to create service account [%s]. [%s]", svcacc.Name, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "Service Account [%s] created with token [%s]", svcacc.Name, payload.Token)
@@ -112,8 +112,7 @@ serviceaccounts update --name john --owner admin --groups MyGroup1 --groups MyGr
 				return err
 			}
 			if err := config.Client.UpdateServiceAccount(&svcacc); err != nil {
-				golog.Errorf("Failed to create service account [%s]. [%s]", svcacc.Name, err.Error())
-				return err
+				return fmt.Errorf("Failed to create service account [%s]. [%s]", svcacc.Name, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "Service account [%s] updated", svcacc.Name)
@@ -140,8 +139,7 @@ func NewDeleteServiceAccountCommand() *cobra.Command {
 			}
 
 			if err := config.Client.DeleteServiceAccount(name); err != nil {
-				golog.Errorf("Failed to delete service account [%s]. [%s]", name, err.Error())
-				return err
+				return fmt.Errorf("Failed to delete service account [%s]. [%s]", name, err.Error())
 			}
 			return bite.PrintInfo(cmd, "Service account [%s] deleted.", name)
 		},
@@ -169,8 +167,7 @@ func NewRevokeServiceAccountCommand() *cobra.Command {
 			}
 			payload, err := config.Client.RevokeServiceAccountToken(name, token)
 			if err != nil {
-				golog.Errorf("Failed to revoke service account token [%s]. [%s]", name, err.Error())
-				return err
+				return fmt.Errorf("Failed to revoke service account token [%s]. [%s]", name, err.Error())
 			}
 			return bite.PrintInfo(cmd, "Service account token [%s] revoked. New token [%s]", name, payload.Token)
 		},

@@ -32,5 +32,7 @@ const (
 	ElasticsearchIndexesPath   = "/api/elastic/indexes"
 	AlertChannelsPath          = "api/v1/alert/channels"
 	AlertsSettingsPath         = "api/v1/alert/settings"
-	LicensePath                = "api/v1/license"
+	AlertsPathSSE              = "api/sse/alerts"
+
+	LicensePath = "api/v1/license"
 )
