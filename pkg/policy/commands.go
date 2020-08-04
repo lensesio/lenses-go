@@ -2,6 +2,7 @@ package policy
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/kataras/golog"
@@ -36,8 +37,7 @@ func NewGetPoliciesCommand() *cobra.Command {
 
 			if name != "" {
 				err = errors.New("Cannot be found in policies")
-				golog.Errorf("Failed to retrieve policy [%s]. [%s]", name, err.Error())
-				return err
+				return fmt.Errorf("Failed to retrieve policy [%s]. [%s]", name, err.Error())
 			}
 			return bite.PrintObject(cmd, result)
 		},

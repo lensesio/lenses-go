@@ -12,4 +12,8 @@ type SettingConditionPayload struct {
 	Condition   string   `json:"condition" yaml:"condition"`
 	ConditionID string   `json:"conditionID,omitempty" yaml:"conditionID"`
 	Channels    []string `json:"channels" yaml:"channels"`
+	Topic       string   `yaml:"topic,omitempty"`
+	MoreThan    int      `yaml:"more-than,omitempty"`
+	LessThan    int      `yaml:"less-than,omitempty"`
+	Duration    string   `yaml:"duration,omitempty"`
 }

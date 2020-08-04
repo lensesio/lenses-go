@@ -90,6 +90,43 @@ func TestCreateOrUpdateAlertSettingConditionCommand(t *testing.T) {
 			"Update rule's channels succeeded",
 			errors.New(""),
 		},
+		//"Data produced" tests
+		{
+			"Missing topic flag",
+			[]string{"--alert=5000"},
+			"",
+			errors.New(`required flag "topic" not set`),
+		},
+		{
+			`Flags "more-than" or "less-than" not set`,
+			[]string{"--alert=5000", "--topic=foo"},
+			"",
+			errors.New(`required flag "more-than" or "less-than" not set`),
+		},
+		{
+			`Setting both flags "more-than" and "less-than"`,
+			[]string{"--alert=5000", "--topic=foo", "--more-than=5", "--less-than=6"},
+			"",
+			errors.New(`only one flag of "more-than" or "less-than" is supported`),
+		},
+		{
+			`Seting wrong value for flag "more-than"`,
+			[]string{"--alert=5000", "--topic=foo", "--more-than=-5", "--duration=PT2H"},
+			"",
+			errors.New(`"more-than" flag should be greater than zero`),
+		},
+		{
+			`Seting wrong value for flag "less-than"`,
+			[]string{"--alert=5000", "--topic=foo", "--less-than=-5", "--duration=PT2H"},
+			"",
+			errors.New(`"less-than" flag should be greater than zero`),
+		},
+		{
+			`Missing "duration" flag"`,
+			[]string{"--alert=5000", "--topic=foo", "--more-than=5"},
+			"",
+			errors.New(`required flag "duration" not set`),
+		},
 	}
 
 	for _, tt := range testsAlertSettingConditionSetCmd {
@@ -103,7 +140,7 @@ func TestCreateOrUpdateAlertSettingConditionCommand(t *testing.T) {
 		config.Client = client
 
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := NewCreateOrUpdateAlertSettingConditionCommand()
+			cmd := NewSetAlertSettingConditionCommand()
 			out, err := test.ExecuteCommand(cmd, tt.args...)
 
 			test.CheckStringContains(t, out, tt.expectOut)
@@ -130,19 +167,19 @@ func TestServerFailures(t *testing.T) {
 			"Server failure for updating alert's settings",
 			[]string{"set", "--id=1000", "--channels='143315dd-80bf-4833-a13a-394be06dda87'"},
 			"",
-			errors.New("response returned status code 400"),
+			errors.New("failed to update an alert's settings. Error: [response returned status code 400]"),
 		},
 		{
 			"Server failure for updating alert's settings condition",
 			[]string{"condition", "set", "--alert=2000", "--condition='69'"},
 			"",
-			errors.New("response returned status code 400"),
+			errors.New("failed to create or update an alert's condition. Error: [response returned status code 400]"),
 		},
 		{
 			"Server failure for updating alert's settings condition with the new flags",
 			[]string{"condition", "set", "--alert=2000", "--condition='69'", "--conditionID='6969'", "--channels='1234'"},
 			"",
-			errors.New("response returned status code 400"),
+			errors.New("failed to update alert's condition. Error: [response returned status code 400]"),
 		},
 	}
 

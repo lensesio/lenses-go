@@ -96,8 +96,7 @@ groups create --name MyGroup --description "My test group" --applicationPermissi
 			}
 
 			if err := config.Client.CreateGroup(&group); err != nil {
-				golog.Errorf("Failed to create group [%s]. [%s]", group.Name, err.Error())
-				return err
+				return fmt.Errorf("Failed to create group [%s]. [%s]", group.Name, err.Error())
 			}
 			return bite.PrintInfo(cmd, "Group [%s] created", group.Name)
 		},
@@ -129,8 +128,7 @@ groups update --name MyGroup --description "My test group" --applicationPermissi
 			}
 
 			if err := config.Client.UpdateGroup(&group); err != nil {
-				golog.Errorf("Failed to update group [%s]. [%s]", group.Name, err.Error())
-				return err
+				return fmt.Errorf("Failed to update group [%s]. [%s]", group.Name, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "Group [%s] updated", group.Name)
@@ -158,8 +156,7 @@ func NewDeleteGroupCommand() *cobra.Command {
 			}
 
 			if err := config.Client.DeleteGroup(name); err != nil {
-				golog.Errorf("Failed to delete group [%s]. [%s]", name, err.Error())
-				return err
+				return fmt.Errorf("Failed to delete group [%s]. [%s]", name, err.Error())
 			}
 			return bite.PrintInfo(cmd, "Group [%s] deleted.", name)
 		},
@@ -190,8 +187,7 @@ func NewCloneGroupCommand() *cobra.Command {
 			}
 
 			if err := config.Client.CloneGroup(name, cloneName); err != nil {
-				golog.Errorf("Failed to clone group [%s]. [%s]", name, err.Error())
-				return err
+				return fmt.Errorf("Failed to clone group [%s]. [%s]", name, err.Error())
 			}
 			return bite.PrintInfo(cmd, "Group [%s] cloned to [%s].", name, cloneName)
 		},
