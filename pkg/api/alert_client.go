@@ -198,3 +198,17 @@ func (c *Client) UpdateAlertSettingsCondition(alertID, condition, conditionID st
 
 	return nil
 }
+
+// CreateAlertSettingsCondition corresponds to `/api/v1/alerts/settings/{alert_setting_id}/condition/{condition_id}`
+func (c *Client) CreateAlertSettingsCondition(alertID, condition string, channels []string) error {
+	path := fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
+
+	jsonPayload, err := json.Marshal(AlertSettingsConditionPayload{Condition: condition, Channels: channels})
+	_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
