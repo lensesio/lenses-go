@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/landoop/bite"
+	"github.com/lensesio/bite"
 	"github.com/spf13/cobra"
 )
 

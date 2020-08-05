@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/landoop/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/pkg"
 )
 
 // LicenseInfo describes the data received from the `GetLicenseInfo`.

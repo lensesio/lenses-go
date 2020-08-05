@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/landoop/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/pkg"
 )
 
 // SingleTopicOffset represent the payload structure

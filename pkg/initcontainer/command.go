@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	golog "github.com/kataras/golog"
-	"github.com/landoop/lenses-go/pkg/utils"
+	"github.com/lensesio/lenses-go/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

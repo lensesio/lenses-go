@@ -1,4 +1,4 @@
-module github.com/landoop/lenses-go
+module github.com/lensesio/lenses-go
 
 go 1.13
 
@@ -21,9 +21,10 @@ require (
 	github.com/kataras/survey v2.0.0+incompatible
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect
 	github.com/landoop/bite v0.0.0-20190214122416-63c22faffe17
-	github.com/landoop/tableprinter v0.0.0-20200104100433-ae9249991eb1
-	github.com/mattn/go-colorable v0.1.6 // indirect
-	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/landoop/tableprinter v0.0.0-20200104100433-ae9249991eb1 // indirect
+	github.com/lensesio/bite v0.0.0-20190214122416-63c22faffe17
+	github.com/lensesio/tableprinter v0.0.0-20200104100433-ae9249991eb1
+	github.com/mattn/go-runewidth v0.0.8 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/mapstructure v1.1.2
