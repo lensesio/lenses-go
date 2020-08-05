@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
-	"github.com/landoop/lenses-go/pkg/api"
-	"github.com/landoop/lenses-go/pkg/utils"
+	"github.com/lensesio/lenses-go/pkg/api"
+	"github.com/lensesio/lenses-go/pkg/utils"
 	"github.com/spf13/pflag"
 )
 

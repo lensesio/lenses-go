@@ -1,6 +1,6 @@
 # Lenses Client (Go)
 
-The [Lenses's](http://www.lenses.io) [REST API](https:/api.lenses.io) client written in Go.
+The [Lenses](http://www.lenses.io) [REST API](https:/api.lenses.io) client written in Go.
 
 [![Build Status](https://travis-ci.org/lensesio/lenses-go.svg?branch=master)](https://travis-ci.org/lensesio/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/lensesio/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/lensesio)
 
@@ -9,6 +9,7 @@ The [Lenses's](http://www.lenses.io) [REST API](https:/api.lenses.io) client wri
 The only requirement is the [Go Programming Language](https://golang.org/dl) version **1.13+** and a [Lenses Box](https://lenses.io/box/) of version **2.0 at least**.
 
 ```sh
+# If you have Go < 1.13 you may need to set GO111MODULE=on
 $ go get -u github.com/lensesio/lenses-go/cmd/lenses-cli
 ```
 
@@ -236,7 +237,7 @@ topics[0].ConsumersGroup[0].Coordinator.Host
 
 ### Documentation
 
-Detailed documentation can be found at [godocs](https://godoc.org/github.com/landoop/lenses-go).
+Detailed documentation can be found at [godocs](https://godoc.org/github.com/lensesio/lenses-go).
 
 ## Versioning
 

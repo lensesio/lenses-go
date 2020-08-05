@@ -1,4 +1,4 @@
-module github.com/landoop/lenses-go
+module github.com/lensesio/lenses-go
 
 go 1.13
 
@@ -19,9 +19,12 @@ require (
 	github.com/kataras/golog v0.0.10
 	github.com/kataras/survey v2.0.0+incompatible
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect
-	github.com/landoop/bite v0.0.0-20190214122416-63c22faffe17
-	github.com/landoop/tableprinter v0.0.0-20200104100433-ae9249991eb1
+	github.com/landoop/bite v0.0.0-20190214122416-63c22faffe17 // indirect
+	github.com/landoop/tableprinter v0.0.0-20200104100433-ae9249991eb1 // indirect
+	github.com/lensesio/bite v0.0.0-20190214122416-63c22faffe17
+	github.com/lensesio/tableprinter v0.0.0-20200104100433-ae9249991eb1
 	github.com/mattn/go-runewidth v0.0.8 // indirect
+	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect
@@ -30,6 +33,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
 	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
+	gopkg.in/jcmturner/goidentity.v2 v2.0.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v5 v5.3.0
 	gopkg.in/jcmturner/rpc.v0 v0.0.2 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1

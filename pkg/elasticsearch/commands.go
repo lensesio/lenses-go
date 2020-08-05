@@ -1,8 +1,8 @@
 package elasticsearch
 
 import (
-	"github.com/landoop/bite"
-	config "github.com/landoop/lenses-go/pkg/configs"
+	"github.com/lensesio/bite"
+	config "github.com/lensesio/lenses-go/pkg/configs"
 	"github.com/spf13/cobra"
 )
 

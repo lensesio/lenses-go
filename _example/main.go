@@ -1,6 +1,6 @@
 package main
 
-import "github.com/landoop/lenses-go"
+import "github.com/lensesio/lenses-go"
 
 func main() {
 	// Prepare authentication using raw Username and Password.
