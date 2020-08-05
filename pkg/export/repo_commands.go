@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/kataras/golog"
-	"github.com/landoop/bite"
+	"github.com/lensesio/bite"
 	"github.com/spf13/cobra"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"

@@ -32,31 +32,25 @@ echo "Highest patch for current version is $HIGH_MINOR"
 
 # Publish docker
 echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-docker build -t landoop/lenses-cli:${CUR_MINOR} .
 docker build -t lensesio/lenses-cli:${CUR_MINOR} .
 
-echo "Publishing landoop/lenses-cli:${CUR_MINOR}"
-docker push landoop/lenses-cli:${CUR_MINOR}
+echo "Publishing lensesio/lenses-cli:${CUR_MINOR}"
 docker push lensesio/lenses-cli:${CUR_MINOR}
 
 
 # If we have the highest patch (minor) for our version, then we need to tag
 # with our version too (e.g 2.2)
 if [[ $CUR_MINOR == $HIGH_MINOR ]]; then
-    echo "Publishing landoop/lenses-cli:${CUR_MAJOR}"
-    docker tag landoop/lenses-cli:${CUR_MINOR} landoop/lenses-cli:${CUR_MAJOR}
+    echo "Publishing lensesio/lenses-cli:${CUR_MAJOR}"
     docker tag lensesio/lenses-cli:${CUR_MINOR} lensesio/lenses-cli:${CUR_MAJOR}
 
-    docker push landoop/lenses-cli:${CUR_MAJOR}
     docker push lensesio/lenses-cli:${CUR_MAJOR}
 
     # If we have the highest version too, then we need to tag with latest too
     if [[ $REPO_MAJOR == $CUR_MAJOR ]]; then
-        echo "Publishing landoop/lenses-cli:latest"
-        docker tag landoop/lenses-cli:${CUR_MINOR} landoop/lenses-cli:latest
+        echo "Publishing lensesio/lenses-cli:latest"
         docker tag lensesio/lenses-cli:${CUR_MINOR} lensesio/lenses-cli:latest
 
-        docker push landoop/lenses-cli:latest
         docker push lensesio/lenses-cli:latest
     fi
 fi
