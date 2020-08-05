@@ -1,6 +1,6 @@
 package management
 
-import "github.com/landoop/lenses-go/pkg/api"
+import "github.com/lensesio/lenses-go/pkg/api"
 
 //GroupView the view model for group to be printed
 type GroupView struct {
