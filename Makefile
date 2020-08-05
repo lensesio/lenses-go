@@ -18,7 +18,6 @@ build-linux: dep ## Build binary for linux
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-amd64 ./cmd/${EXECUTABLE}
 
 build-docker: ## Builds Docker with linux lenses-cli
-	docker build -t landoop/lenses-cli:${VERSION} .
 	docker build -t lensesio/lenses-cli:${VERSION} .
 
 dep: ## Ensure dependencies

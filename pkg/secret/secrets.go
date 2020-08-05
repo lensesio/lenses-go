@@ -12,7 +12,7 @@ import (
 	azureAuth "github.com/Azure/go-autorest/autorest/azure/auth"
 	vaultapi "github.com/hashicorp/vault/api"
 	golog "github.com/kataras/golog"
-	"github.com/landoop/lenses-go/pkg/utils"
+	"github.com/lensesio/lenses-go/pkg/utils"
 )
 
 var providerType Provider
