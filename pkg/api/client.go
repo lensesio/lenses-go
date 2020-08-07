@@ -1403,8 +1403,8 @@ type CreateProcessorPayload struct {
 	Name        string `json:"name" yaml:"name"` // required
 	SQL         string `json:"sql" yaml:"sql"`   // required
 	Runners     int    `json:"runnerCount" yaml:"runnerCount"`
-	ClusterName string `json:"cluster" yaml:"cluster"`
-	Namespace   string `json:"namespace" yaml:"namespace"`
+	ClusterName string `json:"cluster,omitempty" yaml:"cluster"`
+	Namespace   string `json:"namespace,omitempty" yaml:"namespace"`
 	Pipeline    string `json:"pipeline" yaml:"pipeline"`     // defaults to Name if not set.
 	AppID       string `json:"appId,omitempty" yaml:"appId"` //not required
 }
