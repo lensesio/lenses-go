@@ -1472,6 +1472,12 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 		pipeline = name
 	}
 
+	mode, err := c.GetExecutionMode()
+	if mode == ExecutionModeInProcess {
+		clusterName = "IN_PROC"
+		namespace = "lenses"
+	}
+
 	payload := CreateProcessorPayload{
 		Name:        name,
 		SQL:         sql,
