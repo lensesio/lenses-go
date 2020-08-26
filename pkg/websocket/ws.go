@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kataras/golog"
+	conf "github.com/lensesio/lenses-go/pkg/configs"
 )
 
 // ResponseType is the corresponding message type for the response came from the back-end server to the client.
@@ -164,6 +165,10 @@ func OpenLiveConnection(config LiveConfiguration) (*LiveConnection, error) {
 	//ws://localhost:24015/api/ws/v1/sql/execute
 	endpoint := fmt.Sprintf("%s/api/ws/v2/sql/execute", config.Host)
 
+	if conf.Manager.Config.GetCurrent().Insecure == true {
+		config.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	c := &LiveConnection{
 		config:      config,
 		endpoint:    endpoint,
@@ -182,6 +187,7 @@ func (c *LiveConnection) start() error {
 		HandshakeTimeout: c.config.HandshakeTimeout,
 		ReadBufferSize:   c.config.ReadBufferSize,
 		WriteBufferSize:  c.config.WriteBufferSize,
+		TLSClientConfig:  c.config.TLSClientConfig,
 	}
 
 	conn, _, err := dialer.Dial(c.endpoint, nil)
