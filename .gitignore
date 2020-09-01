@@ -9,3 +9,6 @@ worker.props
 cover.out
 cover.html
 _cicd/local.env
+alert-settings/
+alert-channels/
+connections/

@@ -78,22 +78,29 @@ type AlertSettingsConditionPayload struct {
 
 // AlertConditionRequestv1 represents the schema of /api/v1/alert/settings/{alert_setting_id}/conditions payload
 type AlertConditionRequestv1 struct {
-	Condition DataProduced `json:"condition"`
-	Channels  []string     `json:"channels"`
+	Condition DataProduced `json:"condition" yaml:"condition"`
+	Channels  []string     `json:"channels" yaml:"channels"`
 }
 
 // DataProduced is the payload for Producer's alert type category
 type DataProduced struct {
-	ConnectionName string    `json:"connectionName"`
-	DatasetName    string    `json:"datasetName"`
-	Threshold      Threshold `json:"threshold"`
-	Duration       string    `json:"duration"`
+	ConnectionName string    `json:"connectionName" yaml:"connectionName"`
+	DatasetName    string    `json:"datasetName" yaml:"datasetName"`
+	Threshold      Threshold `json:"threshold" yaml:"threshold"`
+	Duration       string    `json:"duration" yaml:"duration"`
 }
 
 // Threshold corresponds to AlertSettingCondition DataProduced Threshold data structure
 type Threshold struct {
-	Type     string `json:"type"`
-	Messages int    `json:"messages"`
+	Type     string `json:"type" yaml:"type"`
+	Messages int    `json:"messages" yaml:"messages"`
+}
+
+//ProducerAlertSettings is the struct used for importing/exporting alert settings
+type ProducerAlertSettings struct {
+	ID               int                       `json:"alert" yaml:"alert"`
+	Description      string                    `json:"description" yaml:"description"`
+	ConditionDetails []AlertConditionRequestv1 `json:"conditions" yaml:"conditions"`
 }
 
 func constructQueryString(page int, pageSize int, sortField, sortOrder, templateName, channelName string) (query string) {

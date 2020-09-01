@@ -53,6 +53,7 @@ func NewExportGroupCommand() *cobra.Command {
 		Example: `	
 export acls --dir my-dir
 export alert-settings --dir my-dir
+export alert-channels
 export connectors --dir my-dir --resource-name my-connector --cluster-name Cluster1
 export processors --dir my-dir --resource-name my-processor
 export quota --dir my-dir
@@ -79,6 +80,7 @@ export serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewExportConnectionsCommand())
 	cmd.AddCommand(NewExportGroupsCommand())
 	cmd.AddCommand(NewExportServiceAccountsCommand())
+	cmd.AddCommand(NewExportAlertChannelsCommand())
 
 	return cmd
 }

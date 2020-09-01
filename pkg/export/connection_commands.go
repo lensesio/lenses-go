@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kataras/golog"
 	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/pkg"
 	config "github.com/lensesio/lenses-go/pkg/configs"
@@ -25,8 +24,7 @@ export connections --name connection-name`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			checkFileFlags(cmd)
 			if err := writeConnections(cmd, connectionName); err != nil {
-				golog.Errorf("Error while exporting connections. [%s]", err.Error())
-				return err
+				return fmt.Errorf("error while exporting connections. [%s]", err.Error())
 			}
 			return nil
 		},
@@ -41,7 +39,7 @@ export connections --name connection-name`,
 
 // writeConnections retrieves and writes one or all connections to a file
 func writeConnections(cmd *cobra.Command, connectionName string) error {
-	golog.Infof("Writing connections to [%s]", landscapeDir)
+	fmt.Fprintf(cmd.OutOrStdout(), "writing connections to base directory [%s]\n", landscapeDir)
 
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
@@ -69,7 +67,7 @@ func writeConnections(cmd *cobra.Command, connectionName string) error {
 		fileName := fmt.Sprintf("connection-%s-%s.%s", strings.ToLower(strings.ReplaceAll(connection.Name, " ", "_")), connection.Name, strings.ToLower(output))
 		err = utils.WriteFile(landscapeDir, pkg.ConnectionsFilePath, fileName, output, connectionComplete)
 		if err != nil {
-			fmt.Printf("Could not write connection to file %s", fileName)
+			return fmt.Errorf("could not export connection to file %s", fileName)
 		}
 	}
 
