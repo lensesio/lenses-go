@@ -37,6 +37,7 @@ import serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewImportPoliciesCommand())
 	cmd.AddCommand(NewImportGroupsCommand())
 	cmd.AddCommand(NewImportServiceAccountsCommand())
+	cmd.AddCommand(NewImportAlertChannelsCommand())
 
 	return cmd
 }
