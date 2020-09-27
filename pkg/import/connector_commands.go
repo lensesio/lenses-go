@@ -76,7 +76,6 @@ func loadConnectors(client *api.Client, cmd *cobra.Command, loadpath string) err
 					}
 
 					golog.Infof("Updated connector config for cluster [%s], connector [%s]", connector.ClusterName, connector.Name)
-					break
 				}
 
 				existsOrUpdated = true
