@@ -224,8 +224,7 @@ func NewTopicMetadataCreateCommand() *cobra.Command {
 			}
 
 			if err := client.CreateOrUpdateTopicMetadata(meta); err != nil {
-				golog.Errorf("Failed to update topic metadat for [%s]. [%s]", meta.TopicName, err.Error())
-				return err
+				return fmt.Errorf("Failed to update topic metadata for [%s]. [%s]", meta.TopicName, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "Metadata for topic [%s] created/updated", meta.TopicName)
