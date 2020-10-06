@@ -106,8 +106,8 @@ func NewPolicyGroupCommand() *cobra.Command {
 		Use:   "policy",
 		Short: "Manage a policy",
 		Example: `
-policy create --name my-policy --category my-category --impact HIGH --redaction First-1 --fields myfield1,myfield2
-policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --fields myfield1,myfield2
+policy create --name my-policy --category my-category --impact HIGH --redaction First-1 --datasets myTopic1,myTopic2 --fields myfield1,myfield2
+policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --datasets myTopic1,myTopic2 --fields myfield1,myfield2
 policy delete --id 1
 		`,
 		SilenceErrors:    true,
@@ -117,7 +117,6 @@ policy delete --id 1
 	//add subcommands
 	cmd.AddCommand(NewViewPolicyCommand())
 	cmd.AddCommand(NewCreatePolicyCommand())
-	cmd.AddCommand(NewUpdatePolicyCommand())
 	cmd.AddCommand(NewUpdatePolicyCommand())
 	cmd.AddCommand(NewDeletePolicyCommand())
 	return cmd
@@ -164,11 +163,12 @@ func NewViewPolicyCommand() *cobra.Command {
 func NewCreatePolicyCommand() *cobra.Command {
 	var policy api.DataPolicyRequest
 	var fields string
+	var datasets string
 
 	cmd := &cobra.Command{
 		Use:              "create",
 		Short:            "Create a policy",
-		Example:          `policy create --name my-policy --category my-category --impact HIGH --redaction First-1 --fields myfield1,myfield2`,
+		Example:          `policy create --name my-policy --category my-category --impact HIGH --redaction First-1 --datasets myTopic1,myTopic2 --fields myfield1,myfield2`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -186,6 +186,9 @@ func NewCreatePolicyCommand() *cobra.Command {
 			}
 
 			policy.Fields = strings.Split(fields, ",")
+			datasetArray := strings.Split(datasets, ",")
+
+			policy.Datasets = &datasetArray
 
 			if err := config.Client.CreatePolicy(policy); err != nil {
 				golog.Errorf("Failed to create policy [%s]. [%s]", policy.Name, err.Error())
@@ -200,10 +203,13 @@ func NewCreatePolicyCommand() *cobra.Command {
 	cmd.Flags().StringVar(&policy.Category, "category", "", "Policy category")
 	cmd.Flags().StringVar(&policy.ImpactType, "impact", "", "Policy impact type")
 	cmd.Flags().StringVar(&policy.Obfuscation, "redaction", "", "Policy redaction type")
+	cmd.Flags().StringVar(&datasets, "datasets", "*", "(Optional - Comma separated) Specify Datasets")
 	cmd.Flags().StringVar(&fields, "fields", "", "Schema fields, comma separated")
+
 	bite.Prepend(cmd, bite.FileBind(&policy))
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
+
 	return cmd
 }
 
@@ -211,11 +217,12 @@ func NewCreatePolicyCommand() *cobra.Command {
 func NewUpdatePolicyCommand() *cobra.Command {
 	var policy api.DataPolicyUpdateRequest
 	var fields string
+	var datasets string
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update a policy",
-		Example: `policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --fields myfield1,myfield2		`,
+		Example: `policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --datasets myTopic1,myTopic2 --fields myfield1,myfield2		`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -234,6 +241,8 @@ func NewUpdatePolicyCommand() *cobra.Command {
 			}
 
 			policy.Fields = strings.Split(fields, ",")
+			datasetArray := strings.Split(datasets, ",")
+			policy.Datasets = &datasetArray
 
 			if err := config.Client.UpdatePolicy(policy); err != nil {
 				golog.Errorf("Failed to update policy [%s]. [%s]", policy.Name, err.Error())
@@ -249,10 +258,13 @@ func NewUpdatePolicyCommand() *cobra.Command {
 	cmd.Flags().StringVar(&policy.Category, "category", "", "Policy category")
 	cmd.Flags().StringVar(&policy.ImpactType, "impact", "", "Policy impact type")
 	cmd.Flags().StringVar(&policy.Obfuscation, "redaction", "", "Policy redaction type")
+	cmd.Flags().StringVar(&datasets, "datasets", "*", "(Optional - Comma separated) Specify Datasets")
 	cmd.Flags().StringVar(&fields, "fields", "", "Schema fields, comma separated")
+
 	bite.Prepend(cmd, bite.FileBind(&policy))
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
+
 	return cmd
 }
 
