@@ -349,7 +349,7 @@ func TestPolicyCreateCommandFailMissingFields(t *testing.T) {
 	config.Client = nil
 }
 
-func TestPolicyCreateCommandSuccess(t *testing.T) {
+func TestPolicyCreateCommandRequiredSuccess(t *testing.T) {
 
 	//setup http client
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -370,6 +370,34 @@ func TestPolicyCreateCommandSuccess(t *testing.T) {
 		"--category=my-category",
 		"--impact=HIGH",
 		"--redaction=First-1",
+		"--fields=f1,f2,f3",
+	)
+	assert.Nil(t, err)
+	assert.Equal(t, "Policy [MyTestPolicy] created\n", output)
+	config.Client = nil
+}
+
+func TestPolicyCreateCommandOptionalSuccess(t *testing.T) {
+
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+	client, err := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+
+	assert.Nil(t, err)
+
+	config.Client = client
+
+	cmd := NewPolicyGroupCommand()
+	output, err := test.ExecuteCommand(cmd, "create",
+		"--name=MyTestPolicy",
+		"--category=my-category",
+		"--impact=HIGH",
+		"--redaction=First-1",
+		"--datasets=d1,d2,d3",
 		"--fields=f1,f2,f3",
 	)
 	assert.Nil(t, err)
@@ -478,6 +506,7 @@ func TestPolicyUpdateCommandFail(t *testing.T) {
 		"--category=my-category",
 		"--impact=HIGH",
 		"--redaction=First-1",
+		"--datasets=d1,d2",
 		"--fields=f1,f2,f3",
 	)
 	assert.NotNil(t, err)

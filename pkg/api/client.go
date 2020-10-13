@@ -3916,10 +3916,10 @@ const (
 
 // Impacts holds the impact response from Lenses for DataPolicies
 type Impacts struct {
-	Topics     []string         `json:"topics" yaml:"topics"`
-	Processors []ImpactsDetails `json:"processors" yaml:"processors"`
-	Connectors []ImpactsDetails `json:"connectors" yaml:"connectors"`
-	Apps       []ImpactsDetails `json:"apps" yaml:"apps"`
+	ConnectionEntities []ConnectionEntity `json:"connectionEntities" yaml:"connectionEntities"`
+	Processors         []ImpactsDetails   `json:"processors" yaml:"processors"`
+	Connectors         []ImpactsDetails   `json:"connectors" yaml:"connectors"`
+	Apps               []ImpactsDetails   `json:"apps" yaml:"apps"`
 }
 
 // ImpactsDetails holds impact details
@@ -3929,18 +3929,40 @@ type ImpactsDetails struct {
 	Type string `json:"type" yaml:"type"`
 }
 
+// ConnectionEntity holds the connections with their entities
+type ConnectionEntity struct {
+	ConnectionName     string               `json:"connectionName" yaml:"connectionName"`
+	ConnectionType     string               `json:"connectionType" yaml:"connectionType"`
+	DatasetsWithFields []DatasetsWithFields `json:"datasetsWithFields" yaml:"datasetsWithFields"`
+	Entities           []string             `json:"entities" yaml:"entities"`
+}
+
+// DatasetsWithFields holds the dataset fields
+type DatasetsWithFields struct {
+	DatasetName         string                `json:"datasetName" yaml:"datasetName"`
+	MatchingKeyFields   []string              `json:"matchingKeyFields" yaml:"matchingKeyFields"`
+	MatchingValueFields []MatchingValueFields `json:"matchingValueFields" yaml:"matchingValueFields"`
+}
+
+// MatchingValueFields holds the matching fields
+type MatchingValueFields struct {
+	Name    string   `json:"name" yaml:"name"`
+	Parents []string `json:"parents" yaml:"parents"`
+}
+
 // DataPolicy holds a Lenses data policy
 type DataPolicy struct {
-	ID              string   `json:"id" yaml:"id" header:"ID,text"`
-	Name            string   `json:"name" yaml:"name" header:"Name,text"`
-	LastUpdated     string   `json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
-	Versions        int      `json:"versions" yaml:"versions" header:"Version,text"`
-	ImpactType      string   `json:"impactType" yaml:"impactType" header:"ImpactType,text"`
-	Impacts         Impacts  `json:"impact" yaml:"impact" header:"Impacts,text"`
-	Category        string   `json:"category" yaml:"category" header:"Category,text"`
-	Fields          []string `json:"fields" yaml:"fields" header:"Fields,text"`
-	Obfuscation     string   `json:"obfuscation" yaml:"obfuscation" header:"Redaction,text"`
-	LastUpdatedUser string   `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
+	ID              string    `json:"id" yaml:"id" header:"ID,text"`
+	Name            string    `json:"name" yaml:"name" header:"Name,text"`
+	LastUpdated     string    `json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
+	Versions        int       `json:"versions" yaml:"versions" header:"Version,text"`
+	ImpactType      string    `json:"impactType" yaml:"impactType" header:"Impact Type,text"`
+	Impacts         Impacts   `json:"impact" yaml:"impact" header:"Impacts,text"`
+	Category        string    `json:"category" yaml:"category" header:"Category,text"`
+	Datasets        *[]string `json:"datasets" yaml:"datasets"`
+	Fields          []string  `json:"fields" yaml:"fields" header:"Fields,text"`
+	Obfuscation     string    `json:"obfuscation" yaml:"obfuscation" header:"Redaction,text"`
+	LastUpdatedUser string    `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
 }
 
 //DataPolicyTablePrint holds a data policy for bit table printing
@@ -3949,12 +3971,11 @@ type DataPolicyTablePrint struct {
 	Name            string           `json:"name" yaml:"name" header:"Name"`
 	LastUpdated     string           `json:"lastUpdated" yaml:"lastUpdated" header:"Last update"`
 	Versions        int              `json:"versions" yaml:"versions" header:"Version"`
-	ImpactType      string           `json:"impactType" yaml:"impactType" header:"ImpactType"`
+	ImpactType      string           `json:"impactType" yaml:"impactType" header:"Impact Type"`
 	Category        string           `json:"category" yaml:"category" header:"Category"`
 	Fields          []string         `json:"fields" yaml:"fields" header:"Fields"`
 	Obfuscation     string           `json:"obfuscation" yaml:"obfuscation" header:"Redaction"`
 	LastUpdatedUser string           `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By"`
-	Topics          []string         `json:"topics" yaml:"topics" header:"Topics"`
 	Processors      []ImpactsDetails `json:"processors" yaml:"processors" header:"Processors"`
 	Connectors      []ImpactsDetails `json:"connectors,omitempty" yaml:"connectors" header:"Connectors"`
 	Apps            []ImpactsDetails `json:"apps" yaml:"apps" header:"Apps"`
@@ -3977,25 +3998,27 @@ type DataImpactType struct {
 
 // DataPolicyRequest is a Lenses data policy as a request
 type DataPolicyRequest struct {
-	Name            string   `json:"name" yaml:"name" header:"Name,text"`
-	LastUpdated     string   `json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
-	Versions        int      `json:"versions" yaml:"versions" header:"Version,text"`
-	ImpactType      string   `json:"impactType" yaml:"impactType" header:"ImpactType,text"`
-	Impacts         Impacts  `json:"impact" yaml:"impact" header:"Impacts,text"`
-	Category        string   `json:"category" yaml:"category" header:"Category,text"`
-	Fields          []string `json:"fields" yaml:"fields" header:"Fields,text"`
-	Obfuscation     string   `json:"obfuscation" yaml:"obfuscation" header:"Redaction,text"`
-	LastUpdatedUser string   `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
+	Name            string    `json:"name" yaml:"name" header:"Name,text"`
+	LastUpdated     string    `json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
+	Versions        int       `json:"versions" yaml:"versions" header:"Version,text"`
+	ImpactType      string    `json:"impactType" yaml:"impactType" header:"ImpactType,text"`
+	Impacts         Impacts   `json:"impact" yaml:"impact" header:"Impacts,text"`
+	Category        string    `json:"category" yaml:"category" header:"Category,text"`
+	Datasets        *[]string `json:"datasets" yaml:"datasets" header:"Datasets,text"`
+	Fields          []string  `json:"fields" yaml:"fields" header:"Fields,text"`
+	Obfuscation     string    `json:"obfuscation" yaml:"obfuscation" header:"Redaction,text"`
+	LastUpdatedUser string    `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
 }
 
 // DataPolicyUpdateRequest is a data policy as an update
 type DataPolicyUpdateRequest struct {
-	ID          string   `json:"id" yaml:"id"`
-	Name        string   `json:"name" yaml:"name"`
-	Category    string   `json:"category" yaml:"category"`
-	ImpactType  string   `json:"impactType" yaml:"impact"`
-	Obfuscation string   `json:"obfuscation" yaml:"redaction"`
-	Fields      []string `json:"fields" yaml:"fields"`
+	ID          string    `json:"id" yaml:"id"`
+	Name        string    `json:"name" yaml:"name"`
+	Category    string    `json:"category" yaml:"category"`
+	ImpactType  string    `json:"impactType" yaml:"impact"`
+	Obfuscation string    `json:"obfuscation" yaml:"redaction"`
+	Datasets    *[]string `json:"datasets" yaml:"datasets"`
+	Fields      []string  `json:"fields" yaml:"fields"`
 }
 
 // PolicyAsRequest returns a data policy as a request
@@ -4005,6 +4028,7 @@ func (c *Client) PolicyAsRequest(p DataPolicy) DataPolicyRequest {
 		Category:    p.Category,
 		ImpactType:  p.ImpactType,
 		Obfuscation: p.Obfuscation,
+		Datasets:    p.Datasets,
 		Fields:      p.Fields,
 	}
 }
@@ -4021,7 +4045,6 @@ func (c *Client) PolicyForPrint(p DataPolicy) DataPolicyTablePrint {
 		ImpactType:      p.ImpactType,
 		Obfuscation:     p.Obfuscation,
 		Fields:          p.Fields,
-		Topics:          p.Impacts.Topics,
 		Processors:      p.Impacts.Processors,
 		Connectors:      p.Impacts.Connectors,
 		Apps:            p.Impacts.Apps,
