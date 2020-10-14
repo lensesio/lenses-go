@@ -12,7 +12,7 @@ import (
 
 	"github.com/kataras/golog"
 
-	"github.com/kataras/survey"
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/pkg/api"
 	config "github.com/lensesio/lenses-go/pkg/configs"
@@ -309,7 +309,7 @@ Docs at https://docs.lenses.io
 						Message: "krb5.conf file location",
 						Default: defKrbFile,
 						Help:    "This is the local kerberos configuration file.",
-					}, &kerberosAuth.ConfFile, survey.Required); err != nil {
+					}, &kerberosAuth.ConfFile, survey.WithValidator(survey.Required)); err != nil {
 						return err
 					}
 
