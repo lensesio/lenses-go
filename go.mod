@@ -3,6 +3,7 @@ module github.com/lensesio/lenses-go
 go 1.13
 
 require (
+	github.com/AlecAivazis/survey/v2 v2.1.1
 	github.com/Azure/azure-sdk-for-go v39.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.9.4
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
@@ -18,7 +19,6 @@ require (
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/kataras/golog v0.0.18
-	github.com/kataras/survey v2.0.0+incompatible
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect
 	github.com/landoop/bite v0.0.0-20190214122416-63c22faffe17
 	github.com/landoop/tableprinter v0.0.0-20200104100433-ae9249991eb1 // indirect
@@ -26,7 +26,6 @@ require (
 	github.com/lensesio/tableprinter v0.0.0-20200104100433-ae9249991eb1
 	github.com/mattn/go-runewidth v0.0.8 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect
