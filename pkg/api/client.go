@@ -1030,7 +1030,7 @@ type (
 	// and the payload to send on the `CreateTopicMetadata`.
 	TopicMetadata struct {
 		TopicName string `json:"topicName" yaml:"topicName" header:"Topic"`
-		KeyType   string `json:"keyType,omitempty" yaml:"KkyType" header:"Key /,NULL"`
+		KeyType   string `json:"keyType,omitempty" yaml:"keyType" header:"Key /,NULL"`
 		ValueType string `json:"valueType,omitempty" yaml:"valueType" header:"Value Type,NULL"`
 
 		ValueSchemaRaw string `json:"valueSchema,omitempty" yaml:"valueSchema,omitempty"` // for response read.
