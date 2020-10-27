@@ -11,7 +11,7 @@ const serviceAccountPath = "api/v1/serviceaccount"
 //ServiceAccount the service account data transfer object
 type ServiceAccount struct {
 	Name   string   `json:"name" yaml:"name" header:"Name"`
-	Owner  string   `json:"owner" yaml:"owner" header:"Owner"`
+	Owner  string   `json:"owner,omitempty" yaml:"owner,omitempty" header:"Owner"`
 	Groups []string `json:"groups" yaml:"groups" header:"Groups"`
 }
 
