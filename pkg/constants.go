@@ -33,6 +33,7 @@ const (
 	AlertChannelsPath          = "api/v1/alert/channels"
 	AlertsSettingsPath         = "api/v1/alert/settings"
 	AlertsPathSSE              = "api/sse/alerts"
+	MetadataTopicsPath         = "api/v1/metadata/topics"
 
 	LicensePath = "api/v1/license"
 )
