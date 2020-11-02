@@ -52,8 +52,8 @@ func NewExportProcessorsCommand() *cobra.Command {
 func writeProcessors(cmd *cobra.Command, client *api.Client, id, cluster, namespace, name string) error {
 
 	if mode == api.ExecutionModeInProcess {
-		cluster = "IN_PROC"
-		namespace = "lenses"
+		cluster = "IN-PROC"
+		namespace = "Lenses"
 	}
 	processors, err := client.GetProcessors()
 	if err != nil {

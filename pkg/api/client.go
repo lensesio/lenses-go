@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/kataras/golog"
+	"github.com/lensesio/lenses-go/pkg"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -1029,7 +1030,7 @@ type (
 	// and the payload to send on the `CreateTopicMetadata`.
 	TopicMetadata struct {
 		TopicName string `json:"topicName" yaml:"topicName" header:"Topic"`
-		KeyType   string `json:"keyType,omitempty" yaml:"KkyType" header:"Key /,NULL"`
+		KeyType   string `json:"keyType,omitempty" yaml:"keyType" header:"Key /,NULL"`
 		ValueType string `json:"valueType,omitempty" yaml:"valueType" header:"Value Type,NULL"`
 
 		ValueSchemaRaw string `json:"valueSchema,omitempty" yaml:"valueSchema,omitempty"` // for response read.
@@ -1102,28 +1103,16 @@ func (c *Client) GetTopicMetadata(topicName string) (TopicMetadata, error) {
 
 // CreateOrUpdateTopicMetadata adds or updates an existing topic metadata.
 func (c *Client) CreateOrUpdateTopicMetadata(metadata TopicMetadata) error {
-	if metadata.TopicName == "" {
-		return errRequired("metadata.TopicName")
-	}
 
-	path := fmt.Sprintf(topicMetadataPath, metadata.TopicName)
-	path += fmt.Sprintf("?keyType=%s&valueType=%s", metadata.KeyType, metadata.ValueType) // required.
-
-	// optional.
-	if len(metadata.KeySchemaRaw) > 0 {
-		path += "&keySchema=" + string(metadata.KeySchemaRaw)
-	}
-
-	if len(metadata.ValueSchemaRaw) > 0 {
-		path += "&valueSchema" + string(metadata.ValueSchemaRaw)
-	}
-
-	resp, err := c.Do(http.MethodPost, path, "", nil)
+	payload, err := json.Marshal(metadata)
 	if err != nil {
 		return err
 	}
-
-	return resp.Body.Close()
+	response, err := c.Do(http.MethodPost, pkg.MetadataTopicsPath, contentTypeJSON, payload)
+	if err != nil {
+		return err
+	}
+	return response.Body.Close()
 }
 
 // DeleteTopicMetadata removes an existing topic metadata.
@@ -1403,8 +1392,8 @@ type CreateProcessorPayload struct {
 	Name        string `json:"name" yaml:"name"` // required
 	SQL         string `json:"sql" yaml:"sql"`   // required
 	Runners     int    `json:"runnerCount" yaml:"runnerCount"`
-	ClusterName string `json:"cluster" yaml:"cluster"`
-	Namespace   string `json:"namespace" yaml:"namespace"`
+	ClusterName string `json:"cluster,omitempty" yaml:"cluster"`
+	Namespace   string `json:"namespace,omitempty" yaml:"namespace"`
 	Pipeline    string `json:"pipeline" yaml:"pipeline"`     // defaults to Name if not set.
 	AppID       string `json:"appId,omitempty" yaml:"appId"` //not required
 }
