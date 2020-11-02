@@ -234,6 +234,7 @@ func NewTopicMetadataCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&meta.TopicName, "name", "", "Topic name to update/create metadata for")
 	cmd.Flags().StringVar(&meta.KeyType, "key-type", "", "Topic keyType")
 	cmd.Flags().StringVar(&meta.ValueType, "value-type", "", "Topic's value type")
+	cmd.Flags().StringVar(&meta.KeySchemaRaw, "key-schema", "", "Topic's key schema")
 	cmd.Flags().StringVar(&meta.ValueSchemaRaw, "value-schema", "", "Topic's value schema")
 	bite.CanBeSilent(cmd)
 
