@@ -46,6 +46,7 @@ func NewExportPoliciesCommand() *cobra.Command {
 }
 
 func writePolicies(cmd *cobra.Command, client *api.Client, name string, ID string) error {
+	golog.Infof("Writing policies to [%s]", landscapeDir)
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
 	if ID != "" {
