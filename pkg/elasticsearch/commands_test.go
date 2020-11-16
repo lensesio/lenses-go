@@ -24,6 +24,7 @@ func index(name string, connection string) api.Index {
 		KeySchema:      "string",
 		ValueSchema:    "null",
 		Size:           4244452,
+		Description     "TextDescription",
 		TotalRecords:   192910,
 		Status:         "yellow",
 		Shards:         shards,

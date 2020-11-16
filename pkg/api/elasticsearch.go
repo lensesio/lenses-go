@@ -27,6 +27,7 @@ type Index struct {
 	ValueSchema    string   `json:"valueSchema,omitempty"`
 	Size           int      `json:"size" header:"Size"`
 	TotalRecords   int      `json:"totalMessages" header:"Records"`
+	Description    string   `json:"description" yaml:"description"`
 	Status         string   `json:"status" header:"Status"`
 	Shards         []Shard  `json:"shards"`
 	ShardsCount    int      `json:"shardsCount" header:"Shards"`

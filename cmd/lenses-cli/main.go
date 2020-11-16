@@ -32,6 +32,7 @@ import (
 	"github.com/lensesio/lenses-go/pkg/sql"
 	"github.com/lensesio/lenses-go/pkg/topic"
 	"github.com/lensesio/lenses-go/pkg/user"
+	"github.com/lensesio/lenses-go/pkg/dataset"
 	"github.com/spf13/cobra"
 )
 
@@ -222,6 +223,8 @@ func main() {
 
 	// Add init container command for kubernetes
 	app.AddCommand(initcontainer.NewInitConCommand())
+
+	app.AddCommand(dataset.NewDatasetGroupCmd())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)

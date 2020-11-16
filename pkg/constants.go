@@ -27,6 +27,7 @@ const (
 
 	ConnectionsFilePath        = "connections"
 	ConnectionsAPIPath         = "v1/connection/connections"
+	DatasetsAPIPath            = "v1/datasets"
 	ConnectionTemplatesAPIPath = "v1/connection/connection-templates"
 	ConsumersGroupPath         = "api/consumers"
 	ElasticsearchIndexesPath   = "/api/elastic/indexes"
