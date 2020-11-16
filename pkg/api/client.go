@@ -1135,7 +1135,7 @@ type CreateTopicPayload struct {
 	TopicName   string `json:"topicName" yaml:"name"`
 	Replication int    `json:"replication" yaml:"replication"`
 	Partitions  int    `json:"partitions" yaml:"partitions"`
-	Description string  `json:"description" yaml:"description"`
+	Description string `json:"description" yaml:"description"`
 	Configs     KV     `json:"configs" yaml:"configs"`
 }
 
@@ -1282,7 +1282,7 @@ type Topic struct {
 	ValueSchema          string             `json:"valueSchema,omitempty"`
 	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
 	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
-	Description          string             `json:"description" yaml:"de"`
+	Description          string             `json:"description" yaml:"description"`
 	Timestamp            int64              `json:"timestamp"`
 	Configs              []KV               `json:"config" header:"Configs,count"`
 	ConsumersGroup       []ConsumersGroup   `json:"consumers"`

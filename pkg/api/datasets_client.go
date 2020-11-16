@@ -1,22 +1,22 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"encoding/json"
 
 	"github.com/lensesio/lenses-go/pkg"
 )
 
 // UpdateDatasetsMetadata Struct
 type UpdateDatasetsMetadata struct {
-	Description    string    `json:"description" yaml:"description"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
 // updateDatasetsMetadata validates and creates new dataset metadata json payload
 func updateDatasetMetadata(description string) (jsonPayload []byte, err error) {
 	payload := UpdateDatasetsMetadata{
-		Description:  description,
+		Description: description,
 	}
 
 	jsonPayload, err = json.Marshal(payload)
@@ -25,7 +25,7 @@ func updateDatasetMetadata(description string) (jsonPayload []byte, err error) {
 }
 
 // UpdateMetadata Method
-func (c *Client) UpdateMetadata(connection, name, description string) ( err error) {
+func (c *Client) UpdateMetadata(connection, name, description string) (err error) {
 	if connection == "" {
 		err = errRequired("Required argument --connection not given")
 		return

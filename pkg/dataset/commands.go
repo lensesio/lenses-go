@@ -17,11 +17,11 @@ const metadataLong = `Description:
 // NewDatasetGroupCmd Group Cmd
 func NewDatasetGroupCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "dataset",
-		Short: "Use the Dataset Cmd, to execute action for Datasets(Kafka Topics, ES Indices)",
+		Use:              "dataset",
+		Short:            "Use the Dataset Cmd, to execute action for Datasets(Kafka Topics, ES Indices)",
 		SilenceErrors:    true,
 		TraverseChildren: true,
-		Args:  cobra.NoArgs,
+		Args:             cobra.NoArgs,
 	}
 
 	cmd.AddCommand(NewDatasetUpdateMetadataCmd())
@@ -33,14 +33,14 @@ func NewDatasetUpdateMetadataCmd() *cobra.Command {
 	var connection, name, description string
 
 	cmd := &cobra.Command{
-		Use: "updateMetadata [CONNECTION] [NAME] [DESCRIPTION]",
-		Short: "Manage your metadata for Datasets(i.e: Description)",
-		Long: metadataLong,
-		SilenceErrors: true,
+		Use:              "updateMetadata [CONNECTION] [NAME] [DESCRIPTION]",
+		Short:            "Manage your metadata for Datasets(i.e: Description)",
+		Long:             metadataLong,
+		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-				if err := config.Client.UpdateMetadata(connection, name, description); err != nil {
-				golog.Errorf("Failed to update Lenses Description. [%s]", err.Error())
+			if err := config.Client.UpdateMetadata(connection, name, description); err != nil {
+				golog.Errorf("Failed to update Lenses Metadata. [%s]", err.Error())
 				return err
 			}
 			return bite.PrintInfo(cmd, "Lenses Metadata have been updated successfully")

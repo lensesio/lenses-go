@@ -16,6 +16,7 @@ import (
 	"github.com/lensesio/lenses-go/pkg/connector"
 	"github.com/lensesio/lenses-go/pkg/conntemplate"
 	"github.com/lensesio/lenses-go/pkg/consumers"
+	"github.com/lensesio/lenses-go/pkg/dataset"
 	"github.com/lensesio/lenses-go/pkg/elasticsearch"
 	"github.com/lensesio/lenses-go/pkg/export"
 	imports "github.com/lensesio/lenses-go/pkg/import"
@@ -32,7 +33,6 @@ import (
 	"github.com/lensesio/lenses-go/pkg/sql"
 	"github.com/lensesio/lenses-go/pkg/topic"
 	"github.com/lensesio/lenses-go/pkg/user"
-	"github.com/lensesio/lenses-go/pkg/dataset"
 	"github.com/spf13/cobra"
 )
 
