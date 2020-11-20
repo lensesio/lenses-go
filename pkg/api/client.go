@@ -3928,13 +3928,13 @@ type ConnectionEntity struct {
 
 // DatasetsWithFields holds the dataset fields
 type DatasetsWithFields struct {
-	DatasetName         string                `json:"datasetName" yaml:"datasetName"`
-	MatchingKeyFields   []string              `json:"matchingKeyFields" yaml:"matchingKeyFields"`
-	MatchingValueFields []MatchingValueFields `json:"matchingValueFields" yaml:"matchingValueFields"`
+	DatasetName         string           `json:"datasetName" yaml:"datasetName"`
+	MatchingKeyFields   []MatchingFields `json:"matchingKeyFields" yaml:"matchingKeyFields"`
+	MatchingValueFields []MatchingFields `json:"matchingValueFields" yaml:"matchingValueFields"`
 }
 
-// MatchingValueFields holds the matching fields
-type MatchingValueFields struct {
+// MatchingFields holds the matching fields
+type MatchingFields struct {
 	Name    string   `json:"name" yaml:"name"`
 	Parents []string `json:"parents" yaml:"parents"`
 }
@@ -3946,7 +3946,7 @@ type DataPolicy struct {
 	LastUpdated     string    `json:"lastUpdated" yaml:"lastUpdated" header:"Last update,text"`
 	Versions        int       `json:"versions" yaml:"versions" header:"Version,text"`
 	ImpactType      string    `json:"impactType" yaml:"impactType" header:"Impact Type,text"`
-	Impacts         Impacts   `json:"impact" yaml:"impact" header:"Impacts,text"`
+	Impact          Impacts   `json:"impact" yaml:"impact" header:"Impact,text"`
 	Category        string    `json:"category" yaml:"category" header:"Category,text"`
 	Datasets        *[]string `json:"datasets" yaml:"datasets"`
 	Fields          []string  `json:"fields" yaml:"fields" header:"Fields,text"`
@@ -4034,9 +4034,9 @@ func (c *Client) PolicyForPrint(p DataPolicy) DataPolicyTablePrint {
 		ImpactType:      p.ImpactType,
 		Obfuscation:     p.Obfuscation,
 		Fields:          p.Fields,
-		Processors:      p.Impacts.Processors,
-		Connectors:      p.Impacts.Connectors,
-		Apps:            p.Impacts.Apps,
+		Processors:      p.Impact.Processors,
+		Connectors:      p.Impact.Connectors,
+		Apps:            p.Impact.Apps,
 	}
 }
 
