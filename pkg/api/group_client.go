@@ -18,13 +18,14 @@ type Namespace struct {
 
 //Group the payload object
 type Group struct {
-	Name                 string      `json:"name" yaml:"name" header:"Name"`
-	Description          string      `json:"description,omitempty" yaml:"description" header:"Description"`
-	Namespaces           []Namespace `json:"namespaces,omitempty" yaml:"dataNamespaces" header:"Namespaces,count"`
-	ScopedPermissions    []string    `json:"scopedPermissions" yaml:"applicationPermissions" header:"Application Permissions,count"`
-	AdminPermissions     []string    `json:"adminPermissions" yaml:"adminPermissions" header:"Admin Permissions,count"`
-	UserAccountsCount    int         `json:"userAccounts" yaml:"userAccounts" header:"User Accounts"`
-	ServiceAccountsCount int         `json:"serviceAccounts" yaml:"serviceAccounts" header:"Service Accounts"`
+	Name                       string      `json:"name" yaml:"name" header:"Name"`
+	Description                string      `json:"description,omitempty" yaml:"description" header:"Description"`
+	Namespaces                 []Namespace `json:"namespaces,omitempty" yaml:"dataNamespaces" header:"Namespaces,count"`
+	ScopedPermissions          []string    `json:"scopedPermissions" yaml:"applicationPermissions" header:"Application Permissions,count"`
+	AdminPermissions           []string    `json:"adminPermissions" yaml:"adminPermissions" header:"Admin Permissions,count"`
+	UserAccountsCount          int         `json:"userAccounts" yaml:"userAccounts" header:"User Accounts"`
+	ServiceAccountsCount       int         `json:"serviceAccounts" yaml:"serviceAccounts" header:"Service Accounts"`
+	ConnectClustersPermissions []string    `json:"connectClustersPermissions" yaml:"connectClustersPermissions" header:"Connect clusters access"`
 }
 
 //GetGroups returns the list of groups
