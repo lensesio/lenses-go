@@ -16,6 +16,7 @@ import (
 	"github.com/lensesio/lenses-go/pkg/connector"
 	"github.com/lensesio/lenses-go/pkg/conntemplate"
 	"github.com/lensesio/lenses-go/pkg/consumers"
+	"github.com/lensesio/lenses-go/pkg/dataset"
 	"github.com/lensesio/lenses-go/pkg/elasticsearch"
 	"github.com/lensesio/lenses-go/pkg/export"
 	imports "github.com/lensesio/lenses-go/pkg/import"
@@ -222,6 +223,8 @@ func main() {
 
 	// Add init container command for kubernetes
 	app.AddCommand(initcontainer.NewInitConCommand())
+
+	app.AddCommand(dataset.NewDatasetGroupCmd())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
