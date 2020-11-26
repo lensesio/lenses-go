@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -515,16 +516,40 @@ const (
 	configPath = "api/config"
 )
 
+// FlexInt is a custom type to accomodate JMXPort special case
+// where its value can range be either int or empty string e.g. ""
+type FlexInt int
+
+// UnmarshalJSON is the custom unmarshaller for JMXPort
+func (fi *FlexInt) UnmarshalJSON(b []byte) error {
+	if b[0] != '"' {
+		return json.Unmarshal(b, (*int)(fi))
+	}
+	if string(b) == "\"\"" {
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	*fi = FlexInt(i)
+	return nil
+}
+
 // BoxConfig contains the structure for the lenses box configuration, see the `GetConfig` call.
 //
 // Note that this structure contains only the properties that are exposed via the API's response data.
 type BoxConfig struct {
 	ConnectClusters []BoxConnectClusterConfigProperty `json:"lenses.kafka.connect.clusters"`
 
-	Version string      `json:"lenses.version" header:"Version"`
-	IP      string      `json:"lenses.ip" header:"IP"`
-	Port    int         `json:"lenses.port" header:"Port,text"`
-	JMXPort json.Number `json:"lenses.jmx.port,omitempty" header:"JMX Port,text"`
+	Version string  `json:"lenses.version" header:"Version"`
+	IP      string  `json:"lenses.ip" header:"IP"`
+	Port    int     `json:"lenses.port" header:"Port,text"`
+	JMXPort FlexInt `json:"lenses.jmx.port,omitempty" header:"JMX Port,text"`
 
 	KafkaBrokers string `json:"lenses.kafka.brokers"`
 
