@@ -1,6 +1,8 @@
 package dataset
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
@@ -39,9 +41,14 @@ func TestNewDatasetGroupCmdSuccess(t *testing.T) {
 	assert.NotEmpty(t, output)
 }
 
-func TestNewDatasetUpdateMetadataCmdSuccess(t *testing.T) {
+func TestNewDatasetUpdateDescriptionCmdSuccess(t *testing.T) {
+	var payload api.UpdateDatasetDescription
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(datasetResponse))
+		body, err := ioutil.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		json.Unmarshal(body, &payload)
+		w.Write([]byte(""))
 	})
 
 	httpClient, teardown := test.TestingHTTPClient(h)
@@ -51,16 +58,67 @@ func TestNewDatasetUpdateMetadataCmdSuccess(t *testing.T) {
 
 	config.Client = client
 
-	cmd := NewDatasetUpdateMetadataCmd()
-	output, err := test.ExecuteCommand(cmd,
+	cmd := UpdateDatasetDescriptionCmd()
+	_, err := test.ExecuteCommand(cmd,
 		"--connection=kafka",
 		"--name=topicName",
 		"--description=Some Description",
 	)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "Lenses Metadata have been updated successfully\n", output)
+	assert.Equal(t, "Some Description", payload.Description)
 
+	config.Client = nil
+}
+
+func TestNewDatasetUpdateRejectsBlankDescription(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(""))
+	})
+
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+
+	client, _ := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+
+	config.Client = client
+
+	cmd := UpdateDatasetDescriptionCmd()
+	_, err := test.ExecuteCommand(cmd,
+		"--connection=kafka",
+		"--name=topicName",
+		"--description= \n \t  ",
+	)
+
+	assert.Error(t, err)
+	config.Client = nil
+}
+
+func TestDatasetRemoveDescription(t *testing.T) {
+	var payload map[string]string
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := ioutil.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		json.Unmarshal(body, &payload)
+		w.Write([]byte(""))
+	})
+
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+
+	client, _ := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+
+	config.Client = client
+
+	cmd := RemoveDatasetDescriptionCmd()
+	_, err := test.ExecuteCommand(cmd,
+		"--connection=kafka",
+		"--name=topicName",
+	)
+
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{}, payload)
 	config.Client = nil
 }
 
@@ -76,7 +134,7 @@ func TestNewDatasetUpdateMetadataCmdFailureNoConnection(t *testing.T) {
 
 	config.Client = client
 
-	cmd := NewDatasetUpdateMetadataCmd()
+	cmd := UpdateDatasetDescriptionCmd()
 	output, err := test.ExecuteCommand(cmd,
 		"--name=topicName",
 		"--description=Some Description",
@@ -100,7 +158,7 @@ func TestNewDatasetUpdateMetadataCmdFailureNoName(t *testing.T) {
 
 	config.Client = client
 
-	cmd := NewDatasetUpdateMetadataCmd()
+	cmd := UpdateDatasetDescriptionCmd()
 	output, err := test.ExecuteCommand(cmd,
 		"--connection=kafka",
 		"--description=Some Description",

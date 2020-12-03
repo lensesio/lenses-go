@@ -2,20 +2,22 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/lensesio/lenses-go/pkg"
 )
 
-// UpdateDatasetsMetadata Struct
-type UpdateDatasetsMetadata struct {
+// UpdateDatasetDescription Struct
+type UpdateDatasetDescription struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
-// updateDatasetsMetadata validates and creates new dataset metadata json payload
-func updateDatasetMetadata(description string) (jsonPayload []byte, err error) {
-	payload := UpdateDatasetsMetadata{
+// updateDatasetsDescrciption creates new dataset metadata json payload
+func updateDatasetDescription(description string) (jsonPayload []byte, err error) {
+	payload := UpdateDatasetDescription{
 		Description: description,
 	}
 
@@ -24,30 +26,29 @@ func updateDatasetMetadata(description string) (jsonPayload []byte, err error) {
 	return
 }
 
-// UpdateMetadata Method
-func (c *Client) UpdateMetadata(connection, name, description string) (err error) {
-	if connection == "" {
-		err = errRequired("Required argument --connection not given")
-		return
+// UpdateDatasetDescription validates that the supplied parameters are not empty
+// note: we intenionally allow here description to be empty as that is needed in order to remove it
+func (c *Client) UpdateDatasetDescription(connection, name, description string) (err error) {
+	if len(strings.TrimSpace(connection)) == 0 {
+		return errors.New("Required argument --connection not given or blank")
 	}
 
-	if name == "" {
-		err = errRequired("Required argument --name not given")
-		return
+	if len(strings.TrimSpace(name)) == 0 {
+		return errors.New("Required argument --name not given or blank")
 	}
 
-	jsonPayload, err := updateDatasetMetadata(description)
+	jsonPayload, err := updateDatasetDescription(description)
 	if err != nil {
-		return
+		return err
 	}
 
-	path := fmt.Sprintf("api/%s/%s/%s", pkg.DatasetsAPIPath, connection, name)
+	path := fmt.Sprintf("api/%s/%s/%s/description", pkg.DatasetsAPIPath, connection, name)
 
-	resp, err := c.Do(http.MethodPatch, path, contentTypeJSON, jsonPayload)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, jsonPayload)
 	if err != nil {
-		return
+		return err
 	}
+
 	defer resp.Body.Close()
-
-	return
+	return nil
 }
