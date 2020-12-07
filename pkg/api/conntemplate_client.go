@@ -39,14 +39,15 @@ type ConnectionTemplateConfig struct {
 
 // ConnectionTemplate type
 type ConnectionTemplate struct {
-	Name     string                     `json:"	name" yaml:"name" header:"Name,text"`
-	Version  string                     `json:"version" yaml:"version" header:"Version,text"`
-	BuiltIn  bool                       `json:"builtIn" yaml:"buildIn" header:"BuiltIn,text"`
-	Enabled  bool                       `json:"enabled" yaml:"enabled" header:"Enabled,text"`
-	Category string                     `json:"category" yaml:"category"`
-	Type     string                     `json:"type" yaml:"type"`
-	Metadata ConnectionTemplateMetadata `json:"metadata" yaml:"metadata"`
-	Config   []ConnectionTemplateConfig `json:"configuration" yaml:"configuration"`
+	Name            string                     `json:"name,omitempty" yaml:"name" header:"Name,text"`
+	TemplateVersion int                        `json:"templateVersion,omitempty" yaml:"templateVersion" header:"Template Version"`
+	Version         string                     `json:"version,omitempty" yaml:"version" header:"Version,text"`
+	BuiltIn         bool                       `json:"builtIn,omitempty" yaml:"buildIn" header:"BuiltIn,text"`
+	Enabled         bool                       `json:"enabled,omitempty" yaml:"enabled" header:"Enabled,text"`
+	Category        string                     `json:"category,omitempty" yaml:"category"`
+	Type            string                     `json:"type,omitempty" yaml:"type"`
+	Metadata        ConnectionTemplateMetadata `json:"metadata,omitempty" yaml:"metadata"`
+	Config          []ConnectionTemplateConfig `json:"configuration,omitempty" yaml:"configuration"`
 }
 
 // GetConnectionTemplates returns all connections

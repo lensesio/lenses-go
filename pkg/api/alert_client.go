@@ -23,28 +23,30 @@ type AlertChannelPayload struct {
 
 // AlertChannel describes a channel of an alert
 type AlertChannel struct {
-	ID             string `json:"id" yaml:"id" header:"Id,text"`
-	Name           string `json:"name" yaml:"name" header:"Name,text"`
-	ConnectionName string `json:"connectionName" yaml:"connectionName" header:"Connection Name,text"`
-	TemplateName   string `json:"templateName" yaml:"templateName" header:"Template,text"`
-	Properties     []KV   `json:"properties" yaml:"properties" header:"Properties,count"`
-	CreatedAt      string `json:"createdAt" yaml:"createdAt"`
-	CreatedBy      string `json:"createdBy" yaml:"createdBy"`
-	UpdatedAt      string `json:"updatedAt" yaml:"updatedAt"`
-	UpdatedBy      string `json:"updatedBy" yaml:"updatedBy"`
+	ID              string `json:"id,omitempty" yaml:"id" header:"Id,text"`
+	Name            string `json:"name,omitempty" yaml:"name" header:"Name,text"`
+	ConnectionName  string `json:"connectionName,omitempty" yaml:"connectionName" header:"Connection Name,text"`
+	TemplateName    string `json:"templateName,omitempty" yaml:"templateName" header:"Template,text"`
+	TemplateVersion int    `json:"templateVersion,omitempty" yaml:"templateVersion" header:"Template version"`
+	Properties      []KV   `json:"properties,omitempty" yaml:"properties" header:"Properties,count"`
+	CreatedAt       string `json:"createdAt,omitempty" yaml:"createdAt"`
+	CreatedBy       string `json:"createdBy,omitempty" yaml:"createdBy"`
+	UpdatedAt       string `json:"updatedAt,omitempty" yaml:"updatedAt"`
+	UpdatedBy       string `json:"updatedBy,omitempty" yaml:"updatedBy"`
 }
 
 // AlertChannelWithDetails describes a channel of an alert with more details
 type AlertChannelWithDetails struct {
-	ID             string `json:"id" yaml:"id" header:"Id,text"`
-	Name           string `json:"name" yaml:"name" header:"Name,text"`
-	ConnectionName string `json:"connectionName" yaml:"connectionName" header:"Connection Name,text"`
-	TemplateName   string `json:"templateName" yaml:"templateName" header:"Template,text"`
-	Properties     []KV   `json:"properties" yaml:"properties" header:"Properties"`
-	CreatedAt      string `json:"createdAt" yaml:"createdAt" header:"Created at,date"`
-	CreatedBy      string `json:"createdBy" yaml:"createdBy" header:"Created by,text"`
-	UpdatedAt      string `json:"updatedAt" yaml:"updatedAt" header:"Updated at,date"`
-	UpdatedBy      string `json:"updatedBy" yaml:"updatedBy" header:"Updated by,text"`
+	ID              string `json:"id" yaml:"id" header:"Id,text"`
+	Name            string `json:"name" yaml:"name" header:"Name,text"`
+	ConnectionName  string `json:"connectionName" yaml:"connectionName" header:"Connection Name,text"`
+	TemplateName    string `json:"templateName" yaml:"templateName" header:"Template,text"`
+	TemplateVersion int    `json:"templateVersion,omitempty" yaml:"templateVersion" header:"Template version"`
+	Properties      []KV   `json:"properties" yaml:"properties" header:"Properties"`
+	CreatedAt       string `json:"createdAt" yaml:"createdAt" header:"Created at,date"`
+	CreatedBy       string `json:"createdBy" yaml:"createdBy" header:"Created by,text"`
+	UpdatedAt       string `json:"updatedAt" yaml:"updatedAt" header:"Updated at,date"`
+	UpdatedBy       string `json:"updatedBy" yaml:"updatedBy" header:"Updated by,text"`
 }
 
 // AlertChannelResponse response for alert channels

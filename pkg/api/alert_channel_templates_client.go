@@ -8,12 +8,13 @@ import (
 
 // ChannelTemplate payload struct used for alert and audit
 type ChannelTemplate struct {
-	ID       int    `json:"id" yaml:"id"`
-	Name     string `json:"name" yaml:"name" header:"name"`
-	Version  string `json:"version" yaml:"version" header:"version"`
-	Enabled  bool   `json:"enabled" yaml:"enabled" header:"enabled"`
-	BuiltIn  bool   `json:"builtIn" yaml:"builtin" header:"builtin"`
-	Metadata struct {
+	ID              int    `json:"id" yaml:"id"`
+	Name            string `json:"name" yaml:"name" header:"name"`
+	TemplateVersion int    `json:"templateVersion,omitempty" yaml:"templateVersion" header:"Template Version"`
+	Version         string `json:"version" yaml:"version" header:"version"`
+	Enabled         bool   `json:"enabled" yaml:"enabled" header:"enabled"`
+	BuiltIn         bool   `json:"builtIn" yaml:"builtin" header:"builtin"`
+	Metadata        struct {
 		Author      string `json:"author"`
 		Description string `json:"description"`
 	} `json:"metadata"`
