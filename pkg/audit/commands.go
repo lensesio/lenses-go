@@ -83,9 +83,15 @@ func NewGetAuditEntriesCommand() *cobra.Command {
 // NewGetAuditChannelTemplatesCommand creates the `auditchannel-templates` sub-command
 func NewGetAuditChannelTemplatesCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:              "auditchannel-templates",
-		Short:            "List audit channel templates",
-		Example:          `auditchannel-templates`,
+		Use:   "auditchannel-templates",
+		Short: "List audit channel templates",
+		Example: `
+# List all audit channel templates
+auditchannel-templates
+
+# Do a simple query using jq
+auditchannel-templates --output=json | jq '.[] | select(.name =="Splunk")' 
+`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {

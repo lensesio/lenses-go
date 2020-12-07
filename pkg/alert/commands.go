@@ -583,9 +583,15 @@ func NewUpdateAlertChannelCommand() *cobra.Command {
 // NewGetAlertChannelTemplatesCommand creates the `alertchannel-templates` sub-command
 func NewGetAlertChannelTemplatesCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:              "alertchannel-templates",
-		Short:            "List alert channel templates",
-		Example:          `alertchannel-templates`,
+		Use:   "alertchannel-templates",
+		Short: "List alert channel templates",
+		Example: `
+# List all alert channel templates
+alertchannel-templates
+
+# Do a simple query using jq
+alertchannel-templates --output=json | jq '.[] | select(.name =="Slack")' 
+`,
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
