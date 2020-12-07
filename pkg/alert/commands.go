@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/kataras/golog"
 	"github.com/lensesio/bite"
@@ -575,6 +576,34 @@ func NewUpdateAlertChannelCommand() *cobra.Command {
 	cmd.Flags().StringVar(&propertiesRaw, "properties", "", `Alert channel properties .e.g. "[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]"`)
 	bite.CanBeSilent(cmd)
 	bite.Prepend(cmd, bite.FileBind(&channel))
+
+	return cmd
+}
+
+// NewGetAlertChannelTemplatesCommand creates the `alertchannel-templates` sub-command
+func NewGetAlertChannelTemplatesCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:              "alertchannel-templates",
+		Short:            "List alert channel templates",
+		Example:          `alertchannel-templates`,
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			alertChannelTemplates, err := config.Client.GetAlertChannelTemplates()
+			if err != nil {
+				return fmt.Errorf("failed to retrieve alert channel templates. [%s]", err.Error())
+			}
+
+			outputFlagValue := strings.ToUpper(bite.GetOutPutFlag(cmd))
+			if outputFlagValue != "JSON" && outputFlagValue != "YAML" {
+				bite.PrintInfo(cmd, "Info: use JSON or YAML output to get the complete object\n\n")
+			}
+
+			return bite.PrintObject(cmd, alertChannelTemplates)
+		},
+	}
+
+	bite.CanPrintJSON(cmd)
 
 	return cmd
 }
