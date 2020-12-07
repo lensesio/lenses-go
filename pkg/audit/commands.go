@@ -79,3 +79,37 @@ func NewGetAuditEntriesCommand() *cobra.Command {
 
 	return cmd
 }
+
+// NewGetAuditChannelTemplatesCommand creates the `auditchannel-templates` sub-command
+func NewGetAuditChannelTemplatesCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "auditchannel-templates",
+		Short: "List audit channel templates",
+		Example: `
+# List all audit channel templates
+auditchannel-templates
+
+# Do a simple query using jq
+auditchannel-templates --output=json | jq '.[] | select(.name =="Splunk")' 
+`,
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			auditChannelTemplates, err := config.Client.GetAuditChannelTemplates()
+			if err != nil {
+				return fmt.Errorf("failed to retrieve audit channel templates. [%s]", err.Error())
+			}
+
+			outputFlagValue := strings.ToUpper(bite.GetOutPutFlag(cmd))
+			if outputFlagValue != "JSON" && outputFlagValue != "YAML" {
+				bite.PrintInfo(cmd, "Info: use JSON or YAML output to get the complete object\n\n")
+			}
+
+			return bite.PrintObject(cmd, auditChannelTemplates)
+		},
+	}
+
+	bite.CanPrintJSON(cmd)
+
+	return cmd
+}
