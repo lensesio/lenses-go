@@ -143,8 +143,14 @@ func main() {
 	app.AddCommand(alert.NewGetAlertsCommand())
 	app.AddCommand(alert.NewGetAlertChannelsCommand())
 
+	// Alert channel templates
+	app.AddCommand((alert.NewGetAlertChannelTemplatesCommand()))
+
 	//Audit
 	app.AddCommand(audit.NewGetAuditEntriesCommand())
+
+	// Audit channel templates
+	app.AddCommand((audit.NewGetAuditChannelTemplatesCommand()))
 
 	//Config
 	app.AddCommand(config.NewGetConfigsCommand())
