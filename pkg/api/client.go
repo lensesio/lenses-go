@@ -1637,7 +1637,11 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 	identifier := name
 
 	if mode == ExecutionModeInProcess {
-		clusterName = "IN_PROC"
+		clusterName = "IN-PROC"
+	}
+
+	if mode == ExecutionModeConnect && clusterName == "" {
+		return "", fmt.Errorf("`cluster-name` flag is empty")
 	}
 
 	if mode == ExecutionModeConnect || mode == ExecutionModeInProcess {
