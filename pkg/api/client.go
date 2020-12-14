@@ -1669,13 +1669,22 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 		if id != "" {
 			identifier = id
 		} else {
-			// the clusterName+.+namespace+.+processor name is the string we need in the endpoints,
-			// therefore, we require both cluster name and namespace in K8.
+			// to match a processor by name in k8 mode we also need to match by both clusterName and namespace
 			if clusterName == "" || namespace == "" || name == "" {
 				return "", fmt.Errorf("LookupProcessorIdentifier:KUBERNETES: (name or clusterName or namespace) or id arguments are missing")
 			}
 
-			identifier = fmt.Sprintf("%s.%s.%s", clusterName, namespace, name)
+			result, err := c.GetProcessors()
+			if err != nil {
+				return "", err
+			}
+
+			for _, processor := range result.Streams {
+				if processor.Name == name && processor.ClusterName == clusterName && processor.Namespace == namespace {
+					identifier = processor.ID
+					break
+				}
+			}
 		}
 	}
 
