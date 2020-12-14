@@ -1586,6 +1586,12 @@ func (c *Client) GetProcessors() (ProcessorsResult, error) {
 		return res, err
 	}
 
+	// Hack to populate the `DeploymentState` field due to current implementation
+	// of table printer not able to handle nested fields as headers.
+	for i, processor := range res.Streams {
+		res.Streams[i].DeploymentState = processor.RunnerState.DeploymentStatus
+	}
+
 	return res, nil
 }
 
