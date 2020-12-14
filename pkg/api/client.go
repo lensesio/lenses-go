@@ -1586,6 +1586,12 @@ func (c *Client) GetProcessors() (ProcessorsResult, error) {
 		return res, err
 	}
 
+	// Hack to populate the `DeploymentState` field due to current implementation
+	// of table printer not able to handle nested fields as headers.
+	for i, processor := range res.Streams {
+		res.Streams[i].DeploymentState = processor.RunnerState.DeploymentStatus
+	}
+
 	return res, nil
 }
 
@@ -1640,7 +1646,11 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 	identifier := name
 
 	if mode == ExecutionModeInProcess {
-		clusterName = "IN_PROC"
+		clusterName = "IN-PROC"
+	}
+
+	if mode == ExecutionModeConnect && clusterName == "" {
+		return "", fmt.Errorf("`cluster-name` flag is empty")
 	}
 
 	if mode == ExecutionModeConnect || mode == ExecutionModeInProcess {
@@ -1668,13 +1678,22 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 		if id != "" {
 			identifier = id
 		} else {
-			// the clusterName+.+namespace+.+processor name is the string we need in the endpoints,
-			// therefore, we require both cluster name and namespace in K8.
+			// to match a processor by name in k8 mode we also need to match by both clusterName and namespace
 			if clusterName == "" || namespace == "" || name == "" {
 				return "", fmt.Errorf("LookupProcessorIdentifier:KUBERNETES: (name or clusterName or namespace) or id arguments are missing")
 			}
 
-			identifier = fmt.Sprintf("%s.%s.%s", clusterName, namespace, name)
+			result, err := c.GetProcessors()
+			if err != nil {
+				return "", err
+			}
+
+			for _, processor := range result.Streams {
+				if processor.Name == name && processor.ClusterName == clusterName && processor.Namespace == namespace {
+					identifier = processor.ID
+					break
+				}
+			}
 		}
 	}
 
