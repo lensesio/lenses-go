@@ -28,6 +28,7 @@ type Index struct {
 	Size           int      `json:"size" header:"Size"`
 	TotalRecords   int      `json:"totalMessages" header:"Records"`
 	Description    string   `json:"description" yaml:"description"`
+	Tags           []string `json:"tags" yaml:"tags"`
 	Status         string   `json:"status" header:"Status"`
 	Shards         []Shard  `json:"shards"`
 	ShardsCount    int      `json:"shardsCount" header:"Shards"`

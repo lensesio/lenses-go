@@ -26,7 +26,9 @@ func NewDatasetGroupCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(UpdateDatasetDescriptionCmd())
+	cmd.AddCommand(UpdateDatasetTagsCmd())
 	cmd.AddCommand(RemoveDatasetDescriptionCmd())
+	cmd.AddCommand(RemoveDatasetTagsCmd())
 	return cmd
 }
 
@@ -35,7 +37,7 @@ func UpdateDatasetDescriptionCmd() *cobra.Command {
 	var connection, name, description string
 
 	cmd := &cobra.Command{
-		Use:              "update-description [CONNECTION] [NAME] [DESCRIPTION]",
+		Use:              "update-description [CONNECTION] [NAME]",
 		Short:            "Set a dataset description",
 		Long:             metadataLong,
 		SilenceErrors:    true,
@@ -67,6 +69,43 @@ func UpdateDatasetDescriptionCmd() *cobra.Command {
 	return cmd
 }
 
+// UpdateDatasetTagsCmd updates the Dataset Metadata
+func UpdateDatasetTagsCmd() *cobra.Command {
+	var connection, name, spaceSeparatedTags string
+	tags := []string{}
+
+	cmd := &cobra.Command{
+		Use:              "update-tags [CONNECTION] [NAME]",
+		Short:            "Set a dataset tags",
+		Long:             metadataLong,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			tags = strings.Split(spaceSeparatedTags, " ")
+
+			if len(tags) == 0 {
+				return errors.New("Tags cannot be empty")
+			}
+
+			if err := config.Client.UpdateDatasetTags(connection, name, tags); err != nil {
+				return err
+			}
+			return bite.PrintInfo(cmd, "Dataset tags have been updated successfully")
+		},
+	}
+
+	cmd.Flags().StringVar(&connection, "connection", "", "Name of the connection")
+	cmd.Flags().StringVar(&name, "name", "", "Name of the dataset")
+	cmd.Flags().StringVar(&spaceSeparatedTags, "tags", "", "A list of space separated tags")
+	cmd.MarkFlagRequired("connection")
+	cmd.MarkFlagRequired("name")
+	cmd.MarkFlagRequired("tags")
+
+	_ = bite.CanBeSilent(cmd)
+
+	return cmd
+}
+
 //RemoveDatasetDescriptionCmd unsets a dataset description
 func RemoveDatasetDescriptionCmd() *cobra.Command {
 	var connection, name string
@@ -82,10 +121,36 @@ func RemoveDatasetDescriptionCmd() *cobra.Command {
 			//which the backend will handle by unsetting the description record (see `UpdateDatasetDescription`'s
 			//`omitempty` annotation)
 			if err := config.Client.UpdateDatasetDescription(connection, name, ""); err != nil {
-				golog.Errorf("Failed to remove dataset description. [%s]", err.Error())
 				return err
 			}
-			return bite.PrintInfo(cmd, "Dataset description has been updated removed")
+			return bite.PrintInfo(cmd, "Dataset description has been removed")
+		},
+	}
+
+	cmd.Flags().StringVar(&connection, "connection", "", "Name of the connection")
+	cmd.Flags().StringVar(&name, "name", "", "Name of the dataset")
+	cmd.MarkFlagRequired("connection")
+	cmd.MarkFlagRequired("name")
+
+	_ = bite.CanBeSilent(cmd)
+	return cmd
+}
+
+//RemoveDatasetTagsCmd unsets a dataset description
+func RemoveDatasetTagsCmd() *cobra.Command {
+	var connection, name string
+
+	cmd := &cobra.Command{
+		Use:              "remove-tags [CONNECTION] [NAME]",
+		Short:            "Remove all tags associated to a dataset",
+		Long:             metadataLong,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := config.Client.UpdateDatasetTags(connection, name, []string{}); err != nil {
+				return err
+			}
+			return bite.PrintInfo(cmd, "Dataset tags have been removed")
 		},
 	}
 

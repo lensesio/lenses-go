@@ -1308,6 +1308,7 @@ type Topic struct {
 	MessagesPerSecond    int64              `json:"messagesPerSecond" header:"msg/sec"`
 	TotalMessages        int64              `json:"totalMessages" header:"Total Msg"`
 	Description          string             `json:"description" yaml:"description"`
+	Tags                 []string           `json:"tags" yaml:"tags"`
 	Timestamp            int64              `json:"timestamp"`
 	Configs              []KV               `json:"config" header:"Configs,count"`
 	ConsumersGroup       []ConsumersGroup   `json:"consumers"`
