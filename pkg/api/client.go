@@ -1502,7 +1502,8 @@ type (
 
 	// DeploymentTargets describes the deployment cluster targets
 	DeploymentTargets struct {
-		Kubernetes []KubernetesTarget `json:"kubernetes"`
+		Kubernetes []KubernetesTarget   `json:"kubernetes"`
+		Connect    []KafkaConnectTarget `json:"connect"`
 	}
 
 	// KubernetesTarget describes a kubernetes deployment target
@@ -1510,6 +1511,12 @@ type (
 		Cluster    string   `json:"cluster"`
 		Namespaces []string `json:"namespaces"`
 		Version    string   `json:"version,omitempty"`
+	}
+
+	// KafkaConnectTarget describes a Kafka Connect deployment target
+	KafkaConnectTarget struct {
+		Cluster string `json:"cluster"`
+		Version string `json:"version,omitempty"`
 	}
 
 	// ProcessorStream describes the processor stream,

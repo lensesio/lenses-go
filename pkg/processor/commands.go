@@ -382,9 +382,11 @@ func NewListDeploymentTargetsCommand() *cobra.Command {
 	var clusterName, targetType string
 
 	cmd := &cobra.Command{
-		Use:              "targets",
-		Short:            "List available target clusters to deploy to Kubernetes",
-		Example:          `processors targets --target-type kubernetes --cluster-name="clusterName"`,
+		Use:   "targets",
+		Short: "List available target clusters to deploy to Kubernetes",
+		Example: `
+processors targets --target-type kubernetes --cluster-name="clusterName"
+processors targets --target-type connect`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -408,11 +410,21 @@ func NewListDeploymentTargetsCommand() *cobra.Command {
 				}
 			}
 
+			if targetType == "" || targetType == "connect" {
+				for _, connect := range targets.Connect {
+					if clusterName != "" && clusterName != connect.Cluster {
+						continue
+					}
+
+					results = append(results, ListTargetsResult{"Connect", connect.Cluster, "", connect.Version})
+				}
+			}
+
 			return bite.PrintObject(cmd, results)
 		},
 	}
 
-	cmd.Flags().StringVar(&targetType, "target-type", "", `Target type to filter by. Currently only kubernetes is supported.`)
+	cmd.Flags().StringVar(&targetType, "target-type", "", `Target type to filter by, e.g. Kubernetes or Connect.`)
 	cmd.Flags().StringVar(&clusterName, "cluster-name", "", `Cluster name to filter by`)
 	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
