@@ -19,21 +19,21 @@ type Shard struct {
 
 // Index is Elasticsearch index type
 type Index struct {
-	IndexName      string   `json:"indexName" header:"Name"`
-	ConnectionName string   `json:"connectionName" header:"Connection"`
-	KeyType        string   `json:"keyType"`
-	ValueType      string   `json:"valueType"`
-	KeySchema      string   `json:"keySchema,omitempty"`
-	ValueSchema    string   `json:"valueSchema,omitempty"`
-	Size           int      `json:"size" header:"Size"`
-	TotalRecords   int      `json:"totalMessages" header:"Records"`
-	Description    string   `json:"description" yaml:"description"`
-	Tags           []string `json:"tags" yaml:"tags"`
-	Status         string   `json:"status" header:"Status"`
-	Shards         []Shard  `json:"shards"`
-	ShardsCount    int      `json:"shardsCount" header:"Shards"`
-	Replicas       int      `json:"replicas" header:"Replicas"`
-	Permission     []string `json:"permissions"`
+	IndexName      string       `json:"indexName" header:"Name"`
+	ConnectionName string       `json:"connectionName" header:"Connection"`
+	KeyType        string       `json:"keyType"`
+	ValueType      string       `json:"valueType"`
+	KeySchema      string       `json:"keySchema,omitempty"`
+	ValueSchema    string       `json:"valueSchema,omitempty"`
+	Size           int          `json:"size" header:"Size"`
+	TotalRecords   int          `json:"totalMessages" header:"Records"`
+	Description    string       `json:"description" yaml:"description"`
+	Tags           []DatasetTag `json:"tags" yaml:"tags"`
+	Status         string       `json:"status" header:"Status"`
+	Shards         []Shard      `json:"shards"`
+	ShardsCount    int          `json:"shardsCount" header:"Shards"`
+	Replicas       int          `json:"replicas" header:"Replicas"`
+	Permission     []string     `json:"permissions"`
 }
 
 // GetIndexes returns the list of elasticsearch indexes.
