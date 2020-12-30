@@ -3390,7 +3390,7 @@ type (
 	AlertSettingsCategoryMap struct {
 		Infrastructure []AlertSetting `json:"infrastructure" header:"Infrastructure"`
 		Consumers      []AlertSetting `json:"consumers" header:"Consumers"`
-		Producers      []AlertSetting `json:"producers" header:"Producers"`
+		Producers      []AlertSetting `json:"Data Produced" header:"Producers"`
 	}
 )
 
