@@ -71,18 +71,22 @@ func UpdateDatasetDescriptionCmd() *cobra.Command {
 
 // UpdateDatasetTagsCmd updates the Dataset Metadata
 func UpdateDatasetTagsCmd() *cobra.Command {
-	var connection, name, spaceSeparatedTags string
-	tags := []string{}
+	var connection, name string
+	var tags []string
 
 	cmd := &cobra.Command{
-		Use:              "update-tags [CONNECTION] [NAME]",
-		Short:            "Set a dataset tags",
+		Use:   "update-tags [CONNECTION] [NAME]",
+		Short: "Set a dataset tags",
+		Example: `
+		dataset update-tags --connection kafka \
+		           --name mytopic \
+				   --tag t1 \
+				   --tag t2
+		`,
 		Long:             metadataLong,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tags = strings.Split(spaceSeparatedTags, " ")
-
 			if len(tags) == 0 {
 				return errors.New("Tags cannot be empty")
 			}
@@ -96,10 +100,10 @@ func UpdateDatasetTagsCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&connection, "connection", "", "Name of the connection")
 	cmd.Flags().StringVar(&name, "name", "", "Name of the dataset")
-	cmd.Flags().StringVar(&spaceSeparatedTags, "tags", "", "A list of space separated tags")
+	cmd.Flags().StringArrayVar(&tags, "tag", []string{}, "tag assigned to the connection, can be defined multiple times")
 	cmd.MarkFlagRequired("connection")
 	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("tags")
+	cmd.MarkFlagRequired("tag")
 
 	_ = bite.CanBeSilent(cmd)
 

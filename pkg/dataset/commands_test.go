@@ -106,7 +106,9 @@ func TestDatasetUpdateTagsCmdSuccess(t *testing.T) {
 	_, err := test.ExecuteCommand(cmd,
 		"--connection=kafka",
 		"--name=topicName",
-		"--tags=tag1 tag2 tag3",
+		"--tag=tag1",
+		"--tag=tag2",
+		"--tag=tag3",
 	)
 	tags := []string{}
 	for _, tag := range payload.Tags {
@@ -158,7 +160,7 @@ func TestNewDatasetRejectBlankTags(t *testing.T) {
 	_, err := test.ExecuteCommand(cmd,
 		"--connection=kafka",
 		"--name=topicName",
-		"--tags= \t  ",
+		"--tag=\t",
 	)
 
 	assert.Error(t, err)
