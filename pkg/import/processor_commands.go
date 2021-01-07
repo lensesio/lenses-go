@@ -87,7 +87,7 @@ func loadProcessors(client *api.Client, cmd *cobra.Command, loadpath string) err
 			processor.ClusterName,
 			processor.Namespace,
 			processor.Pipeline,
-			processor.AppID); err != nil {
+			processor.ProcessorID); err != nil {
 
 			golog.Errorf("Error creating processor from file [%s/%s]. [%s]", loadpath, file.Name(), err.Error())
 			return err
