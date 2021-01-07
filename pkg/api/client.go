@@ -1424,7 +1424,7 @@ type CreateProcessorPayload struct {
 	ClusterName string `json:"cluster,omitempty" yaml:"cluster"`
 	Namespace   string `json:"namespace,omitempty" yaml:"namespace"`
 	Pipeline    string `json:"pipeline" yaml:"pipeline"`     // defaults to Name if not set.
-	AppID       string `json:"appId,omitempty" yaml:"appId"` //not required
+	ProcessorID string `json:"appId,omitempty" yaml:"appId"` //not required
 }
 
 // ProcessorAsRequest returns a proccessor as a CreateProcessorPayload
@@ -1436,7 +1436,7 @@ func (p *ProcessorStream) ProcessorAsRequest() CreateProcessorPayload {
 		ClusterName: p.ClusterName,
 		Namespace:   p.Namespace,
 		Pipeline:    p.Pipeline,
-		AppID:       p.ID,
+		ProcessorID: p.ID,
 	}
 }
 
@@ -1476,7 +1476,7 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 			ClusterName: clusterName,
 			Namespace:   namespace,
 			Pipeline:    pipeline,
-			AppID:       appID,
+			ProcessorID: appID,
 		}
 	}
 
@@ -1527,6 +1527,7 @@ type (
 	// see `ProcessorResult`.
 	ProcessorStream struct {
 		ID              string `json:"id" header:"ID,text"`
+		ProcessorID     string `json:"processorId" header:"ProcessorID,text"`
 		Name            string `json:"name" header:"Name"`
 		DeploymentState string `json:"deploymentState" header:"State"`
 		Runners         int    `json:"runners" header:"Runners"`

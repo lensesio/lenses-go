@@ -187,7 +187,7 @@ func NewProcessorCreateCommand() *cobra.Command {
 				return err
 			}
 
-			err := config.Client.CreateProcessor(processor.Name, processor.SQL, processor.Runners, processor.ClusterName, processor.Namespace, processor.Pipeline, processor.AppID)
+			err := config.Client.CreateProcessor(processor.Name, processor.SQL, processor.Runners, processor.ClusterName, processor.Namespace, processor.Pipeline, processor.ProcessorID)
 
 			if err != nil {
 				golog.Errorf("Failed to create processor [%s]. [%s]", processor.Name, err.Error())
@@ -204,7 +204,7 @@ func NewProcessorCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&processor.SQL, "sql", "", `Lenses SQL to run .e.g. sql="SET autocreate=true;INSERT INTO topic1 SELECT * FROM topicA"`)
 	cmd.Flags().IntVar(&processor.Runners, "runners", 1, "Number of runners/instance to deploy")
 	cmd.Flags().StringVar(&processor.Pipeline, "pipeline", "", `A label to apply to kubernetes processors, defaults to processor name`)
-	cmd.Flags().StringVar(&processor.AppID, "id", "", `The processor identifier, it is used as the underlying Kafka consumer group`)
+	cmd.Flags().StringVar(&processor.ProcessorID, "id", "", `The processor identifier, it is used as the underlying Kafka consumer group`)
 
 	bite.Prepend(cmd, bite.FileBind(&processor))
 	bite.CanBeSilent(cmd)
