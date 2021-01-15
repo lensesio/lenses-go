@@ -41,17 +41,16 @@ func NewExportAlertsCommand() *cobra.Command {
 
 func writeAlertSetting(cmd *cobra.Command, client *api.Client) error {
 
-	var topics []string
-	settings, err := getAlertSettings(cmd, client, topics)
-
+	producerSettings, err := getProducerAlertSettings(client)
 	if err != nil {
 		return err
 	}
-
-	writeAlertSettingsAsRequest(cmd, settings)
-
-	producerSettings, err := getProducerAlertSettings(client)
+	consumerSettings, err := getConsumerAlertSettings(client)
+	if err != nil {
+		return err
+	}
 	writeProducerAlertSettings(cmd, producerSettings)
+	writeConsumerAlertSettings(cmd, consumerSettings)
 
 	return nil
 }
@@ -59,6 +58,19 @@ func writeAlertSetting(cmd *cobra.Command, client *api.Client) error {
 func writeProducerAlertSettings(cmd *cobra.Command, settings api.ProducerAlertSettings) error {
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	fileName := fmt.Sprintf("alert-setting-producer.%s", strings.ToLower(output))
+
+	err := utils.WriteFile(landscapeDir, pkg.AlertSettingsPath, fileName, output, settings)
+	if err != nil {
+		return fmt.Errorf("error writing to %s. [%v]", fileName, err)
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "successfully wrote to %s\n", fileName)
+	return nil
+}
+
+func writeConsumerAlertSettings(cmd *cobra.Command, settings api.ConsumerAlertSettings) error {
+	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
+	fileName := fmt.Sprintf("alert-setting-consumer.%s", strings.ToLower(output))
 
 	err := utils.WriteFile(landscapeDir, pkg.AlertSettingsPath, fileName, output, settings)
 	if err != nil {
@@ -115,11 +127,40 @@ func getAlertSettings(cmd *cobra.Command, client *api.Client, topics []string) (
 	}
 
 	if len(conditions) == 0 {
-		fmt.Fprintf(cmd.OutOrStdout(), "no consumer conditions found")
+		fmt.Fprintf(cmd.OutOrStdout(), "no consumer conditions found\n")
 		return alertSettings, nil
 	}
 
 	return alert.SettingConditionPayloads{AlertID: 2000, Conditions: conditions}, nil
+}
+
+func getConsumerAlertSettings(client *api.Client) (api.ConsumerAlertSettings, error) {
+	var consumerAlertSettings api.ConsumerAlertSettings
+
+	settings, err := client.GetAlertSetting(2000)
+	if err != nil {
+		return consumerAlertSettings, err
+	}
+
+	consumerAlertSettings.ID = settings.ID
+	consumerAlertSettings.Description = settings.Description
+
+	// iterate over the consumer condition details
+	for _, condDetail := range settings.ConditionDetails {
+		jsonStringCondition, _ := json.Marshal(condDetail.ConditionDsl)
+
+		consumerAlertConditionDetail := api.ConsumerAlertConditionRequestv1{}
+		json.Unmarshal(jsonStringCondition, &consumerAlertConditionDetail.Condition)
+
+		// iterate channels of a condition detail
+		for _, chann := range condDetail.Channels {
+			consumerAlertConditionDetail.Channels = append(consumerAlertConditionDetail.Channels, chann.Name)
+		}
+
+		consumerAlertSettings.ConditionDetails = append(consumerAlertSettings.ConditionDetails, consumerAlertConditionDetail)
+	}
+
+	return consumerAlertSettings, nil
 }
 
 func getProducerAlertSettings(client *api.Client) (api.ProducerAlertSettings, error) {
