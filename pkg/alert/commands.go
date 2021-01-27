@@ -35,7 +35,6 @@ func NewAlertGroupCommand() *cobra.Command {
 //NewGetAlertsCommand creates the `alerts` command
 func NewGetAlertsCommand() *cobra.Command {
 	var (
-		sse      bool
 		pageSize int
 	)
 
@@ -46,12 +45,6 @@ func NewGetAlertsCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if sse {
-				handler := func(alert api.Alert) error {
-					return bite.PrintObject(cmd, alert) // keep json here?
-				}
-				return config.Client.GetAlertsLive(handler)
-			}
 			alerts, err := config.Client.GetAlerts(pageSize)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve alerts. Error: [%s]", err.Error())
@@ -60,7 +53,6 @@ func NewGetAlertsCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&sse, "live", false, "Enables real-time push alert notifications")
 	cmd.Flags().IntVar(&pageSize, "page-size", 25, "Size of items to be included in the list")
 
 	bite.CanPrintJSON(cmd)
