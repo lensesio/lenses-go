@@ -345,7 +345,7 @@ func (c *Client) GetAlertsLive(handler AlertHandler) error {
 
 // GetAlerts returns the registered alerts.
 func (c *Client) GetAlerts(pageSize int) (alerts []Alert, err error) {
-	path := fmt.Sprintf("%s?pageSize=%d", pkg.AlertsSettingsPath, pageSize)
+	path := fmt.Sprintf("%s?pageSize=%d", pkg.AlertEventsPath, pageSize)
 
 	var results AlertResult
 	resp, respErr := c.Do(http.MethodGet, path, "", nil)
