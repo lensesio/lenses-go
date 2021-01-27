@@ -1,11 +1,8 @@
 package api
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -281,66 +278,6 @@ func (c *Client) SetAlertSettingsProducerCondition(alertID, conditionID, topic s
 	}
 
 	return nil
-}
-
-// AlertHandler is the type of func that can be registered to receive alerts via the `GetAlertsLive`.
-type AlertHandler func(Alert) error
-
-// GetAlertsLive receives alert notifications in real-time from the server via a Send Server Event endpoint.
-func (c *Client) GetAlertsLive(handler AlertHandler) error {
-	resp, err := c.Do(http.MethodGet, pkg.AlertsPathSSE, contentTypeJSON, nil, func(r *http.Request) error {
-		r.Header.Add(acceptHeaderKey, "application/json, text/event-stream")
-		return nil
-	}, schemaAPIOption)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	reader, err := c.acquireResponseBodyStream(resp)
-	if err != nil {
-		return err
-	}
-
-	streamReader := bufio.NewReader(reader)
-
-	for {
-		line, err := streamReader.ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				return nil // we read until the the end, exit with no error here.
-			}
-			return err // exit on first failure.
-		}
-
-		if len(line) < shiftN+1 { // even more +1 for the actual event.
-			// almost empty or totally invalid line,
-			// empty message maybe,
-			// we don't care, we ignore them at any way.
-			continue
-		}
-
-		if !bytes.HasPrefix(line, dataPrefix) {
-			return fmt.Errorf("client: see: fail to read the event, the incoming message has no [%s] prefix", string(dataPrefix))
-		}
-
-		message := line[shiftN:] // we need everything after the 'data:'.
-
-		if len(message) < 2 {
-			continue // do NOT stop here, let the connection active.
-		}
-
-		alert := Alert{}
-
-		if err = json.Unmarshal(message, &alert); err != nil {
-			// exit on first error here as well.
-			return err
-		}
-
-		if err = handler(alert); err != nil {
-			return err // stop on first error by the caller.
-		}
-	}
 }
 
 // GetAlerts returns the registered alerts.
