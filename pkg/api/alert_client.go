@@ -325,24 +325,12 @@ func (c *Client) GetAlertSetting(id int) (setting AlertSetting, err error) {
 		return
 	}
 
-	for _, v := range resp.Categories.Consumers {
-		if v.ID == id {
-			setting = v
-			return
-		}
-	}
-
-	for _, v := range resp.Categories.Infrastructure {
-		if v.ID == id {
-			setting = v
-			return
-		}
-	}
-
-	for _, v := range resp.Categories.Producers {
-		if v.ID == id {
-			setting = v
-			return
+	for _, category := range resp.Categories.allCategories() {
+		for _, v := range category {
+			if v.ID == id {
+				setting = v
+				return
+			}
 		}
 	}
 

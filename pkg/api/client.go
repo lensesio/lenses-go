@@ -3392,8 +3392,18 @@ type (
 		Infrastructure []AlertSetting `json:"infrastructure" header:"Infrastructure"`
 		Consumers      []AlertSetting `json:"consumers" header:"Consumers"`
 		Producers      []AlertSetting `json:"Data Produced" header:"Producers"`
+		Apps           []AlertSetting `json:"Apps" header:"Apps"`
 	}
 )
+
+func (categoryMap AlertSettingsCategoryMap) allCategories() [][]AlertSetting {
+	return [][]AlertSetting{
+		categoryMap.Apps,
+		categoryMap.Consumers,
+		categoryMap.Producers,
+		categoryMap.Infrastructure,
+	}
+}
 
 type (
 	//AlertResult  alerts in a paging format
