@@ -81,6 +81,19 @@ type AlertConditionRequestv1 struct {
 	Channels  []string     `json:"channels" yaml:"channels"`
 }
 
+// ConsumerAlertConditionRequestv1 represents the schema of /api/v1/alert/settings/{alert_setting_id}/conditions payload for consumer
+type ConsumerAlertConditionRequestv1 struct {
+	Condition ConsumerConditionDsl `json:"condition" yaml:"condition"`
+	Channels  []string             `json:"channels" yaml:"channels"`
+}
+
+// ConsumerConditionDsl represents the consumer specific payload expected at /api/v1/alert/settings/{alert_setting_id}/conditions
+type ConsumerConditionDsl struct {
+	Group     string `json:"group"`
+	Threshold int    `json:"threshold"`
+	Topic     string `json:"topic"`
+}
+
 // DataProduced is the payload for Producer's alert type category
 type DataProduced struct {
 	ConnectionName string    `json:"connectionName" yaml:"connectionName"`
@@ -100,6 +113,13 @@ type ProducerAlertSettings struct {
 	ID               int                       `json:"alert" yaml:"alert"`
 	Description      string                    `json:"description" yaml:"description"`
 	ConditionDetails []AlertConditionRequestv1 `json:"conditions" yaml:"conditions"`
+}
+
+//ConsumerAlertSettings is the struct used for importing/exporting consumer alert settings
+type ConsumerAlertSettings struct {
+	ID               int                               `json:"alert" yaml:"alert"`
+	Description      string                            `json:"description" yaml:"description"`
+	ConditionDetails []ConsumerAlertConditionRequestv1 `json:"conditions" yaml:"conditions"`
 }
 
 func constructQueryString(page int, pageSize int, sortField, sortOrder, templateName, channelName string) (query string) {
@@ -242,6 +262,25 @@ func (c *Client) CreateAlertSettingsCondition(alertID, condition string, channel
 	return nil
 }
 
+// SetAlertSettingsConsumerCondition handles both POST to `/api/v1/alert/settings/{alert_setting_id}/conditions` and
+// PUT to `/api/v1/alert/settings/{alert_setting_id}/conditions/{condition_id}` that handles Consumer type of alert category payloads
+// TO-DO: updating not handled yet. Above 'CreateAlertSettingsCondtion' is the legacy
+func (c *Client) SetAlertSettingsConsumerCondition(alertID string, consumerAlert ConsumerAlertConditionRequestv1) error {
+	jsonPayload, err := json.Marshal(consumerAlert)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
+	_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // SetAlertSettingsProducerCondition handles both POST to `/api/v1/alert/settings/{alert_setting_id}/conditions` and
 // PUT to `/api/v1/alert/settings/{alert_setting_id}/conditions/{condition_id}` that handles Producer type of alert category payloads
 func (c *Client) SetAlertSettingsProducerCondition(alertID, conditionID, topic string, threshold Threshold, duration string, channels []string) error {
@@ -325,24 +364,12 @@ func (c *Client) GetAlertSetting(id int) (setting AlertSetting, err error) {
 		return
 	}
 
-	for _, v := range resp.Categories.Consumers {
-		if v.ID == id {
-			setting = v
-			return
-		}
-	}
-
-	for _, v := range resp.Categories.Infrastructure {
-		if v.ID == id {
-			setting = v
-			return
-		}
-	}
-
-	for _, v := range resp.Categories.Producers {
-		if v.ID == id {
-			setting = v
-			return
+	for _, category := range resp.Categories.allCategories() {
+		for _, v := range category {
+			if v.ID == id {
+				setting = v
+				return
+			}
 		}
 	}
 
