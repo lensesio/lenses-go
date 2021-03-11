@@ -2865,12 +2865,13 @@ const (
 
 // ACL is the type which defines a single Apache Access Control List.
 type ACL struct {
-	ResourceName   string            `json:"resourceName" yaml:"resourceName" header:"Name"`           // required.
-	ResourceType   ACLResourceType   `json:"resourceType" yaml:"resourceType" header:"Type"`           // required.
-	Principal      string            `json:"principal" yaml:"principal" header:"Principal"`            // required.
 	PermissionType ACLPermissionType `json:"permissionType" yaml:"permissionType" header:"Permission"` // required.
-	Host           string            `json:"host" yaml:"host" header:"Host"`                           // required.
+	Principal      string            `json:"principal" yaml:"principal" header:"Principal"`            // required.
 	Operation      ACLOperation      `json:"operation" yaml:"operation" header:"Operation"`            // required.
+	ResourceType   ACLResourceType   `json:"resourceType" yaml:"resourceType" header:"Resource Type"`  // required.
+	PatternType    string            `json:"patternType" yaml:"patternType" header:"Pattern type"`
+	ResourceName   string            `json:"resourceName" yaml:"resourceName" header:"Name"` // required.
+	Host           string            `json:"host" yaml:"host" header:"Host"`                 // required.
 }
 
 // Validate force validates the acl's resource type, permission type and operation.
@@ -2885,6 +2886,8 @@ func (acl *ACL) Validate() error {
 	acl.ResourceType = ACLResourceType(strings.ToTitle(string(acl.ResourceType)))
 	acl.PermissionType = ACLPermissionType(strings.ToTitle(string(acl.PermissionType)))
 	acl.Operation = ACLOperation(strings.ToTitle(string(acl.Operation)))
+	// No need to do any special handling, just pass it to Lenses
+	acl.PatternType = strings.ToUpper(acl.PatternType)
 
 	if !acl.Operation.isValidForResourceType(acl.ResourceType) {
 		validOps := ACLOperations[acl.ResourceType]
@@ -2897,10 +2900,6 @@ func (acl *ACL) Validate() error {
 		}
 
 		return fmt.Errorf(errMsg)
-	}
-
-	if acl.Host == "" {
-		acl.Host = "*" // wildcard, all.
 	}
 
 	return nil
