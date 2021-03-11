@@ -1419,8 +1419,8 @@ type CreateProcessorPayload struct {
 	Runners     int    `json:"runnerCount" yaml:"runnerCount"`
 	ClusterName string `json:"cluster,omitempty" yaml:"cluster"`
 	Namespace   string `json:"namespace,omitempty" yaml:"namespace"`
-	Pipeline    string `json:"pipeline" yaml:"pipeline"`     // defaults to Name if not set.
-	ProcessorID string `json:"appId,omitempty" yaml:"appId"` //not required
+	Pipeline    string `json:"pipeline" yaml:"pipeline"`                 // defaults to Name if not set.
+	ProcessorID string `json:"processorId,omitempty" yaml:"processorId"` //not required
 }
 
 // ProcessorAsRequest returns a proccessor as a CreateProcessorPayload
@@ -1432,12 +1432,12 @@ func (p *ProcessorStream) ProcessorAsRequest() CreateProcessorPayload {
 		ClusterName: p.ClusterName,
 		Namespace:   p.Namespace,
 		Pipeline:    p.Pipeline,
-		ProcessorID: p.ID,
+		ProcessorID: p.ProcessorID,
 	}
 }
 
 // CreateProcessor creates a new LSQL processor.
-func (c *Client) CreateProcessor(name string, sql string, runners int, clusterName, namespace, pipeline string, appID string) error {
+func (c *Client) CreateProcessor(name string, sql string, runners int, clusterName, namespace, pipeline string, processorID string) error {
 	if name == "" {
 		return errRequired("name")
 	}
@@ -1455,7 +1455,7 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 	}
 
 	var payload CreateProcessorPayload
-	if appID == "" {
+	if processorID == "" {
 		payload = CreateProcessorPayload{
 			Name:        name,
 			SQL:         sql,
@@ -1472,7 +1472,7 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 			ClusterName: clusterName,
 			Namespace:   namespace,
 			Pipeline:    pipeline,
-			ProcessorID: appID,
+			ProcessorID: processorID,
 		}
 	}
 
