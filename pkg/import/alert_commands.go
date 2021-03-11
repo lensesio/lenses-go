@@ -8,7 +8,6 @@ import (
 
 	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/pkg"
-	"github.com/lensesio/lenses-go/pkg/alert"
 	"github.com/lensesio/lenses-go/pkg/api"
 	config "github.com/lensesio/lenses-go/pkg/configs"
 	"github.com/lensesio/lenses-go/pkg/utils"
@@ -47,43 +46,6 @@ func NewImportAlertSettingsCommand() *cobra.Command {
 	bite.CanBeSilent(cmd)
 	cmd.Flags().Set("silent", "true")
 	return cmd
-}
-
-func loadAlertSettings(client *api.Client, cmd *cobra.Command, loadpath string) error {
-
-	asc, err := client.GetAlertSettingConditions(2000)
-
-	if err != nil {
-		return err
-	}
-
-	var conds alert.SettingConditionPayloads
-
-	if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, "alert-setting.yaml"), &conds); err != nil {
-		return fmt.Errorf("error loading file [%s]", loadpath)
-	}
-
-	fmt.Fprintf(cmd.OutOrStdout(), "loading alert conditions from alert-setting.yaml\n")
-	alertID := conds.AlertID
-
-	for _, condition := range conds.Conditions {
-		found := false
-		for _, v := range asc {
-			if v == condition {
-				found = true
-			}
-		}
-
-		if found {
-			continue
-		}
-
-		if err := client.CreateAlertSettingsCondition(strconv.Itoa(alertID), condition, []string{}); err != nil {
-			return fmt.Errorf("error creating/updating alert setting from from [%d] [%s] [%s]", alertID, loadpath, err.Error())
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "created/updated condition [%s]\n", condition)
-	}
-	return nil
 }
 
 func loadConsumerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath string) error {
