@@ -2,7 +2,7 @@
 
 pipeline {
     agent {
-        label 'docker'
+        label 'docker && ephemeral'
     }
 
     options {

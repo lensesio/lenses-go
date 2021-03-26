@@ -381,16 +381,41 @@ func (c *Client) EnableAlertSetting(id int, enable bool) error {
 	return c.UpdateAlertSettings(AlertSettingsPayload{AlertID: strconv.Itoa(id), Enable: enable, Channels: []string{}})
 }
 
-// AlertSettingConditions map with UUID as key and the condition as value, used on `GetAlertSettingConditions`.
-type AlertSettingConditions map[string]string
+// AlertSettingCondition - used to represent alert settings,
+//   `ConditionDsl` is generic to handle both "Consumer lag" and "Data Produced" rules
+type AlertSettingCondition struct {
+	ID           string                 `json:"id,omitempty" header:"ID,text"`
+	ConditionDsl map[string]interface{} `json:"conditionDsl" header:"conditionDsl,text"`
+	Channels     []string               `json:"channels" header:"channels,text"`
+}
 
-// GetAlertSettingConditions returns alert setting's conditions as a map of strings.
-func (c *Client) GetAlertSettingConditions(id int) (AlertSettingConditions, error) {
+// GetAlertSettingConditions returns alert setting's conditions as an array of `AlertSettingCondition`
+func (c *Client) GetAlertSettingConditions(id int) ([]AlertSettingCondition, error) {
+	conditions := make([]AlertSettingCondition, 0)
+
 	resp, err := c.GetAlertSetting(id)
 	if err != nil {
-		return AlertSettingConditions{}, err
+		return conditions, err
 	}
-	return resp.Conditions, err
+
+	for id, details := range resp.ConditionDetails {
+		channels := make([]string, 0)
+		for _, ch := range details.Channels {
+			channels = append(channels, ch.Name)
+		}
+
+		conditionDslFlattened := make(map[string]interface{})
+		flatten("", details.ConditionDsl, conditionDslFlattened)
+
+		d := AlertSettingCondition{
+			ID:           id,
+			ConditionDsl: conditionDslFlattened,
+			Channels:     channels,
+		}
+		conditions = append(conditions, d)
+	}
+
+	return conditions, err
 }
 
 // DeleteAlertSettingCondition deletes a condition from an alert setting.
@@ -402,4 +427,22 @@ func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID s
 	}
 
 	return resp.Body.Close()
+}
+
+func flatten(prefix string, src map[string]interface{}, dest map[string]interface{}) {
+	if len(prefix) > 0 {
+		prefix += "."
+	}
+	for k, v := range src {
+		switch child := v.(type) {
+		case map[string]interface{}:
+			flatten(prefix+k, child, dest)
+		case []interface{}:
+			for i := 0; i < len(child); i++ {
+				dest[prefix+k+"."+strconv.Itoa(i)] = child[i]
+			}
+		default:
+			dest[prefix+k] = v
+		}
+	}
 }
