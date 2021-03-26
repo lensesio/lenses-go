@@ -51,5 +51,16 @@ func writeACLs(cmd *cobra.Command, client *api.Client) error {
 		return err
 	}
 
-	return utils.WriteFile(landscapeDir, pkg.AclsPath, fileName, output, acls)
+	if len(acls) == 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "no available ACLs for export\n")
+		return nil
+	}
+
+	if err := utils.WriteFile(landscapeDir, pkg.AclsPath, fileName, output, acls); err != nil {
+		return err
+	}
+
+	exportPath := fmt.Sprintf("%s/%s/%s", landscapeDir, pkg.AclsPath, fileName)
+	fmt.Fprintf(cmd.OutOrStdout(), "ACLs have been successfully exported at %s\n", exportPath)
+	return nil
 }
