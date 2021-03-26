@@ -109,6 +109,9 @@ func writeProcessors(cmd *cobra.Command, client *api.Client, id, cluster, namesp
 		if dependents {
 			handleDependents(cmd, client, processor.ID)
 		}
+
+		exportPath := fmt.Sprintf("%s/%s/%s", landscapeDir, pkg.SQLPath, fileName)
+		fmt.Printf("processor '%s' has been successfully exported at %s\n", request.Name, exportPath)
 	}
 
 	return nil

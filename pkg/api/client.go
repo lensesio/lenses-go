@@ -1423,8 +1423,8 @@ type CreateProcessorPayload struct {
 	Runners     int    `json:"runnerCount" yaml:"runnerCount"`
 	ClusterName string `json:"cluster,omitempty" yaml:"cluster"`
 	Namespace   string `json:"namespace,omitempty" yaml:"namespace"`
-	Pipeline    string `json:"pipeline" yaml:"pipeline"`     // defaults to Name if not set.
-	ProcessorID string `json:"appId,omitempty" yaml:"appId"` //not required
+	Pipeline    string `json:"pipeline" yaml:"pipeline"`                 // defaults to Name if not set.
+	ProcessorID string `json:"processorId,omitempty" yaml:"processorId"` //not required
 }
 
 // ProcessorAsRequest returns a proccessor as a CreateProcessorPayload
@@ -1436,12 +1436,12 @@ func (p *ProcessorStream) ProcessorAsRequest() CreateProcessorPayload {
 		ClusterName: p.ClusterName,
 		Namespace:   p.Namespace,
 		Pipeline:    p.Pipeline,
-		ProcessorID: p.ID,
+		ProcessorID: p.ProcessorID,
 	}
 }
 
 // CreateProcessor creates a new LSQL processor.
-func (c *Client) CreateProcessor(name string, sql string, runners int, clusterName, namespace, pipeline string, appID string) error {
+func (c *Client) CreateProcessor(name string, sql string, runners int, clusterName, namespace, pipeline string, processorID string) error {
 	if name == "" {
 		return errRequired("name")
 	}
@@ -1459,7 +1459,7 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 	}
 
 	var payload CreateProcessorPayload
-	if appID == "" {
+	if processorID == "" {
 		payload = CreateProcessorPayload{
 			Name:        name,
 			SQL:         sql,
@@ -1476,7 +1476,7 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 			ClusterName: clusterName,
 			Namespace:   namespace,
 			Pipeline:    pipeline,
-			ProcessorID: appID,
+			ProcessorID: processorID,
 		}
 	}
 
@@ -2869,12 +2869,13 @@ const (
 
 // ACL is the type which defines a single Apache Access Control List.
 type ACL struct {
-	ResourceName   string            `json:"resourceName" yaml:"resourceName" header:"Name"`           // required.
-	ResourceType   ACLResourceType   `json:"resourceType" yaml:"resourceType" header:"Type"`           // required.
-	Principal      string            `json:"principal" yaml:"principal" header:"Principal"`            // required.
 	PermissionType ACLPermissionType `json:"permissionType" yaml:"permissionType" header:"Permission"` // required.
-	Host           string            `json:"host" yaml:"host" header:"Host"`                           // required.
+	Principal      string            `json:"principal" yaml:"principal" header:"Principal"`            // required.
 	Operation      ACLOperation      `json:"operation" yaml:"operation" header:"Operation"`            // required.
+	ResourceType   ACLResourceType   `json:"resourceType" yaml:"resourceType" header:"Resource Type"`  // required.
+	PatternType    string            `json:"patternType" yaml:"patternType" header:"Pattern type"`
+	ResourceName   string            `json:"resourceName" yaml:"resourceName" header:"Name"` // required.
+	Host           string            `json:"host" yaml:"host" header:"Host"`                 // required.
 }
 
 // Validate force validates the acl's resource type, permission type and operation.
@@ -2889,6 +2890,8 @@ func (acl *ACL) Validate() error {
 	acl.ResourceType = ACLResourceType(strings.ToTitle(string(acl.ResourceType)))
 	acl.PermissionType = ACLPermissionType(strings.ToTitle(string(acl.PermissionType)))
 	acl.Operation = ACLOperation(strings.ToTitle(string(acl.Operation)))
+	// No need to do any special handling, just pass it to Lenses
+	acl.PatternType = strings.ToUpper(acl.PatternType)
 
 	if !acl.Operation.isValidForResourceType(acl.ResourceType) {
 		validOps := ACLOperations[acl.ResourceType]
@@ -2901,10 +2904,6 @@ func (acl *ACL) Validate() error {
 		}
 
 		return fmt.Errorf(errMsg)
-	}
-
-	if acl.Host == "" {
-		acl.Host = "*" // wildcard, all.
 	}
 
 	return nil
