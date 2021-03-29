@@ -1423,8 +1423,8 @@ type CreateProcessorPayload struct {
 	Runners     int    `json:"runnerCount" yaml:"runnerCount"`
 	ClusterName string `json:"cluster,omitempty" yaml:"cluster"`
 	Namespace   string `json:"namespace,omitempty" yaml:"namespace"`
-	Pipeline    string `json:"pipeline" yaml:"pipeline"`                 // defaults to Name if not set.
-	ProcessorID string `json:"processorId,omitempty" yaml:"processorId"` //not required
+	Pipeline    string `json:"pipeline,omitempty" yaml:"pipeline"`       // not required
+	ProcessorID string `json:"processorId,omitempty" yaml:"processorId"` // not required
 }
 
 // ProcessorAsRequest returns a proccessor as a CreateProcessorPayload
@@ -1454,33 +1454,19 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 		runners = 1
 	}
 
-	if pipeline == "" {
-		pipeline = name
-	}
-
 	var payload CreateProcessorPayload
-	if processorID == "" {
-		payload = CreateProcessorPayload{
-			Name:        name,
-			SQL:         sql,
-			Runners:     runners,
-			ClusterName: clusterName,
-			Namespace:   namespace,
-			Pipeline:    pipeline,
-		}
-	} else {
-		payload = CreateProcessorPayload{
-			Name:        name,
-			SQL:         sql,
-			Runners:     runners,
-			ClusterName: clusterName,
-			Namespace:   namespace,
-			Pipeline:    pipeline,
-			ProcessorID: processorID,
-		}
+	payload = CreateProcessorPayload{
+		Name:        name,
+		SQL:         sql,
+		Runners:     runners,
+		ClusterName: clusterName,
+		Namespace:   namespace,
+		Pipeline:    pipeline,
+		ProcessorID: processorID,
 	}
 
 	send, err := json.Marshal(payload)
+
 	if err != nil {
 		return err
 	}
