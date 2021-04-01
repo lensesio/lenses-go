@@ -68,6 +68,7 @@ func isOK(resp *http.Response) bool {
 	return resp.StatusCode == http.StatusOK ||
 		resp.StatusCode == http.StatusCreated || /* see CreateOrUpdateConnector for the `StatusCreated` */
 		resp.StatusCode == http.StatusAccepted || /* see PauseConnector for the `StatusAccepted` */
+		resp.StatusCode == http.StatusNoContent || /* see TopicSettings for the `StatusNoContent` */
 		(resp.Request.Method == http.MethodDelete && resp.StatusCode == http.StatusNoContent) || /* see RemoveConnector for the `StatusNoContnet` */
 		(resp.Request.Method == http.MethodPost && resp.StatusCode == http.StatusNoContent) || /* see Restart tasks for the `StatusNoContnet` */
 		(resp.StatusCode == http.StatusBadRequest && resp.Request.Method == http.MethodGet) /*||*/ /* for things like LSQL which can return 400 if invalid query, we need to read the json and print the error message */

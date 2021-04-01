@@ -63,6 +63,7 @@ export policies --dir my-dir --resource-name my-policy
 export connections --dir my-dir
 export connections --dir my-dir --connection-id 1
 export groups --dir groups
+export topic-settings --dir topic-settings
 export serviceaccounts --dir serviceaccounts`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -81,6 +82,7 @@ export serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewExportGroupsCommand())
 	cmd.AddCommand(NewExportServiceAccountsCommand())
 	cmd.AddCommand(NewExportAlertChannelsCommand())
+	cmd.AddCommand(NewExportTopicSettingsCmd())
 
 	return cmd
 }
