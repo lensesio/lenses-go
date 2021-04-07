@@ -13,6 +13,7 @@ require (
 	github.com/c-bata/go-prompt v0.2.3
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fatih/color v1.9.0 // indirect
+	github.com/google/go-cmp v0.3.0
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/jcmturner/gofork v1.0.0 // indirect
