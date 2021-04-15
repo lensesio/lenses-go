@@ -250,6 +250,15 @@ pipeline {
             }
         }
     }
+
+    post {
+        always {
+            script {
+                env.JIRA_BRANCH = "${env.CHANGE_BRANCH ? "${env.CHANGE_BRANCH}" : "${env.BRANCH_NAME}"}"
+                jiraSendBuildInfo site: 'landoop.atlassian.net', branch: "${env.JIRA_BRANCH}"
+            }
+        }
+    }
 }
 
 // Jenkins job description
