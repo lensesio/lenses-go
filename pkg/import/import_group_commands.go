@@ -21,6 +21,7 @@ import schemas --landscape my-acls-dir
 import topics --landscape my-acls-dir
 import policies --landscape my-acls-dir
 import groups --dir groups
+import topic-settings --dir topic-settings
 import serviceaccounts --dir serviceaccounts`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
@@ -38,6 +39,7 @@ import serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewImportGroupsCommand())
 	cmd.AddCommand(NewImportServiceAccountsCommand())
 	cmd.AddCommand(NewImportAlertChannelsCommand())
+	cmd.AddCommand(ImportTopicSettingsCmd())
 
 	return cmd
 }
