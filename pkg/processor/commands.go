@@ -174,7 +174,7 @@ func NewProcessorViewCommand() *cobra.Command {
 //NewProcessorCreateCommand creates `processor create` command
 func NewProcessorCreateCommand() *cobra.Command {
 	// the processorName and sql are the required.
-	var processor api.CreateProcessorPayload
+	var processor api.CreateProcessorFilePayload
 
 	cmd := &cobra.Command{
 		Use:              `create`,
