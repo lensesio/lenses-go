@@ -1416,8 +1416,8 @@ func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 const processorsPath = "api/v1/streams"
 const deploymentTargetPath = "api/v1/deployment/targets"
 
-// CreateProcessorPayload holds the data to be sent from `CreateProcessor`.
-type CreateProcessorPayload struct {
+// CreateProcessorFilePayload holds the data to be sent from `CreateProcessor`.
+type CreateProcessorFilePayload struct {
 	Name        string `json:"name" yaml:"name"` // required
 	SQL         string `json:"sql" yaml:"sql"`   // required
 	Runners     int    `json:"runnerCount" yaml:"runnerCount"`
@@ -1427,9 +1427,20 @@ type CreateProcessorPayload struct {
 	ProcessorID string `json:"processorId,omitempty" yaml:"processorId"` //not required
 }
 
-// ProcessorAsRequest returns a proccessor as a CreateProcessorPayload
-func (p *ProcessorStream) ProcessorAsRequest() CreateProcessorPayload {
-	return CreateProcessorPayload{
+// CreateProcessorRequestPayload holds the data to be sent from `CreateProcessor`.
+type CreateProcessorRequestPayload struct {
+	Name        string `json:"name" yaml:"name"` // required
+	SQL         string `json:"sql" yaml:"sql"`   // required
+	Runners     int    `json:"runnerCount" yaml:"runnerCount"`
+	ClusterName string `json:"cluster,omitempty" yaml:"cluster"`
+	Namespace   string `json:"namespace,omitempty" yaml:"namespace"`
+	Pipeline    string `json:"pipeline,omitempty" yaml:"pipeline"` // not required
+	AppID       string `json:"appId,omitempty" yaml:"appId"`       // not required
+}
+
+// ProcessorAsFile returns a proccessor as a CreateProcessorFilePayload
+func (p *ProcessorStream) ProcessorAsFile() CreateProcessorFilePayload {
+	return CreateProcessorFilePayload{
 		Name:        p.Name,
 		SQL:         p.SQL,
 		Runners:     p.Runners,
@@ -1458,26 +1469,14 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 		pipeline = name
 	}
 
-	var payload CreateProcessorPayload
-	if processorID == "" {
-		payload = CreateProcessorPayload{
-			Name:        name,
-			SQL:         sql,
-			Runners:     runners,
-			ClusterName: clusterName,
-			Namespace:   namespace,
-			Pipeline:    pipeline,
-		}
-	} else {
-		payload = CreateProcessorPayload{
-			Name:        name,
-			SQL:         sql,
-			Runners:     runners,
-			ClusterName: clusterName,
-			Namespace:   namespace,
-			Pipeline:    pipeline,
-			ProcessorID: processorID,
-		}
+	var payload = CreateProcessorRequestPayload{
+		Name:        name,
+		SQL:         sql,
+		Runners:     runners,
+		ClusterName: clusterName,
+		Namespace:   namespace,
+		Pipeline:    pipeline,
+		AppID:       processorID,
 	}
 
 	send, err := json.Marshal(payload)
@@ -1494,11 +1493,6 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 }
 
 type (
-	//ProcessorRequests describes the requests required to create the current processors
-	ProcessorRequests struct {
-		Streams []CreateProcessorPayload `json:"streams"`
-	}
-
 	// ProcessorsResult describes the data that are being received from the `GetProcessors`.
 	ProcessorsResult struct {
 		Streams []ProcessorStream `json:"streams"`
