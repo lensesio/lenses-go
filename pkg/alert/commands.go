@@ -418,7 +418,7 @@ func NewGetAlertChannelsCommand() *cobra.Command {
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if details {
-				alertchannelsWithDetails, err := config.Client.GetAlertChannelsWithDetails(page, pageSize, sortField, sortOrder, templateName, channelName)
+				alertchannelsWithDetails, err := config.Client.GetChannelsWithDetails(pkg.AlertChannelsPath, page, pageSize, sortField, sortOrder, templateName, channelName)
 				if err != nil {
 					return fmt.Errorf("failed to retrieve alerts' channels. Error: [%s]", err.Error())
 				}

@@ -121,19 +121,6 @@ type ConsumerAlertSettings struct {
 	ConditionDetails []ConsumerAlertConditionRequestv1 `json:"conditions" yaml:"conditions"`
 }
 
-// TODO AC-1458 unify with audits
-// GetAlertChannelsWithDetails handles the API call get the list of alert channels with details
-func (c *Client) GetAlertChannelsWithDetails(page int, pageSize int, sortField, sortOrder, templateName, channelName string) (response AlertChannelResponseWithDetails, err error) {
-	path := constructQueryString(pkg.AlertChannelsPath, page, pageSize, sortField, sortOrder, templateName, channelName)
-	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	err = c.ReadJSON(resp, &response)
-	return
-}
-
 // DeleteAlertChannel handles the deletion of a channel
 func (c *Client) DeleteAlertChannel(channelID string) error {
 	path := fmt.Sprintf("%s/%s", pkg.AlertChannelsPath, channelID)

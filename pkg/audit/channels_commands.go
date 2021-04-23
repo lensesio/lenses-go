@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO AC-1458  - a parent command ?
+
 //NewGetAuditChannelsCommand creates the `auditchannels` command
 func NewGetAuditChannelsCommand() *cobra.Command {
 	var (
@@ -28,16 +30,17 @@ func NewGetAuditChannelsCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO AC-1458
-			// if details {
-			// 	auditchannelsWithDetails, err := config.Client.GetAuditChannelsWithDetails(page, pageSize, sortField, sortOrder, templateName, channelName)
-			// 	if err != nil {
-			// 		return fmt.Errorf("failed to retrieve audits' channels. Error: [%s]", err.Error())
-			// 	}
-			// 	return bite.PrintObject(cmd, auditchannelsWithDetails.Values)
-			// }
+			auditChannelsPath := pkg.AuditChannelsPath
 
-			auditchannels, err := config.Client.GetChannels(pkg.AuditChannelsPath, page, pageSize, sortField, sortOrder, templateName, channelName)
+			if details {
+				auditchannelsWithDetails, err := config.Client.GetChannelsWithDetails(auditChannelsPath, page, pageSize, sortField, sortOrder, templateName, channelName)
+				if err != nil {
+					return fmt.Errorf("failed to retrieve audits' channels. Error: [%s]", err.Error())
+				}
+				return bite.PrintObject(cmd, auditchannelsWithDetails.Values)
+			}
+
+			auditchannels, err := config.Client.GetChannels(auditChannelsPath, page, pageSize, sortField, sortOrder, templateName, channelName)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve audits' channels. Error: [%s]", err.Error())
 			}
