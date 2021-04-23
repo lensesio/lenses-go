@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 
 	"github.com/lensesio/lenses-go/pkg"
@@ -122,45 +121,10 @@ type ConsumerAlertSettings struct {
 	ConditionDetails []ConsumerAlertConditionRequestv1 `json:"conditions" yaml:"conditions"`
 }
 
-func constructQueryString(page int, pageSize int, sortField, sortOrder, templateName, channelName string) (query string) {
-	v := url.Values{}
-	v.Add("pageSize", strconv.Itoa(pageSize))
-
-	if page != 0 {
-		v.Add("page", strconv.Itoa(page))
-	}
-	if sortField != "" {
-		v.Add("sortField", sortField)
-	}
-	if sortOrder != "" {
-		v.Add("sortOrder", sortOrder)
-	}
-	if templateName != "" {
-		v.Add("templateName", templateName)
-	}
-	if channelName != "" {
-		v.Add("channelName", channelName)
-	}
-
-	query = fmt.Sprintf("%s?%s", pkg.AlertChannelsPath, v.Encode())
-	return
-}
-
-// GetAlertChannels handles the API call get the list of alert channels
-func (c *Client) GetAlertChannels(page int, pageSize int, sortField, sortOrder, templateName, channelName string) (response AlertChannelResponse, err error) {
-	path := constructQueryString(page, pageSize, sortField, sortOrder, templateName, channelName)
-	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	err = c.ReadJSON(resp, &response)
-	return
-}
-
+// TODO AC-1458 unify with audits
 // GetAlertChannelsWithDetails handles the API call get the list of alert channels with details
 func (c *Client) GetAlertChannelsWithDetails(page int, pageSize int, sortField, sortOrder, templateName, channelName string) (response AlertChannelResponseWithDetails, err error) {
-	path := constructQueryString(page, pageSize, sortField, sortOrder, templateName, channelName)
+	path := constructQueryString(pkg.AlertChannelsPath, page, pageSize, sortField, sortOrder, templateName, channelName)
 	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil)
 	if err != nil {
 		return

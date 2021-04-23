@@ -32,6 +32,7 @@ const (
 	ConsumersGroupPath         = "api/consumers"
 	ElasticsearchIndexesPath   = "/api/elastic/indexes"
 	AlertChannelsPath          = "api/v1/alert/channels"
+	AuditChannelsPath          = "api/v1/audit/channels"
 	AlertChannelTemplatesPath  = "api/v1/alert/channel-templates"
 	AuditChannelTemplatesPath  = "api/v1/audit/channel-templates"
 	AlertsSettingsPath         = "api/v1/alert/settings"

@@ -9,6 +9,7 @@ import (
 
 	"github.com/kataras/golog"
 	"github.com/lensesio/bite"
+	"github.com/lensesio/lenses-go/pkg"
 	"github.com/lensesio/lenses-go/pkg/api"
 	config "github.com/lensesio/lenses-go/pkg/configs"
 	"github.com/spf13/cobra"
@@ -424,7 +425,7 @@ func NewGetAlertChannelsCommand() *cobra.Command {
 				return bite.PrintObject(cmd, alertchannelsWithDetails.Values)
 			}
 
-			alertchannels, err := config.Client.GetAlertChannels(page, pageSize, sortField, sortOrder, templateName, channelName)
+			alertchannels, err := config.Client.GetChannels(pkg.AlertChannelsPath, page, pageSize, sortField, sortOrder, templateName, channelName)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve alerts' channels. Error: [%s]", err.Error())
 			}

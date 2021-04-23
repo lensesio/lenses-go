@@ -220,7 +220,7 @@ func NewExportAlertChannelsCommand() *cobra.Command {
 }
 
 func writeAlertChannels(cmd *cobra.Command, channelName string) error {
-	channels, err := config.Client.GetAlertChannels(1, 99999, "name", "asc", "", "")
+	channels, err := config.Client.GetChannels(pkg.AlertChannelsPath, 1, 99999, "name", "asc", "", "")
 	if err != nil {
 		return fmt.Errorf("failed to retrieve alert channels from server: [%v]", err)
 	}
