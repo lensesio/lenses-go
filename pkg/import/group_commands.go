@@ -63,11 +63,12 @@ func loadGroups(client *api.Client, cmd *cobra.Command, loadpath string) error {
 			if g.Name == group.Name {
 				found = true
 				payload := &api.Group{
-					Name:              group.Name,
-					Description:       group.Description,
-					Namespaces:        group.Namespaces,
-					ScopedPermissions: group.ScopedPermissions,
-					AdminPermissions:  group.AdminPermissions,
+					Name:                       group.Name,
+					Description:                group.Description,
+					Namespaces:                 group.Namespaces,
+					ScopedPermissions:          group.ScopedPermissions,
+					AdminPermissions:           group.AdminPermissions,
+					ConnectClustersPermissions: group.ConnectClustersPermissions,
 				}
 
 				if err := config.Client.UpdateGroup(payload); err != nil {
