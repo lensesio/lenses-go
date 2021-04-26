@@ -80,7 +80,7 @@ func writeProcessors(cmd *cobra.Command, client *api.Client, id, cluster, namesp
 				continue
 			}
 		}
-		request := processor.ProcessorAsRequest()
+		request := processor.ProcessorAsFile()
 
 		output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
