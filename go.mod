@@ -13,9 +13,9 @@ require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/briandowns/spinner v1.12.0 // indirect
 	github.com/c-bata/go-prompt v0.2.6
+	github.com/cheekybits/is v0.0.0-20150225183255-68e9c0620927 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/frankban/quicktest v1.11.3 // indirect
 	github.com/google/go-cmp v0.5.4
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/vault/api v1.0.4
@@ -25,14 +25,13 @@ require (
 	github.com/kataras/golog v0.1.7
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
+	github.com/kr/pretty v0.2.1 // indirect
 	github.com/lensesio/bite v0.0.0-20201125135013-f88b399f1cad
 	github.com/lensesio/tableprinter v0.0.0-20201125135848-89e81fc956e7
-	github.com/mattn/go-runewidth v0.0.10 // indirect
-	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
-	github.com/mitchellh/mapstructure v1.4.1
-	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
+	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
+	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
+	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pkg/errors v0.9.1
-	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5

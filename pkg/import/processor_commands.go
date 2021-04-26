@@ -56,7 +56,7 @@ func loadProcessors(client *api.Client, cmd *cobra.Command, loadpath string) err
 
 	for _, file := range files {
 
-		var processor api.CreateProcessorPayload
+		var processor api.CreateProcessorFilePayload
 
 		if err := load(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &processor); err != nil {
 			return err
