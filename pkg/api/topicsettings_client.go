@@ -42,14 +42,14 @@ type Naming struct {
 // TopicSettingsResponse contains Config, Naming and IsApplicable keys
 type TopicSettingsResponse struct {
 	Config       TopicConfiguration `json:"config" yaml:"config"`
-	Naming       Naming             `json:"naming" yaml:"naming"`
+	Naming       *Naming            `json:"naming,omitempty" yaml:"naming,omitempty"`
 	IsApplicable bool               `json:"isApplicable,omitempty" yaml:"isApplicable,omitempty"`
 }
 
 // TopicSettingsRequest contains Config and Naming keys
 type TopicSettingsRequest struct {
 	Config TopicConfiguration `json:"config" yaml:"config"`
-	Naming Naming             `json:"naming,omitempty" yaml:"naming,omitempty"`
+	Naming *Naming            `json:"naming" yaml:"naming"`
 }
 
 const path = "api/v1/kafka/topic/policy"

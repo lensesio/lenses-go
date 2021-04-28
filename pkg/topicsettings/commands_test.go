@@ -138,3 +138,57 @@ func TestUpdateTopicSettingsCmdFailWithMissingFields(t *testing.T) {
 	assert.NotNil(t, err)
 	config.Client = nil
 }
+
+func TestUpdateTopicSettingsCmdFailMissingDescriptionButNotPattern(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+
+	client, err := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+
+	assert.Nil(t, err)
+
+	config.Client = client
+
+	cmd := UpdateTopicSettingsCmd()
+	_, err = test.ExecuteCommand(cmd, "update",
+		"--partitions-min=1",
+		"--replication-min=2",
+		"--retention-time-max=-1",
+		"--retention-size-max=-1",
+		"--naming-pattern=[a-zA-Z]*",
+	)
+
+	assert.Error(t, err)
+	config.Client = nil
+}
+
+func TestUpdateTopicSettingsCmdFailMissingPatternButNotDe(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+
+	client, err := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+
+	assert.Nil(t, err)
+
+	config.Client = client
+
+	cmd := UpdateTopicSettingsCmd()
+	_, err = test.ExecuteCommand(cmd, "update",
+		"--partitions-min=1",
+		"--replication-min=2",
+		"--retention-time-max=-1",
+		"--retention-size-max=-1",
+		"--naming-description=[a-zA-Z]*",
+	)
+
+	assert.Error(t, err)
+	config.Client = nil
+}
