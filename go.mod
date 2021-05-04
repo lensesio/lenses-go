@@ -22,6 +22,7 @@ require (
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect
 	github.com/lensesio/bite v0.0.0-20201125135013-f88b399f1cad
 	github.com/lensesio/tableprinter v0.0.0-20201125135848-89e81fc956e7
+	github.com/matryer/try v0.0.0-20161228173917-9ac251b645a2
 	github.com/mattn/go-runewidth v0.0.8 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
