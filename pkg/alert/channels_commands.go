@@ -77,7 +77,7 @@ func NewDeleteAlertChannelCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := config.Client.DeleteAlertChannel(channelID)
+			err := config.Client.DeleteChannel(pkg.AlertChannelsPath, channelID)
 			if err != nil {
 				return fmt.Errorf("failed to delete alert channel [%s]. [%s]", channelID, err.Error())
 			}
@@ -96,7 +96,7 @@ func NewDeleteAlertChannelCommand() *cobra.Command {
 func NewCreateAlertChannelCommand() *cobra.Command {
 	var (
 		propertiesRaw string
-		channel       = api.AlertChannelPayload{}
+		channel       = api.ChannelPayload{}
 	)
 	cmdExample := "\nalertchannels create --name=\"kafka-prd-health\" --templateName=\"Slack\" --connectionName=\"slack-connection\" --properties=\"[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]\"\n" +
 		"\n# or using YAML\nalertchannels create ./alert_chan.yml"
@@ -122,7 +122,7 @@ func NewCreateAlertChannelCommand() *cobra.Command {
 				}
 			}
 
-			if err := config.Client.CreateAlertChannel(channel); err != nil {
+			if err := config.Client.CreateChannel(channel, pkg.AlertChannelsPath); err != nil {
 				return fmt.Errorf("failed to create alert channel [%s]. [%s]", channel.Name, err.Error())
 			}
 
@@ -146,7 +146,7 @@ func NewUpdateAlertChannelCommand() *cobra.Command {
 	var (
 		propertiesRaw string
 		channelID     string
-		channel       = api.AlertChannelPayload{}
+		channel       = api.ChannelPayload{}
 	)
 
 	cmd := &cobra.Command{
@@ -170,7 +170,7 @@ func NewUpdateAlertChannelCommand() *cobra.Command {
 				}
 			}
 
-			if err := config.Client.UpdateAlertChannel(channel, channelID); err != nil {
+			if err := config.Client.UpdateChannel(channel, pkg.AlertChannelsPath, channelID); err != nil {
 				return fmt.Errorf("failed to update alert channel [%s]. [%s]", channelID, err.Error())
 			}
 
