@@ -59,9 +59,37 @@ func NewGetAuditChannelsCommand() *cobra.Command {
 	bite.CanBeSilent(cmd)
 	bite.CanPrintJSON(cmd)
 
-	// cmd.AddCommand(NewDeleteAuditChannelCommand())
+	cmd.AddCommand(NewDeleteAuditChannelCommand())
 	// cmd.AddCommand(NewCreateAuditChannelCommand())
 	// cmd.AddCommand(NewUpdateAuditChannelCommand())
+
+	return cmd
+}
+
+//NewDeleteAuditChannelCommand creates `auditchannels delete` command
+func NewDeleteAuditChannelCommand() *cobra.Command {
+	var (
+		channelID string
+	)
+
+	cmd := &cobra.Command{
+		Use:              "delete",
+		Short:            "Delete an audit channel",
+		Example:          `auditchannels delete --channelID="fa0e9b96-1048-4f4c-b776-4e96ca62f37d"`,
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := config.Client.DeleteChannel(pkg.AuditChannelsPath, channelID)
+			if err != nil {
+				return fmt.Errorf("failed to delete audit channel [%s]. [%s]", channelID, err.Error())
+			}
+			return bite.PrintInfo(cmd, "Audit channel [%s] deleted", channelID)
+		},
+	}
+
+	cmd.Flags().StringVar(&channelID, "channelID", "", "The audit channel id, e.g. d15-4960-9ea6-2ccb4d26ebb4")
+	cmd.MarkFlagRequired("channelID")
+	bite.CanBeSilent(cmd)
 
 	return cmd
 }
