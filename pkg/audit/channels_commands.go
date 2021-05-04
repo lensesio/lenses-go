@@ -3,13 +3,14 @@ package audit
 import (
 	"fmt"
 
+	"encoding/json"
+
 	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/pkg/api"
 	config "github.com/lensesio/lenses-go/pkg/configs"
 	"github.com/spf13/cobra"
 )
-
-// TODO AC-1458  - a parent command ?
 
 //NewGetAuditChannelsCommand creates the `auditchannels` command
 func NewGetAuditChannelsCommand() *cobra.Command {
@@ -60,8 +61,8 @@ func NewGetAuditChannelsCommand() *cobra.Command {
 	bite.CanPrintJSON(cmd)
 
 	cmd.AddCommand(NewDeleteAuditChannelCommand())
-	// cmd.AddCommand(NewCreateAuditChannelCommand())
-	// cmd.AddCommand(NewUpdateAuditChannelCommand())
+	cmd.AddCommand(NewCreateAuditChannelCommand())
+	cmd.AddCommand(NewUpdateAuditChannelCommand())
 
 	return cmd
 }
@@ -90,6 +91,103 @@ func NewDeleteAuditChannelCommand() *cobra.Command {
 	cmd.Flags().StringVar(&channelID, "channelID", "", "The audit channel id, e.g. d15-4960-9ea6-2ccb4d26ebb4")
 	cmd.MarkFlagRequired("channelID")
 	bite.CanBeSilent(cmd)
+
+	return cmd
+}
+
+// NewCreateAuditChannelCommand creates `auditchannels create` command
+func NewCreateAuditChannelCommand() *cobra.Command {
+	var (
+		propertiesRaw string
+		channel       = api.ChannelPayload{}
+	)
+	cmdExample := "\nauditchannels create --name=\"kafka-prd-health\" --templateName=\"Slack\" --connectionName=\"slack-connection\" --properties=\"[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]\"\n" +
+		"\n# or using YAML\nauditchannels create ./audit_chan.yml"
+
+	cmd := &cobra.Command{
+		Use:              "create",
+		Short:            "Create a new audit channel",
+		Example:          cmdExample,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": channel.Name, "connectionName": channel.ConnectionName, "templateName": channel.TemplateName, "properties": channel.Properties}); err != nil {
+				return err
+			}
+
+			if propertiesRaw != "" {
+				if err := bite.TryReadFile(propertiesRaw, &channel.Properties); err != nil {
+					// from flag as json.
+					if err = json.Unmarshal([]byte(propertiesRaw), &channel.Properties); err != nil {
+						return fmt.Errorf("unable to unmarshal the properties: [%v]", err)
+					}
+				}
+			}
+
+			if err := config.Client.CreateChannel(channel, pkg.AuditChannelsPath); err != nil {
+				return fmt.Errorf("failed to create audit channel [%s]. [%s]", channel.Name, err.Error())
+			}
+
+			return bite.PrintInfo(cmd, "audit channel [%s] created", channel.Name)
+		},
+	}
+
+	cmd.Flags().StringVar(&channel.Name, "name", "", "Audit channel name")
+	cmd.Flags().StringVar(&channel.ConnectionName, "connectionName", "", "Audit channel connection name")
+	cmd.Flags().StringVar(&channel.TemplateName, "templateName", "", "Audit channel template name")
+	cmd.Flags().StringVar(&propertiesRaw, "properties", "", `Audit channel properties .e.g. "[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]"`)
+
+	bite.CanBeSilent(cmd)
+	bite.Prepend(cmd, bite.FileBind(&channel))
+
+	return cmd
+}
+
+// NewUpdateAuditChannelCommand creates `auditchannels create` command
+func NewUpdateAuditChannelCommand() *cobra.Command {
+	var (
+		propertiesRaw string
+		channelID     string
+		channel       = api.ChannelPayload{}
+	)
+
+	cmd := &cobra.Command{
+		Use:              "update",
+		Short:            "Update an existing audit channel",
+		Example:          `auditchannels update --id="fa0e9b96-1048-4f4c-b776-4e96ca62f37d" --name="kafka-prd-health" --templateName="Slack" --connectionName="slack-connection" --properties="[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]"`,
+		SilenceErrors:    true,
+		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"id": channelID, "name": channel.Name, "connectionName": channel.ConnectionName, "templateName": channel.TemplateName, "properties": channel.Properties}); err != nil {
+				return err
+			}
+
+			if propertiesRaw != "" {
+				if err := bite.TryReadFile(propertiesRaw, &channel.Properties); err != nil {
+					// from flag as json.
+					if err = json.Unmarshal([]byte(propertiesRaw), &channel.Properties); err != nil {
+						return fmt.Errorf("unable to unmarshal the properties: [%v]", err)
+					}
+				}
+			}
+
+			if err := config.Client.UpdateChannel(channel, pkg.AuditChannelsPath, channelID); err != nil {
+				return fmt.Errorf("failed to update audit channel [%s]. [%s]", channelID, err.Error())
+			}
+
+			return bite.PrintInfo(cmd, "audit channel [%s] updated", channelID)
+		},
+	}
+
+	cmd.Flags().StringVar(&channelID, "id", "", "The audit channel id, e.g. d15-4960-9ea6-2ccb4d26ebb4")
+	cmd.Flags().StringVar(&channel.Name, "name", "", "Audit channel name")
+	cmd.Flags().StringVar(&channel.ConnectionName, "connectionName", "", "Audit channel connection name")
+	cmd.Flags().StringVar(&channel.TemplateName, "templateName", "", "Audit channel template name")
+	cmd.Flags().StringVar(&propertiesRaw, "properties", "", `Audit channel properties .e.g. "[{\"key\":\"username\",\"value\":\"@luk\"},{\"key\":\"channel\",\"value\":\"#lenses\"}]"`)
+	bite.CanBeSilent(cmd)
+	bite.Prepend(cmd, bite.FileBind(&channel))
 
 	return cmd
 }
