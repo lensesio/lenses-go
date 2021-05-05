@@ -9,8 +9,6 @@ import (
 	"github.com/lensesio/lenses-go/pkg"
 )
 
-
-
 // AlertSettingsPayload contains the alert's settings datastructure
 type AlertSettingsPayload struct {
 	AlertID  string   `json:"id,omitempty" yaml:"id"`
