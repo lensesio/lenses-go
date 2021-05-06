@@ -58,6 +58,8 @@ func NewTopicSettingsCmd() *cobra.Command {
 // UpdateTopicSettingsCmd updates the Kafka Topics Settings
 func UpdateTopicSettingsCmd() *cobra.Command {
 	var settings api.TopicSettingsRequest
+	var namingPattern string
+	var namingDescription string
 
 	cmd := &cobra.Command{
 		Use: "update",
@@ -72,11 +74,31 @@ func UpdateTopicSettingsCmd() *cobra.Command {
 			Milliseconds and Bytes respectively or can be set to -1, to signify inifite retention.
 		`),
 		Example: heredoc.Doc(`
-			$ lenses-cli topic-settings update --partitions-min 1 --replication-min 2 --retention-size-default -1 --retention-size-max -1 --retention-time-default -1 retention-time-max -1
+			$ lenses-cli topic-settings update --partitions-min=1 --replication-min=1 --retention-size-max=-1 --retention-time-max=-1
 		`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if namingPattern == "" && namingDescription == "" {
+				settings.Naming = nil
+			}
+
+			if namingPattern != "" && namingDescription != "" {
+				var naming api.Naming
+
+				naming.Description = namingDescription
+				naming.Pattern = namingPattern
+				settings.Naming = &naming
+			}
+
+			if namingPattern != "" && namingDescription == "" {
+				return fmt.Errorf(utils.RED("'naming-description' is mandatory if `naming-pattern` is provided"))
+			}
+
+			if namingPattern == "" && namingDescription != "" {
+				return fmt.Errorf(utils.RED("'naming-pattern' is mandatory if `naming-description` is provided"))
+			}
+
 			err := config.Client.UpdateTopicSettings(settings)
 			return errors.Wrap(err, utils.RED("✘ Error"))
 		},
@@ -85,9 +107,9 @@ func UpdateTopicSettingsCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&settings.Config.Partitions.Min, "partitions-min", 1, "The minimum number of partitions when creating a topic")
+	cmd.Flags().IntVar(&settings.Config.Partitions.Min, "partitions-min", 0, "The minimum number of partitions when creating a topic")
 	cmd.Flags().IntVar(&settings.Config.Partitions.Max, "partitions-max", 0, "The maximum number of partitions when creating a topic")
-	cmd.Flags().IntVar(&settings.Config.Replication.Min, "replication-min", 1, "The minimum number of replicas for each partition")
+	cmd.Flags().IntVar(&settings.Config.Replication.Min, "replication-min", 0, "The minimum number of replicas for each partition")
 	cmd.Flags().IntVar(&settings.Config.Replication.Max, "replication-max", 0, "The maximum number of replicas for each partition")
 
 	cmd.Flags().Int64Var(&settings.Config.Retention.Size.Default, "retention-size-default", -1, "Default retention size")
@@ -95,8 +117,8 @@ func UpdateTopicSettingsCmd() *cobra.Command {
 	cmd.Flags().Int64Var(&settings.Config.Retention.Time.Default, "retention-time-default", -1, "Default retention time")
 	cmd.Flags().Int64Var(&settings.Config.Retention.Time.Max, "retention-time-max", -1, "Maximum retention time")
 
-	cmd.Flags().StringVar(&settings.Naming.Description, "naming-description", "", "Naming description")
-	cmd.Flags().StringVar(&settings.Naming.Pattern, "naming-pattern", "", "Regex pattern")
+	cmd.Flags().StringVar(&namingDescription, "naming-description", "", "Naming description")
+	cmd.Flags().StringVar(&namingPattern, "naming-pattern", "", "Regex pattern")
 
 	cmd.MarkFlagRequired("partitions-min")
 	cmd.MarkFlagRequired("retention-min")
