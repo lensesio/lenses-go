@@ -190,7 +190,7 @@ func NewProcessorCreateCommand() *cobra.Command {
 			err := config.Client.CreateProcessor(processor.Name, processor.SQL, processor.Runners, processor.ClusterName, processor.Namespace, processor.Pipeline, processor.ProcessorID)
 
 			if err != nil {
-				golog.Errorf("Failed to create processor [%s]. [%s]", processor.Name, err.Error())
+				golog.Debugf("Failed to create processor [%s]. [%s]", processor.Name, err.Error())
 				return err
 			}
 

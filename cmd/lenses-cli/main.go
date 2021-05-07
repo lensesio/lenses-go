@@ -154,6 +154,9 @@ func main() {
 	// Audit channel templates
 	app.AddCommand((audit.NewGetAuditChannelTemplatesCommand()))
 
+	// Audit channels
+	app.AddCommand(audit.NewGetAuditChannelsCommand())
+
 	//Config
 	app.AddCommand(config.NewGetConfigsCommand())
 	app.AddCommand(config.NewGetModeCommand())

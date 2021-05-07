@@ -10,7 +10,6 @@ import (
 	"github.com/lensesio/lenses-go/pkg"
 	"github.com/lensesio/lenses-go/pkg/api"
 	config "github.com/lensesio/lenses-go/pkg/configs"
-	"github.com/lensesio/lenses-go/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -72,7 +71,7 @@ func loadConsumerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 	}
 
 	var targetConsumerAlertSettings api.ConsumerAlertSettings
-	channels, err := client.GetAlertChannels(1, 99999, "", "", "", "")
+	channels, err := client.GetChannels(pkg.AlertChannelsPath, 1, 99999, "", "", "", "")
 
 	if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, "alert-setting-consumer.yaml"), &targetConsumerAlertSettings); err != nil {
 		return fmt.Errorf("error loading file [%s]", loadpath)
@@ -144,7 +143,7 @@ func loadProducerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 	}
 
 	var targetProducerAlertSettings api.ProducerAlertSettings
-	channels, err := client.GetAlertChannels(1, 99999, "", "", "", "")
+	channels, err := client.GetChannels(pkg.AlertChannelsPath, 1, 99999, "", "", "", "")
 
 	if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, "alert-setting-producer.yaml"), &targetProducerAlertSettings); err != nil {
 		return fmt.Errorf("error loading file [%s]", loadpath)
@@ -190,85 +189,6 @@ func loadProducerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 		}
 
 		fmt.Fprintf(cmd.OutOrStdout(), "created/updated condition: [%v]\n", targetConditionForLog)
-	}
-
-	return nil
-}
-
-//NewImportAlertChannelsCommand handles the CLI sub-command 'import alert-channels'
-func NewImportAlertChannelsCommand() *cobra.Command {
-	var path string
-
-	cmd := &cobra.Command{
-		Use:              "alert-channels",
-		Short:            "alert-channels",
-		Example:          `import alert-channels --dir <dir>`,
-		SilenceErrors:    true,
-		TraverseChildren: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-
-			path = fmt.Sprintf("%s/%s", path, "alert-channels")
-
-			err := importAlertChannels(config.Client, cmd, path)
-			if err != nil {
-				return fmt.Errorf("error importing alert channels. [%v]", err)
-			}
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVar(&path, "dir", ".", "Base directory to import")
-
-	bite.CanPrintJSON(cmd)
-	bite.CanBeSilent(cmd)
-	cmd.Flags().Set("silent", "true")
-	return cmd
-}
-
-func importAlertChannels(client *api.Client, cmd *cobra.Command, loadpath string) error {
-	fmt.Fprintf(cmd.OutOrStdout(), "loading alert channels from [%s] directory\n", loadpath)
-
-	var targetAlertChannels []api.AlertChannelPayload
-	files := utils.FindFiles(loadpath)
-	for _, file := range files {
-		var targetAlertChannel api.AlertChannelPayload
-		if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &targetAlertChannel); err != nil {
-			return fmt.Errorf("error loading file [%s]", loadpath)
-		}
-		targetAlertChannels = append(targetAlertChannels, targetAlertChannel)
-	}
-
-	channels, err := client.GetAlertChannels(1, 99999, "name", "asc", "", "")
-	if err != nil {
-		return err
-	}
-
-	var sourceAlertChannels []api.AlertChannelPayload
-	for _, chann := range channels.Values {
-		var channForExport api.AlertChannelPayload
-		channΑsJSON, _ := json.Marshal(chann)
-		json.Unmarshal(channΑsJSON, &channForExport)
-		sourceAlertChannels = append(sourceAlertChannels, channForExport)
-	}
-
-	// Check for duplicates lacking server-side implementation
-	for _, targetChannel := range targetAlertChannels {
-		found := false
-
-		for _, sourceChannel := range sourceAlertChannels {
-			if reflect.DeepEqual(targetChannel, sourceChannel) {
-				found = true
-			}
-		}
-
-		if found {
-			continue
-		}
-
-		if err := client.CreateAlertChannel(targetChannel); err != nil {
-			return fmt.Errorf("error importing alert channel [%v]", targetChannel)
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "alert channel [%s] successfully imported\n", targetChannel.Name)
 	}
 
 	return nil
