@@ -1465,10 +1465,6 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 		runners = 1
 	}
 
-	if pipeline == "" {
-		pipeline = name
-	}
-
 	var payload = CreateProcessorRequestPayload{
 		Name:        name,
 		SQL:         sql,
