@@ -1466,10 +1466,6 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 		runners = 1
 	}
 
-	if pipeline == "" {
-		pipeline = name
-	}
-
 	var payload = CreateProcessorRequestPayload{
 		Name:        name,
 		SQL:         sql,
@@ -3361,7 +3357,7 @@ type (
 		ConditionTemplate string                           `json:"conditionTemplate,omitempty"`
 		ConditionRegex    string                           `json:"conditionRegex,omitempty"`
 		Conditions        map[string]string                `json:"conditions,omitempty" header:"Conds"`
-		Channels          []AlertChannel                   `json:"channels,omitempty" header:"Chan,count"`
+		Channels          []Channel                        `json:"channels,omitempty" header:"Chan,count"`
 		ConditionDetails  map[string]AlertConditionDetails `json:"conditionDetails,omitempty"`
 	}
 
@@ -3377,7 +3373,7 @@ type (
 		CreatedBy    string                 `json:"createdBy,omitempty"`
 		ModifiedAt   string                 `json:"modifiedAt,omitempty"`
 		ModifiedBy   string                 `json:"modifiedBy,omitempty"`
-		Channels     []AlertChannel         `json:"channels,omitempty"`
+		Channels     []Channel              `json:"channels,omitempty"`
 		ConditionDsl map[string]interface{} `json:"conditionDsl,omitempty"`
 	}
 

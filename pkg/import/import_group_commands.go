@@ -40,6 +40,7 @@ import serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewImportServiceAccountsCommand())
 	cmd.AddCommand(NewImportAlertChannelsCommand())
 	cmd.AddCommand(ImportTopicSettingsCmd())
+	cmd.AddCommand(NewImportAuditChannelsCommand())
 
 	return cmd
 }
