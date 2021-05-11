@@ -63,7 +63,12 @@ func loadTopics(client *api.Client, cmd *cobra.Command, loadpath string) error {
 		for _, lensesTopic := range topics {
 			if lensesTopic.TopicName == topic.TopicName {
 				found = true
-				if err := client.UpdateTopic(topic.TopicName, []api.KV{topic.Configs}); err != nil {
+				// If the number of partitions remain the same then reset to 0
+				// so that PUT operation is not triggered within 'UpdateTopic' function
+				if lensesTopic.Partitions == topic.Partitions {
+					topic.Partitions = 0
+				}
+				if err := client.UpdateTopic(topic.TopicName, []api.KV{topic.Configs}, topic.Partitions); err != nil {
 					golog.Errorf("Error updating topic [%s]. [%s]", topic.TopicName, err.Error())
 					return err
 				}

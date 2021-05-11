@@ -387,6 +387,7 @@ func NewTopicUpdateCommand() *cobra.Command {
 	var (
 		configsRaw string
 		topic      = api.CreateTopicPayload{Configs: api.KV{}}
+		partitions int
 	)
 
 	cmd := &cobra.Command{
@@ -414,9 +415,11 @@ func NewTopicUpdateCommand() *cobra.Command {
 				confs = append(confs, cfg)
 			}
 
-			if err := config.Client.UpdateTopic(topic.TopicName, []api.KV{topic.Configs}); err != nil {
-				golog.Errorf("Failed to update topic [%s]. [%s]", topic.TopicName, err.Error())
-				return err
+			if topic.Partitions != 0 {
+				partitions = topic.Partitions
+			}
+			if err := config.Client.UpdateTopic(topic.TopicName, []api.KV{topic.Configs}, partitions); err != nil {
+				return fmt.Errorf("failed to update topic [%s]. [%s]", topic.TopicName, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "Config updated for topic [%s]", topic.TopicName)
@@ -425,6 +428,7 @@ func NewTopicUpdateCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&topic.TopicName, "name", "", "Topic to update")
 	cmd.Flags().StringVar(&configsRaw, "configs", "", `Topic configs .e.g. "{\"key\": \"max.message.bytes\", \"value\": \"1000020\"}"`)
+	cmd.Flags().IntVar(&partitions, "partitions", 0, "Number of partitions (can only be increased)")
 	bite.CanBeSilent(cmd)
 	bite.Prepend(cmd, bite.FileBind(&topic))
 

@@ -1264,7 +1264,7 @@ type UpdateConfigs struct {
 // configsSlice, array of topic config key-values.
 //
 // Read more at: https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#update-topic-configuration
-func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
+func (c *Client) UpdateTopic(topicName string, configsSlice []KV, partitions int) error {
 	if topicName == "" {
 		return errRequired("topicName")
 	}
@@ -1288,8 +1288,25 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV) error {
 	if err != nil {
 		return err
 	}
+	resp.Body.Close()
 
-	return resp.Body.Close()
+	if partitions == 0 {
+		return nil
+	}
+
+	type PartitionUpdatePayload struct {
+		Partitions int `json:"partitions"`
+	}
+
+	path = fmt.Sprintf("api/v1/kafka/topics/%s/partitions", topicName)
+	payload, err := json.Marshal(PartitionUpdatePayload{Partitions: partitions})
+	resp, err = c.Do(http.MethodPut, path, contentTypeJSON, payload)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+
+	return nil
 }
 
 type topicsResponse struct {
