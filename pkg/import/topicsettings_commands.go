@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/kataras/golog"
 	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/pkg"
 	"github.com/lensesio/lenses-go/pkg/api"
@@ -33,7 +32,7 @@ func ImportTopicSettingsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path = fmt.Sprintf("%s/%s", path, pkg.TopicSettingsPath)
 			err := ReadTopicSettings(config.Client, cmd, path)
-			return errors.Wrap(err, "Failed to read topic-settings")
+			return errors.Wrapf(err, utils.RED("Failed to read topic-settings"))
 		},
 	}
 
@@ -47,25 +46,20 @@ func ImportTopicSettingsCmd() *cobra.Command {
 }
 
 // ReadTopicSettings to read for each file and pass the topic-settings
-func ReadTopicSettings(client *api.Client, cmd *cobra.Command, loadpath string) error {
-	golog.Infof("Reading topic-settings from [%s]", loadpath)
-
-	files := utils.FindFiles(loadpath)
+func ReadTopicSettings(client *api.Client, cmd *cobra.Command, filePath string) error {
+	files := utils.FindFiles(filePath)
 
 	for _, file := range files {
 		var settings api.TopicSettingsRequest
-		fileErr := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &settings)
-
-		if fileErr != nil {
-			return errors.WithStack(fileErr)
+		var fileName = file.Name()
+		if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", filePath, file.Name()), &settings); err != nil {
+			return errors.Wrapf(err, utils.RED("Could not load file [%s]"), fileName)
 		}
 
-		updateErr := client.UpdateTopicSettings(settings)
-		fmt.Println(utils.GREEN("✓ Imported Topic Settings"))
-
-		if fileErr != nil {
-			return errors.WithStack(updateErr)
+		if err := client.UpdateTopicSettings(settings); err != nil {
+			return errors.Wrapf(err, utils.RED("Could not update Topic Settings [%s]"), fileName)
 		}
+		fmt.Printf(utils.GREEN("✓ Imported Topic Settings from [%s]\n"), fileName)
 	}
 
 	return nil
