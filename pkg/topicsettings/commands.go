@@ -2,6 +2,7 @@ package topicsettings
 
 import (
 	"fmt"
+	"os"
 
 	"strings"
 
@@ -40,13 +41,13 @@ func NewTopicSettingsCmd() *cobra.Command {
 
 			outputFlagValue := strings.ToUpper(bite.GetOutPutFlag(cmd))
 			if outputFlagValue != "JSON" && outputFlagValue != "YAML" {
-				fmt.Println(utils.YELLOW("! Plesese use JSON or YAML output to see the object\n"))
+				fmt.Fprintln(os.Stderr, utils.YELLOW("! Plesese use JSON or YAML output to see the object\n"))
 			}
 
 			return bite.PrintObject(cmd, settings)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
-			fmt.Println(utils.Green("✓ Read Topic Settings"))
+			fmt.Fprintln(os.Stderr, utils.Green("✓ Read Topic Settings"))
 		},
 	}
 
