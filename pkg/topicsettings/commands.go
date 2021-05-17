@@ -104,7 +104,7 @@ func UpdateTopicSettingsCmd() *cobra.Command {
 			return errors.Wrap(err, utils.RED("✘ Error"))
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
-			fmt.Println(utils.Green("✓ Updated Topic Settings"))
+			fmt.Fprintln(os.Stderr, utils.Green("✓ Updated Topic Settings"))
 		},
 	}
 
