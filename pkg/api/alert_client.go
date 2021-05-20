@@ -189,6 +189,19 @@ func (c *Client) GetAlerts(pageSize int) (alerts []Alert, err error) {
 	return
 }
 
+// DeleteAlertEvents deletes alert events.
+//
+// Deletes all the alert events older than timestamp.
+func (c *Client) DeleteAlertEvents(timestamp int64) (err error) {
+	queryString := fmt.Sprintf("%s?timestamp=%d", pkg.AlertEventsPath, timestamp)
+	resp, err := c.Do(http.MethodDelete, queryString, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
 // GetAlertSettings returns all the configured alert settings.
 // Alerts are divided into two categories:
 //

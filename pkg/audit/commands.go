@@ -77,6 +77,36 @@ func NewGetAuditEntriesCommand() *cobra.Command {
 
 	bite.CanPrintJSON(cmd)
 
+	cmd.AddCommand(DeleteAuditEntriesCommand())
+
+	return cmd
+}
+
+//DeleteAuditEntriesCommand  creates the `audits delete` command
+func DeleteAuditEntriesCommand() *cobra.Command {
+	var olderThanTimestamp int64
+
+	cmd := &cobra.Command{
+		Use:              "delete",
+		Short:            "Delete all the audit logs older than specified timestamp",
+		Example:          "audits delete --timestamp=1621244454127",
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"timestamp": olderThanTimestamp}); err != nil {
+				return err
+			}
+
+			if err := config.Client.DeleteAuditEntries(olderThanTimestamp); err != nil {
+				return fmt.Errorf("Failed to delete audit logs. [%s]", err.Error())
+			}
+			return bite.PrintInfo(cmd, "Audit logs older than timestamp: [%d] deleted.", olderThanTimestamp)
+		},
+	}
+
+	cmd.Flags().Int64Var(&olderThanTimestamp, "timestamp", 0, "All the audit logs older than that timestamp will be removed.")
+	bite.CanPrintJSON(cmd)
+	bite.CanBeSilent(cmd)
 	return cmd
 }
 
