@@ -56,6 +56,36 @@ func NewGetAlertsCommand() *cobra.Command {
 
 	bite.CanPrintJSON(cmd)
 
+	cmd.AddCommand(DeleteAlertEventsCommand())
+
+	return cmd
+}
+
+//DeleteAlertEventsCommand  creates the `alerts delete` command
+func DeleteAlertEventsCommand() *cobra.Command {
+	var olderThanTimestamp int64
+
+	cmd := &cobra.Command{
+		Use:              "delete",
+		Short:            "Delete all the alert events older than specified timestamp",
+		Example:          "alerts delete --timestamp=1621244454127",
+		TraverseChildren: true,
+		SilenceErrors:    true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"timestamp": olderThanTimestamp}); err != nil {
+				return err
+			}
+
+			if err := config.Client.DeleteAlertEvents(olderThanTimestamp); err != nil {
+				return fmt.Errorf("Failed to delete alert events. [%s]", err.Error())
+			}
+			return bite.PrintInfo(cmd, "Alert events older than timestamp: [%d] deleted.", olderThanTimestamp)
+		},
+	}
+
+	cmd.Flags().Int64Var(&olderThanTimestamp, "timestamp", 0, "All the alert events older than that timestamp will be removed.")
+	bite.CanPrintJSON(cmd)
+	bite.CanBeSilent(cmd)
 	return cmd
 }
 

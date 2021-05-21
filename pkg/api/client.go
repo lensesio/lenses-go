@@ -3702,6 +3702,19 @@ func (c *Client) GetAuditEntries() (entries []AuditEntry, err error) {
 	return
 }
 
+// DeleteAuditEntries deletes audit logs.
+//
+// Deletes all the audit logs older than timestamp.
+func (c *Client) DeleteAuditEntries(timestamp int64) (err error) {
+	queryString := fmt.Sprintf("%s?timestamp=%d", auditPath, timestamp)
+	resp, err := c.Do(http.MethodDelete, queryString, "", nil)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
 // AuditEntryHandler is the type of the function, the listener which is
 // the input parameter of the `GetAuditEntriesLive` API call.
 type AuditEntryHandler func(AuditEntry) error
