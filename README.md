@@ -3,6 +3,7 @@
 The [Lenses](http://www.lenses.io) [REST API](https:/api.lenses.io) client written in Go.
 
 [![Build Status](https://travis-ci.org/lensesio/lenses-go.svg?branch=master)](https://travis-ci.org/lensesio/lenses-go) [![report card](https://img.shields.io/badge/report%20card-a%2B-ff3333.svg?style=flat-square)](http://goreportcard.com/report/lensesio/lenses-go) [![chat](https://img.shields.io/badge/join-%20chat-00BCD4.svg?style=flat-square)](https://slackpass.io/lensesio)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Flensesio%2Flenses-go.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Flensesio%2Flenses-go?ref=badge_shield)
 
 ## Installation
 
@@ -248,3 +249,6 @@ Detailed documentation can be found at [godocs](https://godoc.org/github.com/len
 ## License
 
 Distributed under Apache Version 2.0 License, click [here](LICENSE) for more details.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Flensesio%2Flenses-go.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Flensesio%2Flenses-go?ref=badge_large)
