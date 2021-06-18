@@ -1562,7 +1562,7 @@ type (
 		Settings    map[string]string `json:"settings"`
 	}
 
-	// TopicDecoders contains the information about the topic storage format
+	// TopicName contains the information about the topic storage format
 	TopicName struct {
 		Name string `json:"name"`
 	}
@@ -1596,10 +1596,7 @@ type (
 	}
 )
 
-/**
- * In Lenses 4.3 the API changed the format of the list of input/output topics.
- * This Unmarshaler is compatible with both formats
- */
+// UnmarshalJSON makes unmarshaling compatible with lenses >= 4.3 and lenses <= 4.2
 func (topicName *TopicName) UnmarshalJSON(data []byte) error {
 
 	var topicString string
