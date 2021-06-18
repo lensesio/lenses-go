@@ -1562,11 +1562,12 @@ type (
 		Settings    map[string]string `json:"settings"`
 	}
 
-	// TopicName contains the information about the topic storage format
+	// TopicName contains the information about the topic names of input/output topics
 	TopicName struct {
 		Name string `json:"name"`
 	}
 
+	// LegacyTopicName contains the legacy format of input/output topics returned by lenses <= 4.2
 	LegacyTopicName struct {
 		Name  string `json:"name"`
 		Key   string `json:"key"`
