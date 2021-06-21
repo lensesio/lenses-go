@@ -1550,9 +1550,9 @@ type (
 
 		SQL string `json:"sql"` // header:"SQL"`
 
-		InputTopics  []TopicDecoders `json:"inputTopics"`
-		OutputTopics []TopicDecoders `json:"outputTopics"` // header:"Topic Decoder"`
-		Pipeline     string          `json:"pipeline"`     // header:"Pipeline"`
+		InputTopics  []TopicName `json:"inputTopics"`
+		OutputTopics []TopicName `json:"outputTopics"` // header:"Topic Decoder"`
+		Pipeline     string      `json:"pipeline"`     // header:"Pipeline"`
 
 		ToTopics   []string            `json:"toTopics,omitempty"` // header:"To Topics"`
 		FromTopics []string            `json:"fromTopics,omitempty"`
@@ -1562,12 +1562,18 @@ type (
 		Settings    map[string]string `json:"settings"`
 	}
 
-	// TopicDecoders contains the information about the topic storage format
-	TopicDecoders struct {
+	// TopicName contains the information about the topic names of input/output topics
+	TopicName struct {
+		Name string `json:"name"`
+	}
+
+	// LegacyTopicName contains the legacy format of input/output topics returned by lenses <= 4.2
+	LegacyTopicName struct {
 		Name  string `json:"name"`
 		Key   string `json:"key"`
 		Value string `json:"value"`
 	}
+
 	// ProcessorLastAction contains the information about the last change on the SQL processor
 	ProcessorLastAction struct {
 		Action  string `json:"action"`
@@ -1590,6 +1596,25 @@ type (
 		ErrorMessage string `json:"errorMsg,omitempty"`
 	}
 )
+
+// UnmarshalJSON makes unmarshaling compatible with lenses >= 4.3 and lenses <= 4.2
+func (topicName *TopicName) UnmarshalJSON(data []byte) error {
+
+	var topicString string
+	if err := json.Unmarshal(data, &topicString); err != nil {
+		var legacyTopicName LegacyTopicName
+
+		if err2 := json.Unmarshal(data, &legacyTopicName); err2 != nil {
+			return err2
+		}
+
+		topicString = legacyTopicName.Name
+	}
+
+	topicName.Name = topicString
+
+	return nil
+}
 
 // GetProcessors returns a list of all available LSQL processors.
 func (c *Client) GetProcessors() (ProcessorsResult, error) {
