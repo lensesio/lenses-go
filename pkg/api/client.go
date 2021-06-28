@@ -3702,29 +3702,38 @@ const (
 	AuditEntryInsert AuditEntryChange = "INSERT"
 )
 
-// AuditEntry describes a lenses Audit Entry, used for audit logs API.
-type AuditEntry struct {
-	Type      AuditEntryType    `json:"type" yaml:"type" header:"Type"`
-	Change    AuditEntryChange  `json:"change" yaml:"change" header:"Change"`
-	UserID    string            `json:"userId" yaml:"user" header:"User         "` /* make it a little bigger than expected, it looks slightly better for this field*/
-	Timestamp int64             `json:"timestamp" yaml:"timestamp" header:"Date,timestamp(ms|utc|02 Jan 2006 15:04)"`
-	Content   map[string]string `json:"content" yaml:"content" header:"Content"`
+// AuditsV3 is the response payload for Lenses v4.3 audits endpoint
+type AuditsV3 struct {
+	Values []AuditEntry `json:"values,omitempty"`
 }
 
-const auditPath = "api/audit"
+// AuditEntry describes a lenses Audit Entry, used for audit logs API.
+type AuditEntry struct {
+	Type      AuditEntryType    `json:"type,omitempty" yaml:"type" header:"Type"`
+	Action    string            `json:"action,omitempty" yaml:"action" header:"Action"`
+	Resource  string            `json:"resourceName,omitempty" yaml:"resourceName" header:"Resource"`
+	User      string            `json:"user,omitempty" yaml:"user" header:"User         "` /* make it a little bigger than expected, it looks slightly better for this field*/
+	Timestamp int64             `json:"timestamp,omitempty" yaml:"timestamp" header:"Date,timestamp(ms|utc|02 Jan 2006 15:04)"`
+	Content   map[string]string `json:"content,omitempty" yaml:"content" header:"Content"`
+}
+
+const auditPath = "api/audit?pageSize=1000"
 
 // GetAuditEntries returns the last buffered audit entries.
 //
 // Retrives the last N audit entries created.
 // See `GetAuditEntriesLive` for real-time notifications.
 func (c *Client) GetAuditEntries() (entries []AuditEntry, err error) {
+
 	resp, err := c.Do(http.MethodGet, auditPath, "", nil)
 	if err != nil {
 		return nil, nil
 	}
 
-	err = c.ReadJSON(resp, &entries)
-	return
+	var auditsV3 AuditsV3
+	err = c.ReadJSON(resp, &auditsV3)
+
+	return auditsV3.Values, err
 }
 
 // DeleteAuditEntries deletes audit logs.
