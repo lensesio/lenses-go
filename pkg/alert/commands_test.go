@@ -74,20 +74,20 @@ func TestCreateOrUpdateAlertSettingConditionCommand(t *testing.T) {
 	}{
 		{
 			"Missing `alert` param/flag",
-			[]string{"--condition='69'"},
+			[]string{"--group=g1", "--topic=t1", "--threshold=1", "--mode=PerPartitionMode"},
 			"",
 			errors.New("required flag \"alert\" not set"),
 		},
 		{
 			"Create new condition",
-			[]string{"--alert=2000", "--condition='69'"},
+			[]string{"--alert=2000", "--group=g1", "--topic=t1", "--threshold=1", "--mode=PerPartitionMode"},
 			"Condition [id=2000] added",
 			errors.New(""),
 		},
 		{
 			"Update a rule's channels",
-			[]string{"--alert=2000", "--condition='69'", "--conditionID='6969'", "--channels='1234'"},
-			"Update rule's channels succeeded",
+			[]string{"--alert=2000", "--group=g1", "--topic=t1", "--threshold=1", "--mode=PerPartitionMode", "--conditionID='6969'", "--channels='1234'"},
+			"Create / Update rule with channels attached succeeded",
 			errors.New(""),
 		},
 		//"Data produced" tests
@@ -171,15 +171,15 @@ func TestServerFailures(t *testing.T) {
 		},
 		{
 			"Server failure for updating alert's settings condition",
-			[]string{"condition", "set", "--alert=2000", "--condition='69'"},
+			[]string{"condition", "set", "--alert=2000", "--group=g1", "--topic=t1", "--threshold=1", "--mode=PerPartitionMode"},
 			"",
 			errors.New("failed to create or update an alert's condition. Error: [response returned status code 400]"),
 		},
 		{
 			"Server failure for updating alert's settings condition with the new flags",
-			[]string{"condition", "set", "--alert=2000", "--condition='69'", "--conditionID='6969'", "--channels='1234'"},
+			[]string{"condition", "set", "--alert=2000", "--group=g1", "--topic=t1", "--threshold=1", "--mode=PerPartitionMode", "--conditionID='6969'", "--channels='1234'"},
 			"",
-			errors.New("failed to update alert's condition. Error: [response returned status code 400]"),
+			errors.New("failed to create or update an alert's condition. Error: [response returned status code 400]"),
 		},
 	}
 
