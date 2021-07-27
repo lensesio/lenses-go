@@ -106,7 +106,7 @@ func loadConsumerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 			}
 		}
 
-		err := config.Client.SetAlertSettingsConsumerCondition(strconv.Itoa(2000),
+		err := config.Client.SetAlertSettingsConsumerCondition(strconv.Itoa(2000), "",
 			api.ConsumerAlertConditionRequestv1{Condition: targetCondition.Condition, Channels: targetCondition.Channels})
 
 		if err != nil {

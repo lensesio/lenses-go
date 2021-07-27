@@ -36,11 +36,21 @@ type ConsumerAlertConditionRequestv1 struct {
 	Channels  []string             `json:"channels" yaml:"channels"`
 }
 
+// ConsumerConditionMode represents the consumer lag alert rule mode
+type ConsumerConditionMode string
+
+// Consumer lag alert rule modes
+const (
+	PerPartitionMode ConsumerConditionMode = "PerPartitionMode"
+	PerTopicMode     ConsumerConditionMode = "PerTopicMode"
+)
+
 // ConsumerConditionDsl represents the consumer specific payload expected at /api/v1/alert/settings/{alert_setting_id}/conditions
 type ConsumerConditionDsl struct {
-	Group     string `json:"group"`
-	Threshold int    `json:"threshold"`
-	Topic     string `json:"topic"`
+	Group     string                `json:"group"`
+	Threshold int                   `json:"threshold"`
+	Topic     string                `json:"topic"`
+	Mode      ConsumerConditionMode `json:"mode"`
 }
 
 // DataProduced is the payload for Producer's alert type category
@@ -85,20 +95,6 @@ func (c *Client) UpdateAlertSettings(alertSettings AlertSettingsPayload) error {
 	return nil
 }
 
-// UpdateAlertSettingsCondition corresponds to `/api/v1/alerts/settings/{alert_setting_id}/condition/{condition_id}`
-func (c *Client) UpdateAlertSettingsCondition(alertID, condition, conditionID string, channels []string) error {
-	path := fmt.Sprintf("%s/%s/conditions/%s", pkg.AlertsSettingsPath, alertID, conditionID)
-
-	jsonPayload, err := json.Marshal(AlertSettingsConditionPayload{Condition: condition, Channels: channels})
-	_, err = c.Do(http.MethodPut, path, contentTypeJSON, jsonPayload)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CreateAlertSettingsCondition corresponds to `/api/v1/alerts/settings/{alert_setting_id}/condition/{condition_id}`
 func (c *Client) CreateAlertSettingsCondition(alertID, condition string, channels []string) error {
 	path := fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
@@ -115,15 +111,20 @@ func (c *Client) CreateAlertSettingsCondition(alertID, condition string, channel
 
 // SetAlertSettingsConsumerCondition handles both POST to `/api/v1/alert/settings/{alert_setting_id}/conditions` and
 // PUT to `/api/v1/alert/settings/{alert_setting_id}/conditions/{condition_id}` that handles Consumer type of alert category payloads
-// TO-DO: updating not handled yet. Above 'CreateAlertSettingsCondtion' is the legacy
-func (c *Client) SetAlertSettingsConsumerCondition(alertID string, consumerAlert ConsumerAlertConditionRequestv1) error {
+func (c *Client) SetAlertSettingsConsumerCondition(alertID string, conditionID string, consumerAlert ConsumerAlertConditionRequestv1) error {
 	jsonPayload, err := json.Marshal(consumerAlert)
 	if err != nil {
 		return err
 	}
 
-	path := fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
-	_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
+	var path string
+	if conditionID != "" {
+		path = fmt.Sprintf("%s/%s/conditions/%s", pkg.AlertsSettingsPath, alertID, conditionID)
+		_, err = c.Do(http.MethodPut, path, contentTypeJSON, jsonPayload)
+	} else {
+		path = fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
+		_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
+	}
 
 	if err != nil {
 		return err

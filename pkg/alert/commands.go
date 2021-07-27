@@ -254,10 +254,10 @@ func NewSetAlertSettingConditionCommand() *cobra.Command {
 
 	cmdExample := `
 # Create
-alert setting condition set --alert=2000 --condition="lag >= 200000 on group groupA and topic topicA"
+alert setting condition set --alert=2000 --group=<consumerGroupID> --topic=<topicName> --threshold=<lag> --mode=<PerPartitionMode/PerTopicMode>"
 
 # Update
-alert setting condition set --alert=<id> --condition=<condition> --conditionID=<conditionID> --channels=<channelID> --channels=<channelID>
+alert setting condition set --alert=<id> --group=<consumerGroupID> --topic=<topicName> --threshold=<lag> --mode=<PerPartitionMode/PerTopicMode> --conditionID=<conditionID> --channels=<channelID> --channels=<channelID>
 
 # Producer type of alert category
 lenses-cli alert setting condition set --alert=5000 --topic=my-topic --duration=PT6H --more-than=5
@@ -338,37 +338,53 @@ alert setting condition set ./alert_cond.yml`
 					return nil
 				}
 
-				if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID, "condition": cond.Condition}); err != nil {
-					return err
+				if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"alert": cond.AlertID}); err != nil {
+					return errors.New(`required flag "alert" not set`)
 				}
 
-				if cond.ConditionID == "" && cond.Channels != nil {
-					err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.Channels)
-					if err != nil {
-						return fmt.Errorf("failed to create an alert condition. Error: [%s]", err.Error())
-					}
-					fmt.Fprintln(cmd.OutOrStdout(), "Create rule with channels attached succeeded")
-					return nil
+				if cond.Topic == "" {
+					return errors.New(`required flag "topic" not set`)
 				}
 
-				if cond.ConditionID != "" {
-					var channels = cond.Channels
-					if channels == nil {
-						channels = []string{}
-					}
-					err := config.Client.UpdateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, cond.ConditionID, channels)
-					if err != nil {
-						return fmt.Errorf("failed to update alert's condition. Error: [%s]", err.Error())
-					}
-					fmt.Fprintln(cmd.OutOrStdout(), "Update rule's channels succeeded")
-					return nil
+				if cond.Group == "" {
+					return errors.New(`required flag "group" not set`)
 				}
 
-				err := config.Client.CreateAlertSettingsCondition(strconv.Itoa(cond.AlertID), cond.Condition, []string{})
+				if cond.Threshold <= 0 {
+					return errors.New(`required flag "threshold" not a positive number`)
+				}
+
+				var parsedMode api.ConsumerConditionMode
+
+				if cond.Mode == "PerTopicMode" {
+					parsedMode = api.PerTopicMode
+				} else if cond.Mode == "PerPartitionMode" {
+					parsedMode = api.PerPartitionMode
+				} else {
+					return errors.New(`required flag "mode" not correct (supported modes: PerPartitionMode or PerTopicMode)`)
+				}
+
+				var channels = cond.Channels
+				if channels == nil {
+					channels = []string{}
+				}
+
+				payload := api.ConsumerAlertConditionRequestv1{
+					Condition: api.ConsumerConditionDsl{
+						Group:     cond.Group,
+						Threshold: cond.Threshold,
+						Topic:     cond.Topic,
+						Mode:      parsedMode,
+					},
+					Channels: channels,
+				}
+
+				err := config.Client.SetAlertSettingsConsumerCondition(strconv.Itoa(cond.AlertID), cond.ConditionID, payload)
 				if err != nil {
-					golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", cond.Condition, err.Error())
+					golog.Errorf("Failed to creating/updating alert setting condition [%s]. [%s]", payload, err.Error())
 					return fmt.Errorf("failed to create or update an alert's condition. Error: [%s]", err.Error())
 				}
+				fmt.Fprintln(cmd.OutOrStdout(), "Create / Update rule with channels attached succeeded")
 
 				return bite.PrintInfo(cmd, "Condition [id=%d] added", cond.AlertID)
 			}
@@ -376,12 +392,16 @@ alert setting condition set ./alert_cond.yml`
 	}
 
 	cmd.Flags().IntVar(&cond.AlertID, "alert", 0, "Alert ID")
-	cmd.Flags().StringVar(&cond.Condition, "condition", "", `Alert condition .e.g. "lag >= 100000 on group group and topic topicA"`)
 	cmd.Flags().StringVar(&cond.ConditionID, "conditionID", "", "Alert condition ID")
 	cmd.Flags().StringArrayVar(&cond.Channels, "channels", nil, "Channel UIDs")
+	cmd.Flags().StringVar(&cond.Topic, "topic", "", "Topic name")
+
+	// Flags for "Consumer lag" alert category
+	cmd.Flags().StringVar(&cond.Group, "group", "", "Group ID")
+	cmd.Flags().IntVar(&cond.Threshold, "threshold", 0, "Threshold value of acceptable lag")
+	cmd.Flags().StringVar(&cond.Mode, "mode", "", "Alert mode (PerPartitionMode/PerTopicMode)")
 
 	// Flags for "Producers" alert category
-	cmd.Flags().StringVar(&cond.Topic, "topic", "", "Topic name")
 	cmd.Flags().IntVar(&cond.MoreThan, "more-than", 0, "Threshold value of messages")
 	cmd.Flags().IntVar(&cond.LessThan, "less-than", 0, "Threshold value of messages")
 	cmd.Flags().StringVar(&cond.Duration, "duration", "", "ISO_8601 duration string - e.g. 1 minute = “PT1M”, 6 hours = “PT6H")
