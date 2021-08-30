@@ -1259,12 +1259,12 @@ type UpdateConfigs struct {
 	Configs []KeyVal `json:"configs"  yaml:"configs"`
 }
 
-// UpdateTopic updates a topic's configuration.
+// UpdateTopicConfig updates a topic's configuration.
 // topicName, string.
 // configsSlice, array of topic config key-values.
 //
 // Read more at: https://docs.lenses.io/dev/lenses-apis/rest-api/index.html#update-topic-configuration
-func (c *Client) UpdateTopic(topicName string, configsSlice []KV, partitions int) error {
+func (c *Client) UpdateTopicConfig(topicName string, configsSlice []KV) error {
 	if topicName == "" {
 		return errRequired("topicName")
 	}
@@ -1290,17 +1290,25 @@ func (c *Client) UpdateTopic(topicName string, configsSlice []KV, partitions int
 	}
 	resp.Body.Close()
 
-	if partitions == 0 {
-		return nil
+	return nil
+}
+
+// UpdateTopicPartitions updates a topics partition number
+func (c *Client) UpdateTopicPartitions(topicName string, partitions int) error {
+	if topicName == "" {
+		return errRequired("topicName")
 	}
 
 	type PartitionUpdatePayload struct {
 		Partitions int `json:"partitions"`
 	}
 
-	path = fmt.Sprintf("api/v1/kafka/topics/%s/partitions", topicName)
+	path := fmt.Sprintf("api/v1/kafka/topics/%s/partitions", topicName)
 	payload, err := json.Marshal(PartitionUpdatePayload{Partitions: partitions})
-	resp, err = c.Do(http.MethodPut, path, contentTypeJSON, payload)
+	if err != nil {
+		return err
+	}
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, payload)
 	if err != nil {
 		return err
 	}
