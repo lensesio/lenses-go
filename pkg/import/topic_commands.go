@@ -26,7 +26,6 @@ func NewImportTopicsCommand() *cobra.Command {
 
 			path = fmt.Sprintf("%s/%s", path, pkg.TopicsPath)
 			if err := loadTopics(config.Client, cmd, path); err != nil {
-				golog.Errorf("Failed to load topics. [%s]", err.Error())
 				return err
 			}
 			return nil
@@ -43,47 +42,74 @@ func NewImportTopicsCommand() *cobra.Command {
 
 func loadTopics(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	golog.Infof("Loading topics from [%s]", loadpath)
-	files := utils.FindFiles(loadpath)
-	topics, err := client.GetTopics()
 
+	remoteTopics, err := client.GetTopics()
 	if err != nil {
 		golog.Errorf("Error retrieving topics [%s]", err.Error())
 		return err
 	}
 
+	// create a map out of Lenses existing topics where key is topic name
+	// and value is a custom object of the topic's partition num and configs that is simplyfied for comparing purposes
+	// i.e. from a slice of maps to a single map where key is the config name and value is its original value
+	// (all other keys are disregarded, e.g. "defaultValue", "documentation", "isDefault", etc.)
+	type simplyfiedTopicPayload struct {
+		partitions int
+		configs    map[string]string
+	}
+	simplyfiedRemoteTopics := make(map[string]simplyfiedTopicPayload)
+
+	for _, topic := range remoteTopics {
+		configMap := make(map[string]string)
+		for _, conf := range topic.Configs {
+			configMap[fmt.Sprintf("%v", conf["name"])] = fmt.Sprintf("%v", conf["originalValue"])
+		}
+		simplyfiedRemoteTopics[topic.TopicName] = simplyfiedTopicPayload{
+			topic.Partitions,
+			configMap,
+		}
+	}
+
+	files := utils.FindFiles(loadpath)
 	for _, file := range files {
-		var topic api.CreateTopicPayload
-		if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &topic); err != nil {
-			golog.Errorf("Error loading file [%s]", loadpath)
+		var topicFromFile api.CreateTopicPayload
+		if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &topicFromFile); err != nil {
 			return err
 		}
 
-		found := false
+		// if target imported topic exists then compare it with the instance found on the server
+		if topicValue, ok := simplyfiedRemoteTopics[topicFromFile.TopicName]; ok {
 
-		for _, lensesTopic := range topics {
-			if lensesTopic.TopicName == topic.TopicName {
-				found = true
-				// If the number of partitions remain the same then reset to 0
-				// so that PUT operation is not triggered within 'UpdateTopic' function
-				if lensesTopic.Partitions == topic.Partitions {
-					topic.Partitions = 0
-				}
-				if err := client.UpdateTopic(topic.TopicName, []api.KV{topic.Configs}, topic.Partitions); err != nil {
-					golog.Errorf("Error updating topic [%s]. [%s]", topic.TopicName, err.Error())
+			// compare the partition values
+			if topicValue.partitions != topicFromFile.Partitions {
+				if err := client.UpdateTopicPartitions(topicFromFile.TopicName, topicFromFile.Partitions); err != nil {
 					return err
 				}
 
-				golog.Infof("Updated topic [%s]", topic.TopicName)
+				golog.Infof("Updated topic '%s' partitions with new value '%v'", topicFromFile.TopicName, topicFromFile.Partitions)
 			}
-		}
 
-		if !found {
-			if err := client.CreateTopic(topic.TopicName, topic.Replication, topic.Partitions, topic.Configs); err != nil {
-				golog.Errorf("Error creating topic [%s]. [%s]", topic.TopicName, err.Error())
+			// compare the config from imported file with the config on the remote server
+			for k, v := range topicFromFile.Configs {
+
+				// If at least one config value is different then perform a single PUT on all config
+				if v != topicValue.configs[k] {
+					if err := client.UpdateTopicConfig(topicFromFile.TopicName, []api.KV{topicFromFile.Configs}); err != nil {
+						return err
+					}
+
+					golog.Infof("Updated topic '%s' config", topicFromFile.TopicName)
+					break
+				}
+
+			}
+		} else {
+			// If topic doesn't exist on the remote server then import it as new
+			if err := client.CreateTopic(topicFromFile.TopicName, topicFromFile.Replication, topicFromFile.Partitions, topicFromFile.Configs); err != nil {
 				return err
 			}
 
-			golog.Infof("Created topic [%s]", topic.TopicName)
+			golog.Infof("Created topic [%s]", topicFromFile.TopicName)
 		}
 	}
 

@@ -416,9 +416,11 @@ func NewTopicUpdateCommand() *cobra.Command {
 			}
 
 			if topic.Partitions != 0 {
-				partitions = topic.Partitions
+				if err := config.Client.UpdateTopicPartitions(topic.TopicName, partitions); err != nil {
+					return fmt.Errorf("failed to update topic '[%s]' partitions. [%s]", topic.TopicName, err.Error())
+				}
 			}
-			if err := config.Client.UpdateTopic(topic.TopicName, []api.KV{topic.Configs}, partitions); err != nil {
+			if err := config.Client.UpdateTopicConfig(topic.TopicName, []api.KV{topic.Configs}); err != nil {
 				return fmt.Errorf("failed to update topic [%s]. [%s]", topic.TopicName, err.Error())
 			}
 
