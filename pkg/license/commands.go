@@ -60,7 +60,7 @@ func NewLicenseUpdateCommand() *cobra.Command {
 		Example: `lenses-cli license update --file my-license.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			license, err := loadLicenseFile(licenseFilePath)
+			license, err := LoadLicenseFile(licenseFilePath)
 			if err != nil {
 				return err
 			}
@@ -79,7 +79,8 @@ func NewLicenseUpdateCommand() *cobra.Command {
 	return cmd
 }
 
-func loadLicenseFile(licenseFilePath string) (api.License, error) {
+// LoadLicenseFile loads a file from filesystem and pass it for parsing
+func LoadLicenseFile(licenseFilePath string) (api.License, error) {
 
 	licenseFile, err := os.Open(licenseFilePath)
 	defer licenseFile.Close()
@@ -87,21 +88,22 @@ func loadLicenseFile(licenseFilePath string) (api.License, error) {
 		golog.Errorf("Failed to load license file", err.Error())
 		return api.License{}, err
 	}
-	return parseLicenseFile(licenseFile)
+	return ParseLicenseFile(licenseFile)
 }
 
-func parseLicenseFile(licenseFile io.Reader) (api.License, error) {
+// ParseLicenseFile unmarshalls the license file into a known struct
+func ParseLicenseFile(licenseFile io.Reader) (api.License, error) {
 	var license api.License
 	licenseFileAsBytes, _ := ioutil.ReadAll(licenseFile)
 	err := json.Unmarshal(licenseFileAsBytes, &license)
 	if err != nil {
-		invalidLicenseErr := errors.New("Invalid Lenses license JSON file")
+		invalidLicenseErr := errors.New("invalid Lenses license JSON file")
 		golog.Errorf(invalidLicenseErr.Error(), err.Error())
 		return license, invalidLicenseErr
 	}
 
 	if (license == api.License{}) {
-		emptyLicenseErr := errors.New("Empty Lenses license file")
+		emptyLicenseErr := errors.New("empty Lenses license file")
 		return license, emptyLicenseErr
 	}
 	return license, nil

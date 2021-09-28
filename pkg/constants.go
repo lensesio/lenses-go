@@ -40,5 +40,6 @@ const (
 	AlertEventsPath            = "api/v1/alert/events"
 	MetadataTopicsPath         = "api/v1/metadata/topics"
 
-	LicensePath = "api/v1/license"
+	LicensePath    = "api/v1/license"
+	FileUploadPath = "api/v1/files"
 )
