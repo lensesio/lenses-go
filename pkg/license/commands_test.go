@@ -89,9 +89,9 @@ func TestLicenseUpdateCommand(t *testing.T) {
 			errors.New(""),
 		},
 		{
-			"Invalid license file",
+			"invalid license file",
 			[]string{"update", "--file", "commands.go"},
-			"Invalid Lenses license JSON file",
+			"invalid Lenses license JSON file",
 			errors.New(""),
 		},
 	}
@@ -141,18 +141,18 @@ func TestParseLicenseFile(t *testing.T) {
 		{
 			"Invalid file type (not a valid JSON)",
 			strings.NewReader(invalidFileType),
-			errors.New("Invalid Lenses license JSON file"),
+			errors.New("invalid Lenses license JSON file"),
 		},
 		{
 			"Valid JSON but invalid license content",
 			strings.NewReader(invalidJSONLicenseContent),
-			errors.New("Empty Lenses license file"),
+			errors.New("empty Lenses license file"),
 		},
 	}
 
 	for _, tt := range testsLicenseFileContent {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseLicenseFile(tt.fileContent)
+			_, err := ParseLicenseFile(tt.fileContent)
 			if err != nil && err.Error() != tt.expectError.Error() {
 				t.Errorf("got `%v`, want `%v`", err, tt.expectError)
 				return

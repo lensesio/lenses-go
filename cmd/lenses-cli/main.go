@@ -11,6 +11,7 @@ import (
 	"github.com/lensesio/lenses-go/pkg/alert"
 	"github.com/lensesio/lenses-go/pkg/api"
 	"github.com/lensesio/lenses-go/pkg/audit"
+	"github.com/lensesio/lenses-go/pkg/beta"
 	config "github.com/lensesio/lenses-go/pkg/configs"
 	"github.com/lensesio/lenses-go/pkg/connection"
 	"github.com/lensesio/lenses-go/pkg/connector"
@@ -236,6 +237,9 @@ func main() {
 
 	app.AddCommand(dataset.NewDatasetGroupCmd())
 	app.AddCommand(topicsettings.NewTopicSettingsCmd())
+
+	// Beta command to group experimental features
+	app.AddCommand(beta.NewRootCommand())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
