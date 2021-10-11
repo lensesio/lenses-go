@@ -43,7 +43,10 @@ func NewImportSchemasCommand() *cobra.Command {
 
 func loadSchemas(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	golog.Infof("Loading schemas from [%s]", loadpath)
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 
 	for _, file := range files {
 		var schema api.SchemaAsRequest

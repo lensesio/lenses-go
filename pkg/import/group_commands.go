@@ -43,7 +43,10 @@ func NewImportGroupsCommand() *cobra.Command {
 
 func loadGroups(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	golog.Infof("Loading user groups from [%s]", loadpath)
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 
 	currentGroups, err := client.GetGroups()
 

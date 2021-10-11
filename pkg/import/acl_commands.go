@@ -46,7 +46,10 @@ func NewImportAclsCommand() *cobra.Command {
 
 func loadAcls(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	golog.Infof("Loading acls from [%s]", loadpath)
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 
 	knownACLs, err := client.GetACLs()
 

@@ -46,7 +46,10 @@ func NewImportProcessorsCommand() *cobra.Command {
 
 func loadProcessors(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	golog.Infof("Loading processors from [%s]", loadpath)
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 
 	processors, err := client.GetProcessors()
 
