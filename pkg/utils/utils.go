@@ -11,10 +11,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/kataras/golog"
@@ -140,13 +141,29 @@ func GetEnvVars(prefix string) []string {
 	return vars
 }
 
-//FindFiles fidn the files in provided directory
-func FindFiles(dir string) []os.FileInfo {
-	files, err := ioutil.ReadDir(dir)
+//FindFiles finds the files in provided directory
+func FindFiles(dir string) ([]fs.DirEntry, error) {
+	allFiles, err := os.ReadDir(dir)
+
 	if err != nil {
-		golog.Fatal(err)
+		return nil, err
 	}
-	return files
+
+	// do not return hidden files/folders and non-yaml files
+	var validImportFiles []fs.DirEntry
+	for _, f := range allFiles {
+		if valid := isValidImportFile(f.Name()); !valid {
+			continue
+		}
+		validImportFiles = append(validImportFiles, f)
+	}
+
+	return validImportFiles, nil
+}
+
+func isValidImportFile(fileName string) bool {
+	var regex = regexp.MustCompile("^(/.)|(.yaml|.yml)$")
+	return regex.MatchString(fileName)
 }
 
 //PrintLogLines prints lines as logs

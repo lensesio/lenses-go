@@ -70,7 +70,10 @@ func loadTopics(client *api.Client, cmd *cobra.Command, loadpath string) error {
 		}
 	}
 
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 	for _, file := range files {
 		var topicFromFile api.CreateTopicPayload
 		if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &topicFromFile); err != nil {
