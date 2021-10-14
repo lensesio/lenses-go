@@ -54,6 +54,7 @@ func loadProcessors(client *api.Client, cmd *cobra.Command, loadpath string) err
 		golog.Errorf("Failed to retrieve processors. [%s]", err.Error())
 	}
 
+IterateImportFiles:
 	for _, file := range files {
 
 		var processor api.CreateProcessorPayload
@@ -63,21 +64,25 @@ func loadProcessors(client *api.Client, cmd *cobra.Command, loadpath string) err
 		}
 
 		for _, p := range processors.Streams {
-			if processor.Name == p.Name &&
-				processor.ClusterName == p.ClusterName &&
-				processor.Namespace == p.Namespace {
-
-				if processor.Runners != p.Runners {
-					//scale
-					if err := client.UpdateProcessorRunners(p.ID, processor.Runners); err != nil {
-						golog.Errorf("Error scaling processor [%s] from file [%s/%s]. [%s]", p.ID, loadpath, file.Name(), err.Error())
-						return err
-					}
-					golog.Infof("Scaled processor [%s] from file [%s/%s] from [%d] to [%d]", p.ID, loadpath, file.Name(), p.Runners, processor.Runners)
-					return nil
-				}
-				golog.Warnf("Processor [%s] from file [%s/%s] already exists", p.ID, loadpath, file.Name())
+			if processor.Name != p.Name ||
+				processor.ClusterName != p.ClusterName ||
+				processor.Namespace != p.Namespace {
+				continue
 			}
+
+			if processor.Runners == p.Runners {
+				golog.Warnf("Processor [%s] from file [%s/%s] already exists", p.ID, loadpath, file.Name())
+				// Iterate next file from 'files'
+				continue IterateImportFiles
+			}
+			//scale
+			if err := client.UpdateProcessorRunners(p.ID, processor.Runners); err != nil {
+				golog.Errorf("Error scaling processor [%s] from file [%s/%s]. [%s]", p.ID, loadpath, file.Name(), err.Error())
+				return err
+			}
+			golog.Infof("Scaled processor [%s] from file [%s/%s] from [%d] to [%d]", p.ID, loadpath, file.Name(), p.Runners, processor.Runners)
+			return nil
+
 		}
 
 		if err := client.CreateProcessor(
