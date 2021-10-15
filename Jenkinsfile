@@ -31,7 +31,7 @@ pipeline {
         // Dev. vars.
         // GCLOUD_SA_KEY_PATH = credentials("gcloud-dev")
         // GCLOUD_PROJECT = 'k8-engine'
-        GCLOUD_DOCKER_IMAGE = 'google/cloud-sdk:289.0.0'
+        GCLOUD_DOCKER_IMAGE = 'google/cloud-sdk:360.0.0-slim'
         GCLOUD_DOCKER_ARGS = '--env HOME=/tmp'
         GCLOUD_BUCKET = 'cli'
         GCLOUD_BUCKET_DEVELOPMENT = 'lenses-artifacts-development'
