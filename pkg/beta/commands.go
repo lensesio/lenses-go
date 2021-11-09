@@ -66,6 +66,9 @@ func NewProvisionCommand() *cobra.Command {
 				return err
 			}
 
+			type Connection struct {
+				Name string `json:"name" yaml:"name"`
+			}
 			// Handle connections
 			for _, conn := range conf.Connections {
 				// Opted to use a 3rd party library since the standard one
@@ -77,13 +80,16 @@ func NewProvisionCommand() *cobra.Command {
 					return err
 				}
 
-				path := fmt.Sprintf("api/%s", pkg.ConnectionsAPIPath)
-				resp, err := config.Client.Do(http.MethodPost, path, "application/JSON", jsonPayload)
+				var c Connection
+				if err := json.Unmarshal(jsonPayload, &c); err != nil {
+					return err
+				}
 
-				// Handle here if connection already exists ??
+				path := fmt.Sprintf("api/%s/%s", pkg.ConnectionsAPIPath, c.Name)
+				resp, err := config.Client.Do(http.MethodPut, path, "application/json", jsonPayload)
+
 				if err != nil {
-					fmt.Fprintln(cmd.ErrOrStderr(), err)
-					continue
+					return err
 				}
 
 				defer resp.Body.Close()
