@@ -68,11 +68,9 @@ func UpdateTopicSettingsCmd() *cobra.Command {
 			Update settings for Kafka Topics
 
 			Update the Settings for Kafka, in order to restrict tennants from overloading the Kafka Cluster(s).
-			Set sensible default for "Minimum and Maximum Partitions", "Minimum and Maximum Replication Factor" and 
-			"Retention Time and Size".
+			Set sensible default for "Minimum and Maximum Partitions", "Minimum and Maximum Replication Factor" and "Retention Time and Size".
 
-			Note that "Partitions" and "Replication" are positive integers, and "Retention Time and Size" need to be set in
-			Milliseconds and Bytes respectively or can be set to -1, to signify inifite retention.
+			Note that "Partitions" and "Replication" are positive integers, and "Retention Time and Size" need to be set in Milliseconds and Bytes respectively or can be set to -1, to signify inifite retention.
 		`),
 		Example: heredoc.Doc(`
 			$ lenses-cli topic-settings update --partitions-min=1 --replication-min=1 --retention-size-max=-1 --retention-time-max=-1
