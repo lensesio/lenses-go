@@ -55,7 +55,7 @@ func NewViewSchemaCmd() *cobra.Command {
 			the name parameter, in quotes to ensure proper encoding support.
 		`),
 		Example: heredoc.Doc(`
-			$ lenses-cli schemas get --name="<ΝΑΜΕ>"
+			$ lenses-cli schema-registry get --name="<ΝΑΜΕ>"
 		`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -98,7 +98,7 @@ func WriteSchemaCmd() *cobra.Command {
 		"AVRO" or "PROTOBUF"
 		`),
 		Example: heredoc.Doc(`
-		$ lenses-cli schemas write --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
+		$ lenses-cli schema-regstiry write --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
 		`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
