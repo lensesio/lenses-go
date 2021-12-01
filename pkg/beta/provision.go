@@ -24,7 +24,7 @@ type Config struct {
 	License struct {
 		FileRef FileRef `yaml:"fileRef"`
 	} `yaml:"license"`
-	Connections []interface{} `yaml:"connections"`
+	Connections map[string]interface{} `yaml:"connections"`
 }
 
 // FileRef is structure that specifies how to retrieve the file to be uploaded
