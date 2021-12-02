@@ -44,7 +44,7 @@ type GetSchemaReq struct {
 
 //GetSchema returns the details of a schema
 func (c *Client) GetSchema(name string) (response GetSchemaRes, err error) {
-	const basePath = "api/v1/datasets/lenses-default-schema-registry"
+	const basePath = "api/v1/datasets/schema-registry"
 	path := fmt.Sprintf("%s/%s", basePath, name)
 
 	if name == "" {
@@ -58,7 +58,13 @@ func (c *Client) GetSchema(name string) (response GetSchemaRes, err error) {
 		return
 	}
 
+	defer resp.Body.Close()
+
 	err = c.ReadJSON(resp, &response)
+	if err != nil {
+		return
+	}
+
 	return
 }
 
@@ -69,7 +75,7 @@ type WriteSchemaReq struct {
 }
 
 //WriteSchema creates a schema if it doens't exist, updates it otherwise
-func (c *Client) WriteSchema(name string, request WriteSchemaReq) error {
+func (c *Client) WriteSchema(name string, request WriteSchemaReq) (err error) {
 	const basePath = "api/v1/sr/default/subject"
 	path := fmt.Sprintf("%s/%s/current-version", basePath, name)
 
@@ -91,8 +97,12 @@ func (c *Client) WriteSchema(name string, request WriteSchemaReq) error {
 		return errors.Wrap(err, "Request failed")
 	}
 
-	_, err = c.Do(http.MethodPut, path, contentTypeJSON, payload)
-	return err
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, payload)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return
 }
 
 //SetSchemaCompatibilityReq Struct
@@ -101,7 +111,7 @@ type SetSchemaCompatibilityReq struct {
 }
 
 //SetSchemaCompatibility set the compatibility of a schema
-func (c *Client) SetSchemaCompatibility(name string, request SetSchemaCompatibilityReq) error {
+func (c *Client) SetSchemaCompatibility(name string, request SetSchemaCompatibilityReq) (err error) {
 	const basePath = "api/v1/sr/default/subject"
 	path := fmt.Sprintf("%s/%s/config", basePath, name)
 
@@ -119,8 +129,14 @@ func (c *Client) SetSchemaCompatibility(name string, request SetSchemaCompatibil
 		return errors.Wrap(err, "Request failed")
 	}
 
-	_, err = c.Do(http.MethodPut, path, contentTypeJSON, payload)
-	return err
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, payload)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	return
 }
 
 //SetGlobalCompatibilityReq Struct
@@ -129,7 +145,7 @@ type SetGlobalCompatibilityReq struct {
 }
 
 //SetGlobalCompatibility set the default compatibility of the schema registry
-func (c *Client) SetGlobalCompatibility(request SetGlobalCompatibilityReq) error {
+func (c *Client) SetGlobalCompatibility(request SetGlobalCompatibilityReq) (err error) {
 	const basePath = "api/v1/sr/default/config"
 
 	if request.Compatibility == "" {
@@ -137,17 +153,23 @@ func (c *Client) SetGlobalCompatibility(request SetGlobalCompatibilityReq) error
 	}
 
 	payload, err := json.Marshal(request)
-
 	if err != nil {
-		return errors.Wrap(err, "Request failed")
+		return
 	}
 
-	_, err = c.Do(http.MethodPut, basePath, contentTypeJSON, payload)
-	return err
+	resp, err := c.Do(http.MethodPut, basePath, contentTypeJSON, payload)
+
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	return
 }
 
 //RemoveSchemaVersion removes a particular schema version
-func (c *Client) RemoveSchemaVersion(name string, version string) error {
+func (c *Client) RemoveSchemaVersion(name string, version string) (err error) {
 	const basePath = "api/v1/sr/default/subject"
 	path := fmt.Sprintf("%s/%s/version/%s", basePath, name, version)
 
@@ -159,12 +181,19 @@ func (c *Client) RemoveSchemaVersion(name string, version string) error {
 		return fmt.Errorf("version is required")
 	}
 
-	_, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
-	return err
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
+
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	return
 }
 
 //RemoveSchema removes the schema and all its versions
-func (c *Client) RemoveSchema(name string) error {
+func (c *Client) RemoveSchema(name string) (err error) {
 	const basePath = "api/v1/sr/default/subject"
 	path := fmt.Sprintf("%s/%s", basePath, name)
 
@@ -172,6 +201,11 @@ func (c *Client) RemoveSchema(name string) error {
 		return fmt.Errorf("name is required")
 	}
 
-	_, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
-	return err
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return
 }

@@ -83,6 +83,7 @@ export serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewExportAlertChannelsCommand())
 	cmd.AddCommand(NewExportTopicSettingsCmd())
 	cmd.AddCommand(NewExportAuditChannelsCommand())
+	cmd.AddCommand(NewExportSchemasCmd())
 
 	return cmd
 }

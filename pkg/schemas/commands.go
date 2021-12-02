@@ -57,7 +57,7 @@ func ViewSchemaCmd() *cobra.Command {
 			the name parameter, in quotes to ensure proper encoding support.
 		`),
 		Example: heredoc.Doc(`
-			$ lenses-cli schema-registry get --name="<ΝΑΜΕ>"
+			$ lenses-cli schema-registry get --name="<NAME>"
 		`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -66,7 +66,7 @@ func ViewSchemaCmd() *cobra.Command {
 			schema, err := client.GetSchema(name)
 
 			if err != nil {
-				return errors.Wrap(err, utils.RED("✘ Error"))
+				return errors.Wrap(err, "✘ Error")
 			}
 			return bite.PrintJSON(cmd, schema)
 		},
@@ -90,7 +90,8 @@ func WriteSchemaCmd() *cobra.Command {
 	var name string
 
 	cmd := &cobra.Command{
-		Use: "write",
+		Use:     "write",
+		Aliases: []string{"update", "create"},
 		Long: heredoc.Doc(`
 		Create a "Schema" if it doesn't exist. Update if it exists.
 
@@ -98,17 +99,19 @@ func WriteSchemaCmd() *cobra.Command {
 		If no format is provide, Avro will be used as default.
 
 		Note, that proper "Schema" encoding is necessary for both
-		"AVRO" or "PROTOBUF"
+		"AVRO" or "PROTOBUF".
 		`),
 		Example: heredoc.Doc(`
 		$ lenses-cli schema-regstiry write --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
+		$ lenses-cli schema-regstiry create --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
+		$ lenses-cli schema-regstiry update --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
 		`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := config.Client
 			err := client.WriteSchema(name, request)
-			return errors.Wrap(err, utils.RED("✘ Error"))
+			return errors.Wrap(err, "✘ Error")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			fmt.Fprintln(os.Stderr, utils.Green("✓ Request succeeded!"))
@@ -147,7 +150,7 @@ func SetSchemaCompatibility() *cobra.Command {
 			client := config.Client
 			err := client.SetSchemaCompatibility(name, request)
 
-			return errors.Wrap(err, utils.RED("✘ Error"))
+			return errors.Wrap(err, "✘ Error")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			fmt.Fprintln(os.Stderr, utils.Green("✓ Request succeeded!"))
@@ -170,7 +173,8 @@ func SetGlobalCompatibility() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "default",
 		Long: heredoc.Doc(`
-		Override the Schema Registry Compatibility.
+		Override the Schema Registry Compatibility. If no compatibility, is set
+		per schema, this value will be used as a default.
 		
 		Options: "BACKWARDS", "FORWARDS", "NONE", "FULL", "FULL_TRANSITIVE"
 		"BACKWARDS_TRANSITIVE", "FORWARDS_TRANSITIVE"
@@ -184,7 +188,7 @@ func SetGlobalCompatibility() *cobra.Command {
 			client := config.Client
 			err := client.SetGlobalCompatibility(request)
 
-			return errors.Wrap(err, utils.RED("✘ Error"))
+			return errors.Wrap(err, "✘ Error")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			fmt.Fprintln(os.Stderr, utils.Green("✓ Request succeeded!"))
@@ -220,7 +224,7 @@ func RemoveSchemaVersion() *cobra.Command {
 			client := config.Client
 			err := client.RemoveSchemaVersion(name, version)
 
-			return errors.Wrap(err, utils.RED("✘ Error"))
+			return errors.Wrap(err, "✘ Error")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			fmt.Fprintln(os.Stderr, utils.Green("✓ Request succeeded!"))
@@ -255,7 +259,7 @@ func RemoveSchema() *cobra.Command {
 			client := config.Client
 			err := client.RemoveSchema(name)
 
-			return errors.Wrap(err, utils.RED("✘ Error"))
+			return errors.Wrap(err, "✘ Error")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			fmt.Fprintln(os.Stderr, utils.Green("✓ Request succeeded!"))
