@@ -287,8 +287,12 @@ func Test_checkConfigValidity(t *testing.T) {
 
 	for _, tt := range tests {
 		inputMap := make(map[interface{}]interface{})
-		_ = yaml.Unmarshal([]byte(tt.args.config), &inputMap)
+
 		t.Run(tt.name, func(t *testing.T) {
+			if uerr := yaml.Unmarshal([]byte(tt.args.config), &inputMap); uerr != nil {
+				t.Fatalf("failed to unmarshall config input, error = %v", uerr)
+			}
+
 			if err := checkConfigValidity(inputMap); err != tt.err {
 				t.Errorf("checkConfigValidity() error = %v, wanted error %v", err, tt.err)
 			}
