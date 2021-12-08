@@ -68,8 +68,12 @@ b:
 `
 
 	validConfigInput = `
+license:
+  fileRef:
+    URL: http://acme.com
 connections:
-  - name: kafka
+  kafka:
+    name: kafka
     tags: []
     templateName: Kafka
     configurationObject:
@@ -85,7 +89,8 @@ connections:
         fileRef:
           inline: MIIFcwIBAzCCBSwGCSqGSIb3DQEHAaCCBR0EggUZMIIFFTCCBREGCSqGSIb3DQEHBqCCBQIwggT+AgEAMIIE9wYJKoZIhvcNAQcBMGYGCSqGSIb3DQEFDTBZMDgGCSqGSIb3DQEFDDArBBSZIsCyx6OD07VZBlkP1Wb1qGnasAICJxACASAwDAYIKoZIhvcNAgkFADAdBglghkgBZQMEASoEELIL4YHQocCrTZIlWZk7u4CAggSANkaRWh4bb5PQhDfeY+oMqUY7SVABU8fuyZYpTL3T9rOrmOlm9yq2lME/1CQYxlzr8pjv6tJfV2ciZNZde9eLfNTXtdRbFKZen0a1hfmvoSUHoEQReX7GQ7Cr/iACEW1nTZaZB9OiB3rF0h2eNtDlh+nMzr8QDwz8xye6sGSYKF2jhAn4IeAg/v+40/1Y+kjfK9MCOrLU593OqFZOJZGpm/oKE4pAsws+TiDMb25MiPeVgjLDJ4pY52fiIJLZ+t/jrNd/+8hfiAKpIRve4BtkMkfJMeOcRYUHoSdN+a6E//tPK0WdQIyoUEGZwmqCUnuLz9uXvnNFvBWb/ANduBudTPUaGUwOrMUBIvsZhDkh8uMw6aZ2L2Zy2IKDtvM10WERIDlY8qTa54JpxpeN/xMDSRpozLx07DETnUroFPHNCu7443gOTk21+6yLW3OlUQCf7kEbuT6yXOjD37ka27KAwf4ZfqPFAT3BmdtxAG/jwn58QbFIQHQ/Q4JwCIIUaG6Ke5GHcjm/Xip9RwAhF8SYtkFsxlBchez523hu4o83oTRLqh+pkvA4SoqkNvpAwrRMU/XYC55IeL8A99fxFsk2FN70iXksK8GuG54uInew8mMsIUEfX5IOwMAFQZ5NkVKMERCZcv1HrbjnrvSwLTa4st4VwOStZq67F437C9U1GobLXPyMMH0r+KnBHqgHQU+QLAhEmqt4SLR7TV3fGVdIqVC1wnBWQRoh+UmDcLGRB0R1Tv8a6vGhvQA7BUECtdRRbgMueRRL+Pkdh3wRTaVIvO24N5fTuAfsHKZKTRyvP0yaNOiJi+mkV/hueucCYJUXHDmV4kF2dlAiUXeSHF4jFx3aoYl9FjqUA7HMvOoK7i/CTDklK58qNE+Po7xPueX/scHRH626MB3l4gc7++Tug4XCQPVHzuVErWu1ybSb/rxFsD4fjyDh4hzab5iRjb+WyYORe6iFQiCaaDl3PpRtdckybl7N9wLsaU9FvhluJDVwbGYhYWNpnLv0WU3FE2bTODNLUW2H3vEuNNLtT8xsU/MEs/F7ScLUU+62wzAUCb09EO5jmocwcSXooGt0BUJqEEWK+GCr8dgwTmKWSUZ2VrOim9ag+wNXIsxrk31zlyd/f1JUQ6cIvnpYfAxKYk/jjBk26lXuVArZUS6Rmu/KzjEoplB450IQ2ihOJXdB7TxsnCquBNpM0z4pdfjXCBa/BoUjLBp90uLNoZbM8ZjaFb8Az8SL39jvZsMoplSONCRxZawgENiow1oWsLOg2vwad3u0E4erZ84pfyZkjDUTjDXDkuVcriMoeNgFqvnbXcS4qJmfJcFyfP0mpMLVigWbfNUx7A7jRvIj62Ma56nkshbpdHNN4f7Wsvas24fPwT80lU0dNMITqZXIRMkPYonN5wT/Spym19OBCuEb39IrOiaCFoLi2F9IW8QgKILMNXhQ8bNKH7i0+sql0NSDNl12x5aAkXwh+7ltP+HoXsV4TTFF1BhvViDVET55gbV8XhLSa6gh+A2UUu9l8OVKkoMqMD4wITAJBgUrDgMCGgUABBSpE4YA915s37bSch6n8X0QUkngAQQUX3TQXsAqVA7SPTvTb1HdfzxIyEECAwGGoA==
       sslTruststorePassword: fastdata
-  - name: lenses-default-schema-registry
+  schema-registry:
+    name: schema-registry
     templateName: SchemaRegiststries
     tags: []
     configurationObject:
@@ -97,8 +102,12 @@ connections:
       additionalProperties: {}
 `
 	validConfigOutput = `
+license:
+  fileRef:
+    URL: http://acme.com
 connections:
-  - name: kafka
+  kafka:
+    name: kafka
     tags: []
     templateName: Kafka
     configurationObject:
@@ -112,7 +121,8 @@ connections:
       sslTruststore:
         fileId: "fdd0b728-7857-4da2-b016-00e51801719f"
       sslTruststorePassword: fastdata
-  - name: lenses-default-schema-registry
+  schema-registry:
+    name: schema-registry
     templateName: SchemaRegiststries
     tags: []
     configurationObject:
@@ -195,7 +205,8 @@ func Test_parseConfig(t *testing.T) {
 const (
 	noLicenseConfigInput = `
 connections:
-  - name: kafka
+  kafka:
+    name: kafka
     tags: []
     templateName: Kafka
     configurationObject:
@@ -209,7 +220,22 @@ connections:
 	noConnectionsConfigInput = `
 license:
   fileRef:
-     URL: http://acme.com
+    URL: http://acme.com
+`
+
+	invalidConnectionsStructureConfigInput = `
+license:
+  fileRef:
+    URL: http://acme.com
+
+connections:
+  - name: kafka
+    tags: []
+    templateName: Kafka
+    configurationObject:
+      kafkaBootstrapServers:
+        - PLAINTEXT:///localhost:9092
+      protocol: PLAINTEXT
 `
 )
 
@@ -218,32 +244,57 @@ func Test_checkConfigValidity(t *testing.T) {
 		config string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name string
+		args args
+		err  error
 	}{
+		{
+			name: "valid input",
+			args: args{
+				config: validConfigInput,
+			},
+			err: nil,
+		},
+		{
+			name: "valid output",
+			args: args{
+				config: validConfigOutput,
+			},
+			err: nil,
+		},
 		{
 			name: "no license key",
 			args: args{
 				config: noLicenseConfigInput,
 			},
-			wantErr: true,
+			err: errMissingLicence,
 		},
 		{
 			name: "no connections",
 			args: args{
 				config: noConnectionsConfigInput,
 			},
-			wantErr: true,
+			err: errMissingConnections,
+		},
+		{
+			name: "invalid connections structure",
+			args: args{
+				config: invalidConnectionsStructureConfigInput,
+			},
+			err: errInvalidConnectionsStruct,
 		},
 	}
 
 	for _, tt := range tests {
 		inputMap := make(map[interface{}]interface{})
-		_ = yaml.Unmarshal([]byte(tt.args.config), &inputMap)
+
 		t.Run(tt.name, func(t *testing.T) {
-			if err := checkConfigValidity(inputMap); (err != nil) != tt.wantErr {
-				t.Errorf("checkConfigValidity() error = %v, wantErr %v", err, tt.wantErr)
+			if uerr := yaml.Unmarshal([]byte(tt.args.config), &inputMap); uerr != nil {
+				t.Fatalf("failed to unmarshall config input, error = %v", uerr)
+			}
+
+			if err := checkConfigValidity(inputMap); err != tt.err {
+				t.Errorf("checkConfigValidity() error = %v, wanted error %v", err, tt.err)
 			}
 		})
 	}

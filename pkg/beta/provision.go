@@ -186,21 +186,25 @@ func gatherFileRefs(input interface{}) []map[interface{}]interface{} {
 	return out
 }
 
+var errMissingLicence = errors.New("'license' key not found or empty value")
+var errMissingConnections = errors.New("no connections found")
+var errInvalidConnectionsStruct = errors.New("cannot decode Connections, expected a map")
+
 // checkConfigValidity verifies the the config passed has the expected
 // high level structure
 func checkConfigValidity(config map[interface{}]interface{}) error {
 
 	var conf Config
 	if err := mapstructure.Decode(config, &conf); err != nil {
-		return err
+		return errInvalidConnectionsStruct
 	}
 
 	if conf.License.FileRef == (FileRef{}) {
-		return errors.New("'license' key not found or empty value")
+		return errMissingLicence
 	}
 
 	if len(conf.Connections) == 0 {
-		return errors.New("no connections found")
+		return errMissingConnections
 	}
 	return nil
 }
