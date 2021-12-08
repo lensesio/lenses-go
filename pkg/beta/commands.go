@@ -66,11 +66,8 @@ func NewProvisionCommand() *cobra.Command {
 				return err
 			}
 
-			type Connection struct {
-				Name string `json:"name" yaml:"name"`
-			}
 			// Handle connections
-			for _, conn := range conf.Connections {
+			for connName, conn := range conf.Connections {
 				// Opted to use a 3rd party library since the standard one
 				// cannot marshall a map of type map[interface{}]interface{}, only
 				// map[string]interface{}
@@ -80,12 +77,7 @@ func NewProvisionCommand() *cobra.Command {
 					return err
 				}
 
-				var c Connection
-				if err := json.Unmarshal(jsonPayload, &c); err != nil {
-					return err
-				}
-
-				path := fmt.Sprintf("api/%s/%s", pkg.ConnectionsAPIPath, c.Name)
+				path := fmt.Sprintf("api/%s/%s", pkg.ConnectionsAPIPath, connName)
 				resp, err := config.Client.Do(http.MethodPut, path, "application/json", jsonPayload)
 
 				if err != nil {
