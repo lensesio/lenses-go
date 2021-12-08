@@ -220,7 +220,22 @@ connections:
 	noConnectionsConfigInput = `
 license:
   fileRef:
-     URL: http://acme.com
+    URL: http://acme.com
+`
+
+	invalidConnectionsStructureConfigInput = `
+license:
+  fileRef:
+    URL: http://acme.com
+
+connections:
+  - name: kafka
+    tags: []
+    templateName: Kafka
+    configurationObject:
+      kafkaBootstrapServers:
+        - PLAINTEXT:///localhost:9092
+      protocol: PLAINTEXT
 `
 )
 
@@ -229,37 +244,44 @@ func Test_checkConfigValidity(t *testing.T) {
 		config string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name string
+		args args
+		err  error
 	}{
 		{
 			name: "valid input",
 			args: args{
 				config: validConfigInput,
 			},
-			wantErr: false,
+			err: nil,
 		},
 		{
 			name: "valid output",
 			args: args{
 				config: validConfigOutput,
 			},
-			wantErr: false,
+			err: nil,
 		},
 		{
 			name: "no license key",
 			args: args{
 				config: noLicenseConfigInput,
 			},
-			wantErr: true,
+			err: errMissingLicence,
 		},
 		{
 			name: "no connections",
 			args: args{
 				config: noConnectionsConfigInput,
 			},
-			wantErr: true,
+			err: errMissingConnections,
+		},
+		{
+			name: "invalid connections structure",
+			args: args{
+				config: invalidConnectionsStructureConfigInput,
+			},
+			err: errInvalidConnectionsStruct,
 		},
 	}
 
@@ -267,8 +289,8 @@ func Test_checkConfigValidity(t *testing.T) {
 		inputMap := make(map[interface{}]interface{})
 		_ = yaml.Unmarshal([]byte(tt.args.config), &inputMap)
 		t.Run(tt.name, func(t *testing.T) {
-			if err := checkConfigValidity(inputMap); (err != nil) != tt.wantErr {
-				t.Errorf("checkConfigValidity() error = %v, wantErr %v", err, tt.wantErr)
+			if err := checkConfigValidity(inputMap); err != tt.err {
+				t.Errorf("checkConfigValidity() error = %v, wanted error %v", err, tt.err)
 			}
 		})
 	}
