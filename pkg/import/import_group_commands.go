@@ -33,7 +33,6 @@ import serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewImportConnectorsCommand())
 	cmd.AddCommand(NewImportProcessorsCommand())
 	cmd.AddCommand(NewImportQuotasCommand())
-	cmd.AddCommand(NewImportSchemasCommand())
 	cmd.AddCommand(NewImportTopicsCommand())
 	cmd.AddCommand(NewImportPoliciesCommand())
 	cmd.AddCommand(NewImportGroupsCommand())
@@ -41,6 +40,7 @@ import serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewImportAlertChannelsCommand())
 	cmd.AddCommand(ImportTopicSettingsCmd())
 	cmd.AddCommand(NewImportAuditChannelsCommand())
+	cmd.AddCommand(NewImportSchemasCmd())
 
 	return cmd
 }

@@ -28,7 +28,7 @@ import (
 	"github.com/lensesio/lenses-go/pkg/policy"
 	"github.com/lensesio/lenses-go/pkg/processor"
 	"github.com/lensesio/lenses-go/pkg/quota"
-	"github.com/lensesio/lenses-go/pkg/schema"
+	"github.com/lensesio/lenses-go/pkg/schemas"
 	"github.com/lensesio/lenses-go/pkg/secret"
 	"github.com/lensesio/lenses-go/pkg/shell"
 	"github.com/lensesio/lenses-go/pkg/sql"
@@ -201,10 +201,6 @@ func main() {
 	app.AddCommand(quota.NewGetQuotasCommand())
 	app.AddCommand(quota.NewQuotaGroupCommand())
 
-	//Schemas
-	app.AddCommand(schema.NewSchemasGroupCommand())
-	app.AddCommand(schema.NewSchemaGroupCommand())
-
 	//Shell
 	app.AddCommand(shell.NewInteractiveCommand())
 
@@ -235,8 +231,9 @@ func main() {
 	// Add init container command for kubernetes
 	app.AddCommand(initcontainer.NewInitConCommand())
 
-	app.AddCommand(dataset.NewDatasetGroupCmd())
 	app.AddCommand(topicsettings.NewTopicSettingsCmd())
+	app.AddCommand(dataset.NewDatasetGroupCmd())
+	app.AddCommand(schemas.NewSchemasCmd())
 
 	// Beta command to group experimental features
 	app.AddCommand(beta.NewRootCommand())

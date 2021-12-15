@@ -75,7 +75,6 @@ export serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewExportConnectorsCommand())
 	cmd.AddCommand(NewExportProcessorsCommand())
 	cmd.AddCommand(NewExportQuotasCommand())
-	cmd.AddCommand(NewExportSchemasCommand())
 	cmd.AddCommand(NewExportTopicsCommand())
 	cmd.AddCommand(NewExportPoliciesCommand())
 	cmd.AddCommand(NewExportConnectionsCommand())
@@ -84,6 +83,7 @@ export serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewExportAlertChannelsCommand())
 	cmd.AddCommand(NewExportTopicSettingsCmd())
 	cmd.AddCommand(NewExportAuditChannelsCommand())
+	cmd.AddCommand(NewExportSchemasCmd())
 
 	return cmd
 }
