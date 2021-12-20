@@ -64,17 +64,14 @@ func loadAcls(client *api.Client, cmd *cobra.Command, loadpath string) error {
 			return err
 		}
 
-		var found, imported bool
+		var imported bool
 		// Import only new ACLs
+	ImportACLs:
 		for _, candidateACL := range candidateACLs {
 			for _, knownACL := range knownACLs {
 				if reflect.DeepEqual(knownACL, candidateACL) {
-					found = true
+					continue ImportACLs
 				}
-			}
-
-			if found {
-				continue
 			}
 
 			if err := client.CreateOrUpdateACL(candidateACL); err != nil {
@@ -83,7 +80,6 @@ func loadAcls(client *api.Client, cmd *cobra.Command, loadpath string) error {
 			fmt.Fprintf(cmd.OutOrStdout(), "imported ACL [%s] successfully\n", candidateACL)
 
 			imported = true
-
 		}
 
 		importFilePath := fmt.Sprintf("%s/%s", loadpath, file.Name())
