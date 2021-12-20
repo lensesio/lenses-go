@@ -132,6 +132,10 @@ func OpenConnection(cfg ClientConfig, options ...ConnectionOption) (*Client, err
 		UsingClient(httpClient)(c)
 	}
 
+	if clientConfig.Debug {
+		golog.SetLevel("debug")
+	}
+
 	// i.e `UsingToken`.
 	if clientConfig.Token != "" {
 		golog.Debugf("Connecting using just the token: [%s]", clientConfig.Token)
@@ -151,11 +155,8 @@ func OpenConnection(cfg ClientConfig, options ...ConnectionOption) (*Client, err
 		return nil, fmt.Errorf("client: login failure: token is undefined")
 	}
 
-	if clientConfig.Debug {
-		golog.SetLevel("debug")
-		golog.Debugf("Connected on [%s] with token: [%s]\nUser details: [%#+v]",
-			c.Config.Host, c.User.Token, c.User)
-	}
+	golog.Debugf("Connected on [%s] with token: [%s]\nUser details: [%#+v]",
+		c.Config.Host, c.User.Token, c.User)
 
 	return c, nil
 }
