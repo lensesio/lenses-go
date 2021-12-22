@@ -1543,31 +1543,31 @@ type (
 	// ProcessorStream describes the processor stream,
 	// see `ProcessorResult`.
 	ProcessorStream struct {
-		ID              string `json:"id" header:"ID,text"`
-		ProcessorID     string `json:"processorId" header:"ProcessorID,text"`
-		Name            string `json:"name" header:"Name"`
-		DeploymentState string `json:"deploymentState" header:"State"`
-		Runners         int    `json:"runners" header:"Runners"`
-		User            string `json:"user" header:"Created By"`
-		StartTimestamp  int64  `json:"startTs" header:"Started at,timestamp(ms|02 Jan 2006 15:04)"`
-		StopTimestamp   int64  `json:"stopTs,omitempty" header:"Stopped,timestamp(ms|02 Jan 2006 15:04),No"`
-		Uptime          int64  `json:"uptime" header:"Up time,unixduration"`
+		ID              string `json:"id" header:"ID,text" yaml:"id"`
+		ProcessorID     string `json:"processorId" header:"ProcessorID,text" yaml:"processorId"`
+		Name            string `json:"name" header:"Name" yaml:"name"`
+		DeploymentState string `json:"deploymentState" header:"State" yaml:"deploymentState"`
+		Runners         int    `json:"runners" header:"Runners" yaml:"runners"`
+		User            string `json:"user" header:"Created By" yaml:"user"`
+		StartTimestamp  int64  `json:"startTs" header:"Started at,timestamp(ms|02 Jan 2006 15:04)" yaml:"startTs"`
+		StopTimestamp   int64  `json:"stopTs,omitempty" header:"Stopped,timestamp(ms|02 Jan 2006 15:04),No" yaml:"stopTs"`
+		Uptime          int64  `json:"uptime" header:"Up time,unixduration" yaml:"uptime"`
 
-		Namespace   string `json:"namespace" header:"Namespace"`
-		ClusterName string `json:"clusterName" header:"Cluster"`
+		Namespace   string `json:"namespace" header:"Namespace" yaml:"namespace"`
+		ClusterName string `json:"clusterName" header:"Cluster" yaml:"clusterName"`
 
-		SQL string `json:"sql"` // header:"SQL"`
+		SQL string `json:"sql" yaml:"sql"` // header:"SQL"`
 
-		InputTopics  []TopicName `json:"inputTopics"`
-		OutputTopics []TopicName `json:"outputTopics"` // header:"Topic Decoder"`
-		Pipeline     string      `json:"pipeline"`     // header:"Pipeline"`
+		InputTopics  []TopicName `json:"inputTopics" yaml:"inputTopics"`
+		OutputTopics []TopicName `json:"outputTopics" yaml:"outputTopics"` // header:"Topic Decoder"`
+		Pipeline     string      `json:"pipeline" yaml:"pipeline"`         // header:"Pipeline"`
 
-		ToTopics   []string            `json:"toTopics,omitempty"` // header:"To Topics"`
-		FromTopics []string            `json:"fromTopics,omitempty"`
-		LastAction ProcessorLastAction `json:"lastAction,omitempty"`
+		ToTopics   []string            `json:"toTopics,omitempty" yaml:"toTopics"` // header:"To Topics"`
+		FromTopics []string            `json:"fromTopics,omitempty" yaml:"fromTopics"`
+		LastAction ProcessorLastAction `json:"lastAction,omitempty" yaml:"lastAction"`
 
-		RunnerState ProcessorAppState `json:"state"`
-		Settings    map[string]string `json:"settings"`
+		RunnerState ProcessorAppState `json:"state" yaml:"state"`
+		Settings    map[string]string `json:"settings" yaml:"settings"`
 	}
 
 	// TopicName contains the information about the topic names of input/output topics

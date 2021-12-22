@@ -65,7 +65,7 @@ groups get --name=MyGroup --dataNamespaces
 			if namespaceOnly {
 				return bite.PrintObject(cmd, group.Namespaces)
 			}
-			return bite.PrintObject(cmd, PrintGroup(group))
+			return bite.PrintObject(cmd, group)
 		},
 	}
 
