@@ -4133,8 +4133,8 @@ type DataPolicyUpdateRequest struct {
 	ID          string    `json:"id" yaml:"id"`
 	Name        string    `json:"name" yaml:"name"`
 	Category    string    `json:"category" yaml:"category"`
-	ImpactType  string    `json:"impactType" yaml:"impact"`
-	Obfuscation string    `json:"obfuscation" yaml:"redaction"`
+	ImpactType  string    `json:"impactType" yaml:"impactType"`
+	Obfuscation string    `json:"obfuscation" yaml:"obfuscation"`
 	Datasets    *[]string `json:"datasets" yaml:"datasets"`
 	Fields      []string  `json:"fields" yaml:"fields"`
 }
