@@ -36,8 +36,8 @@ func NewGetPoliciesCommand() *cobra.Command {
 			}
 
 			if name != "" {
-				err = errors.New("Cannot be found in policies")
-				return fmt.Errorf("Failed to retrieve policy [%s]. [%s]", name, err.Error())
+				err = errors.New("cannot be found in policies")
+				return fmt.Errorf("failed to retrieve policy [%s]. [%s]", name, err.Error())
 			}
 			return bite.PrintObject(cmd, result)
 		},
