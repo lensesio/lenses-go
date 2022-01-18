@@ -12,11 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type importServiceAccount struct {
-	Name  string `json:"name" yaml:"name" header:"Name"`
-	Token string `json:"token" yaml:"token" header:"token"`
-}
-
 //NewImportServiceAccountsCommand creates `import serviceaccounts` command
 func NewImportServiceAccountsCommand() *cobra.Command {
 	var path string

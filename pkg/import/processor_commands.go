@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var importDir string
-
 //NewImportProcessorsCommand import processors command
 func NewImportProcessorsCommand() *cobra.Command {
 	var path string

@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var acl api.ACL
-
 //NewImportAclsCommand creates `import acls` command
 func NewImportAclsCommand() *cobra.Command {
 	var path string
