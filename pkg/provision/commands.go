@@ -2,6 +2,7 @@ package provision
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -20,11 +21,20 @@ var configMode string
 // NewProvisionCommand is the 'beta provision' commmand
 func NewProvisionCommand() *cobra.Command {
 
+	cmdShortDesc := "Provision Lenses with a YAML config file to setup license, connections, etc."
+	cmdLongDesc := `Provision Lenses with a YAML config file to setup license, connections, etc..
+If --mode flag set to 'sidecar' (for k8s purposes) then keep CLI running.`
+
 	cmd := &cobra.Command{
 		Use:     "provision <config_yaml_file> [--mode {normal,sidecar}]",
-		Long:    "Provision Lenses with a YAML config file to setup license, connections, etc",
+		Short:   cmdShortDesc,
+		Long:    cmdLongDesc,
 		Example: "provision wizard.yml --mode=sidecar",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if len(args) == 0 {
+				return errors.New("missing provisioning file, refer to `provision --help` for more info")
+			}
 
 			yamlFileAsBytes, err := ioutil.ReadFile(args[0])
 			if err != nil {
