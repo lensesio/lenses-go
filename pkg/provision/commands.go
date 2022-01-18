@@ -1,4 +1,4 @@
-package beta
+package provision
 
 import (
 	"encoding/json"
@@ -16,20 +16,6 @@ import (
 )
 
 var configMode string
-
-// NewRootCommand is the root command 'beta' used for experimental features
-func NewRootCommand() *cobra.Command {
-
-	cmd := &cobra.Command{
-		Use:              "beta",
-		Short:            "beta short desc",
-		Long:             "beta long desc",
-		TraverseChildren: true,
-	}
-
-	cmd.AddCommand(NewProvisionCommand())
-	return cmd
-}
 
 // NewProvisionCommand is the 'beta provision' commmand
 func NewProvisionCommand() *cobra.Command {
