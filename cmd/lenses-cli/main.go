@@ -11,7 +11,6 @@ import (
 	"github.com/lensesio/lenses-go/pkg/alert"
 	"github.com/lensesio/lenses-go/pkg/api"
 	"github.com/lensesio/lenses-go/pkg/audit"
-	"github.com/lensesio/lenses-go/pkg/beta"
 	config "github.com/lensesio/lenses-go/pkg/configs"
 	"github.com/lensesio/lenses-go/pkg/connection"
 	"github.com/lensesio/lenses-go/pkg/connector"
@@ -27,6 +26,7 @@ import (
 	"github.com/lensesio/lenses-go/pkg/management"
 	"github.com/lensesio/lenses-go/pkg/policy"
 	"github.com/lensesio/lenses-go/pkg/processor"
+	"github.com/lensesio/lenses-go/pkg/provision"
 	"github.com/lensesio/lenses-go/pkg/quota"
 	"github.com/lensesio/lenses-go/pkg/schemas"
 	"github.com/lensesio/lenses-go/pkg/secret"
@@ -235,8 +235,8 @@ func main() {
 	app.AddCommand(dataset.NewDatasetGroupCmd())
 	app.AddCommand(schemas.NewSchemasCmd())
 
-	// Beta command to group experimental features
-	app.AddCommand(beta.NewRootCommand())
+	// Add provision command for dynamic config
+	app.AddCommand(provision.NewProvisionCommand())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)

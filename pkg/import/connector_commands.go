@@ -54,7 +54,10 @@ func loadConnectors(client *api.Client, cmd *cobra.Command, loadpath, interval s
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "loading connectors from [%s]\n", loadpath)
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 
 	for _, file := range files {
 		var connector api.CreateUpdateConnectorPayload

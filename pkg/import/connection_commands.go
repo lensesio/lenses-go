@@ -48,7 +48,10 @@ func loadConnections(client *api.Client, cmd *cobra.Command, loadpath string) er
 		return err
 	}
 
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 	connTemplates, err := config.Client.GetConnectionTemplates()
 	if err != nil {
 		golog.Errorf("Error getting connection templates [%s]", err.Error())
