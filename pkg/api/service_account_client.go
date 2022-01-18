@@ -13,6 +13,7 @@ type ServiceAccount struct {
 	Name   string   `json:"name" yaml:"name" header:"Name"`
 	Owner  string   `json:"owner,omitempty" yaml:"owner,omitempty" header:"Owner"`
 	Groups []string `json:"groups" yaml:"groups" header:"Groups"`
+	Token  string   `json:"token,omitempty" yaml:"token,omitempty"`
 }
 
 //CreateSvcAccPayload the data transfer object when we create a new service account

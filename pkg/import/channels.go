@@ -15,7 +15,11 @@ func importChannels(client *api.Client, cmd *cobra.Command, loadpath, channelTyp
 	fmt.Fprintf(cmd.OutOrStdout(), "loading %s channels from [%s] directory\n", channelType, loadpath)
 
 	var targetChannels []api.ChannelPayload
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
+
 	for _, file := range files {
 		var targetChannel api.ChannelPayload
 		if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, file.Name()), &targetChannel); err != nil {

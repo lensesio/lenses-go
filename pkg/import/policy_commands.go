@@ -43,7 +43,10 @@ func NewImportPoliciesCommand() *cobra.Command {
 
 func loadPolicies(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	golog.Infof("Loading data policies from [%s]", loadpath)
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 
 	polices, err := client.GetPolicies()
 

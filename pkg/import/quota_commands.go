@@ -44,7 +44,10 @@ func NewImportQuotasCommand() *cobra.Command {
 
 func loadQuotas(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	golog.Infof("Loading quotas from [%s]", loadpath)
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 
 	lensesQuotas, err := client.GetQuotas()
 	var lensesReq []api.CreateQuotaPayload
