@@ -36,8 +36,8 @@ func NewGetPoliciesCommand() *cobra.Command {
 			}
 
 			if name != "" {
-				err = errors.New("Cannot be found in policies")
-				return fmt.Errorf("Failed to retrieve policy [%s]. [%s]", name, err.Error())
+				err = errors.New("cannot be found in policies")
+				return fmt.Errorf("failed to retrieve policy [%s]. [%s]", name, err.Error())
 			}
 			return bite.PrintObject(cmd, result)
 		},
@@ -173,6 +173,17 @@ func NewCreatePolicyCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			// Fields and datasets may be populated by CLI flags and need to transform them
+			// from string to slice of string (with ',' used a delimiter)
+			if fields != "" {
+				policy.Fields = strings.Split(fields, ",")
+			}
+
+			if datasets != "" {
+				datasetArray := strings.Split(datasets, ",")
+				policy.Datasets = &datasetArray
+			}
+
 			flags := bite.FlagPair{
 				"name":      policy.Name,
 				"category":  policy.Category,
@@ -184,11 +195,6 @@ func NewCreatePolicyCommand() *cobra.Command {
 			if err := bite.CheckRequiredFlags(cmd, flags); err != nil {
 				return err
 			}
-
-			policy.Fields = strings.Split(fields, ",")
-			datasetArray := strings.Split(datasets, ",")
-
-			policy.Datasets = &datasetArray
 
 			if err := config.Client.CreatePolicy(policy); err != nil {
 				golog.Errorf("Failed to create policy [%s]. [%s]", policy.Name, err.Error())
@@ -227,6 +233,17 @@ func NewUpdatePolicyCommand() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			// Fields and datasets may be populated by CLI flags and need to transform them
+			// from string to slice of string (with ',' used a delimiter)
+			if fields != "" {
+				policy.Fields = strings.Split(fields, ",")
+			}
+
+			if datasets != "" {
+				datasetArray := strings.Split(datasets, ",")
+				policy.Datasets = &datasetArray
+			}
+
 			flags := bite.FlagPair{
 				"id":        policy.ID,
 				"name":      policy.Name,
@@ -239,10 +256,6 @@ func NewUpdatePolicyCommand() *cobra.Command {
 			if err := bite.CheckRequiredFlags(cmd, flags); err != nil {
 				return err
 			}
-
-			policy.Fields = strings.Split(fields, ",")
-			datasetArray := strings.Split(datasets, ",")
-			policy.Datasets = &datasetArray
 
 			if err := config.Client.UpdatePolicy(policy); err != nil {
 				golog.Errorf("Failed to update policy [%s]. [%s]", policy.Name, err.Error())
