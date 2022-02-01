@@ -50,7 +50,7 @@ If --mode flag set to 'sidecar' (for k8s purposes) then keep CLI running.`
 					return err
 				}
 			}
-		
+
 			if configMode == "sidecar" {
 				select {}
 			}
@@ -146,20 +146,22 @@ func provision(cmd *cobra.Command, args []string) error {
 
 	}
 
-	// Handle license
-	licenseAsBytes, _, err := fileRefToBytes(conf.License.FileRef)
-	if err != nil {
-		return err
-	}
+	// License is optional value
+	if conf.License.FileRef != (FileRef{}) {
+		licenseAsBytes, _, err := fileRefToBytes(conf.License.FileRef)
+		if err != nil {
+			return err
+		}
 
-	var lic api.License
-	if err := json.Unmarshal(licenseAsBytes, &lic); err != nil {
-		return err
-	}
+		var lic api.License
+		if err := json.Unmarshal(licenseAsBytes, &lic); err != nil {
+			return err
+		}
 
-	if err := config.Client.UpdateLicense(lic); err != nil {
-		return err
+		if err := config.Client.UpdateLicense(lic); err != nil {
+			return err
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), "license updated successfully")
 	}
-	fmt.Fprintln(cmd.OutOrStdout(), "license updated successfully")
 	return nil
 }
