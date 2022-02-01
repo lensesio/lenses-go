@@ -42,4 +42,5 @@ const (
 
 	LicensePath    = "api/v1/license"
 	FileUploadPath = "api/v1/files"
+	SetupPath      = "api/v1/setup" // aka Wizard mode
 )
