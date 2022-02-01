@@ -52,6 +52,8 @@ If --mode flag set to 'sidecar' (for k8s purposes) then keep CLI running.`
 			}
 
 			if configMode == "sidecar" {
+				fmt.Fprintln(cmd.OutOrStdout(), "'sidecar' flag detected, lenses-cli will keep running for k8 support")
+				// An empty select block will keep the go processes running
 				select {}
 			}
 			return nil
@@ -142,7 +144,7 @@ func provision(cmd *cobra.Command, args []string) error {
 		if err := jsoniter.Unmarshal(respAsBytes, &connectionResponse); err != nil {
 			return err
 		}
-		fmt.Printf("connection '%s' configured successfully\n", connectionResponse.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "connection '%s' configured successfully\n", connectionResponse.Name)
 
 	}
 
