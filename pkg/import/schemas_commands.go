@@ -53,7 +53,10 @@ func NewImportSchemasCmd() *cobra.Command {
 
 //ReadSchemas to read the files and import one by one
 func ReadSchemas(client *api.Client, cmd *cobra.Command, filePath string) error {
-	files := utils.FindFiles(filePath)
+	files, err := utils.FindFiles(filePath)
+	if err != nil {
+		return err
+	}
 
 	for _, file := range files {
 		println(file)

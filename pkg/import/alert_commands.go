@@ -72,6 +72,9 @@ func loadConsumerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 
 	var targetConsumerAlertSettings api.ConsumerAlertSettings
 	channels, err := client.GetChannels(pkg.AlertChannelsPath, 1, 99999, "", "", "", "")
+	if err != nil {
+		return err
+	}
 
 	if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, "alert-setting-consumer.yaml"), &targetConsumerAlertSettings); err != nil {
 		return fmt.Errorf("error loading file [%s]", loadpath)
@@ -144,6 +147,9 @@ func loadProducerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 
 	var targetProducerAlertSettings api.ProducerAlertSettings
 	channels, err := client.GetChannels(pkg.AlertChannelsPath, 1, 99999, "", "", "", "")
+	if err != nil {
+		return err
+	}
 
 	if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", loadpath, "alert-setting-producer.yaml"), &targetProducerAlertSettings); err != nil {
 		return fmt.Errorf("error loading file [%s]", loadpath)

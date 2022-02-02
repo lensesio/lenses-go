@@ -47,7 +47,10 @@ func ImportTopicSettingsCmd() *cobra.Command {
 
 // ReadTopicSettings to read for each file and pass the topic-settings
 func ReadTopicSettings(client *api.Client, cmd *cobra.Command, filePath string) error {
-	files := utils.FindFiles(filePath)
+	files, err := utils.FindFiles(filePath)
+	if err != nil {
+		return err
+	}
 
 	for _, file := range files {
 		var settings api.TopicSettingsRequest

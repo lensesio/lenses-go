@@ -12,11 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type importServiceAccount struct {
-	Name  string `json:"name" yaml:"name" header:"Name"`
-	Token string `json:"token" yaml:"token" header:"token"`
-}
-
 //NewImportServiceAccountsCommand creates `import serviceaccounts` command
 func NewImportServiceAccountsCommand() *cobra.Command {
 	var path string
@@ -46,7 +41,10 @@ func NewImportServiceAccountsCommand() *cobra.Command {
 
 func loadServiceAccounts(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	golog.Infof("Loading service accounts from [%s]", loadpath)
-	files := utils.FindFiles(loadpath)
+	files, err := utils.FindFiles(loadpath)
+	if err != nil {
+		return err
+	}
 
 	currentSvcAccs, err := client.GetServiceAccounts()
 

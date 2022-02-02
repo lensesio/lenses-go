@@ -1,4 +1,4 @@
-package beta
+package provision
 
 import (
 	"bytes"
@@ -256,13 +256,6 @@ func Test_checkConfigValidity(t *testing.T) {
 				config: validConfigOutput,
 			},
 			err: nil,
-		},
-		{
-			name: "no license key",
-			args: args{
-				config: noLicenseConfigInput,
-			},
-			err: errMissingLicence,
 		},
 		{
 			name: "no connections",
