@@ -3,11 +3,14 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/kataras/golog"
 	"github.com/lensesio/lenses-go/pkg/api"
 	"github.com/lensesio/lenses-go/pkg/utils"
 	"github.com/spf13/pflag"
@@ -24,7 +27,7 @@ type ConfigurationManager struct {
 	Config *api.Config
 	// flags below.
 	CurrentContext, host, timeout, token, user, pass, kerberosConf, kerberosRealm, kerberosKeytab, kerberosCCache string
-	insecure, debug                                                                                               bool
+	insecure, debug, WaitForLenses                                                                                bool
 
 	Filepath string
 }
@@ -79,6 +82,7 @@ func NewConfigurationManager(set *pflag.FlagSet) *ConfigurationManager {
 	set.BoolVar(&m.debug, "debug", false, "Print some information that are necessary for debugging")
 
 	set.StringVar(&m.Filepath, "config", "", "Load or save the host, user, pass and debug fields from or to a configuration file (yaml or json)")
+	set.BoolVar(&m.WaitForLenses, "wait-for-lenses", false, "when set will wait for Lenses server to respond")
 	return m
 }
 
@@ -264,6 +268,23 @@ var Client *api.Client
 
 //SetupClient setups a new API client
 func SetupClient() (err error) {
+	if Manager.WaitForLenses {
+		client := http.Client{
+			Timeout: 15 * time.Second,
+		}
+		host := Manager.Config.GetCurrent().Host
+		for {
+			golog.Infof("waiting for host '%s' to respond...", host)
+			resp, err := client.Get(host)
+			if err == nil {
+				golog.Infof("connection to '%s' succeeded!", host)
+				defer resp.Body.Close()
+				break
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+	}
 	Client, err = api.OpenConnection(*Manager.Config.GetCurrent())
 	return
 }

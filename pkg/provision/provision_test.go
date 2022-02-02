@@ -258,13 +258,6 @@ func Test_checkConfigValidity(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "no license key",
-			args: args{
-				config: noLicenseConfigInput,
-			},
-			err: errMissingLicence,
-		},
-		{
 			name: "no connections",
 			args: args{
 				config: noConnectionsConfigInput,
