@@ -49,10 +49,12 @@ If --mode flag set to 'sidecar' (for k8s purposes) then keep CLI running.`
 				if err := provision(cmd, args); err != nil {
 					return err
 				}
+			} else {
+				fmt.Fprintln(cmd.OutOrStdout(), "skipping provisioning as Lenses setup has already been completed")
 			}
 
 			if configMode == "sidecar" {
-				fmt.Fprintln(cmd.OutOrStdout(), "'sidecar' flag detected, lenses-cli will keep running for k8 support")
+				fmt.Fprintln(cmd.OutOrStdout(), "lenses-cli will stay in idle state")
 				// An empty select block will keep the go processes running
 				select {}
 			}
