@@ -46,6 +46,7 @@ func NewSchemasCmd() *cobra.Command {
 	return rootCmd
 }
 
+//ViewSubjectsCmd returns an overview of registered subjects
 func ViewSubjectsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "subjects",

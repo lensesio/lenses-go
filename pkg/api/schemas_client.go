@@ -52,6 +52,7 @@ type DatasetsResp struct {
 	SourceTypes []string `json:"sourceTypes"`
 }
 
+//Subjects struct is used at 'schema-registy subjects' cmd
 type Subjects []struct {
 	Name          string `json:"name" yaml:"name" header:"name"`
 	Format        string `json:"format" yaml:"format" header:"format"`
