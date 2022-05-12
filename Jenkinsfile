@@ -64,6 +64,9 @@ pipeline {
                     //     // sh 'sudo rm -rf /tmp/cli-cache'
                     // }
 
+                    // Remove cache for all builds as main release branches have drifted and cannot be reused (temp fix)
+                    sh 'sudo rm -rf /tmp/cli-cache'
+
                     echo "Set BUILD_MODE to: ${env.BUILD_MODE}"
 
                     switch(BUILD_MODE) {
