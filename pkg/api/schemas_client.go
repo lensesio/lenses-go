@@ -37,9 +37,43 @@ type GetSchemaRes struct {
 	SourceType     string   `json:"sourceType"`
 }
 
-//GetSchemaReq Struct
-type GetSchemaReq struct {
-	Name string `json:"name"`
+//DatasetsResp struct maps to the `api/v1/datasets` response payload
+type DatasetsResp struct {
+	Datasets struct {
+		Values []struct {
+			Name          string `json:"name"`
+			Format        string `json:"format"`
+			Version       int    `json:"version"`
+			Compatibility string `json:"compatibility"`
+		} `json:"values"`
+		PagesAmount int `json:"pagesAmount"`
+		TotalCount  int `json:"totalCount"`
+	} `json:"datasets"`
+	SourceTypes []string `json:"sourceTypes"`
+}
+
+type Subjects []struct {
+	Name          string `json:"name" yaml:"name" header:"name"`
+	Format        string `json:"format" yaml:"format" header:"format"`
+	Version       int    `json:"version" yaml:"version" header:"latest version"`
+	Compatibility string `json:"compatibility" yaml:"compatibility" header:"compatibility"`
+}
+
+//GetSubjects retrieves all registered subjects
+func (c *Client) GetSubjects() (subs Subjects, err error) {
+
+	resp, err := c.Do(http.MethodGet, "api/v1/datasets?pageSize=99999&connections=schema-registry", "gzip", nil)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	var datasets DatasetsResp
+	if err = c.ReadJSON(resp, &datasets); err != nil {
+		return
+	}
+
+	return (Subjects)(datasets.Datasets.Values), nil
 }
 
 //GetSchema returns the details of a schema

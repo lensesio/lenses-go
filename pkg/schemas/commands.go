@@ -21,6 +21,7 @@ func NewSchemasCmd() *cobra.Command {
 			Use this command to operate on various aspects of the
 			Schema Registry. You can:
 
+			- View all subjects
 			- View an "AVRO" or "PROTOBUF" Schema.
 			- Create or Update a particular Schema.
 			- Delete a "Schema" or a "Version".
@@ -34,6 +35,7 @@ func NewSchemasCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
+	rootCmd.AddCommand(ViewSubjectsCmd())
 	rootCmd.AddCommand(ViewSchemaCmd())
 	rootCmd.AddCommand(WriteSchemaCmd())
 	rootCmd.AddCommand(SetSchemaCompatibility())
@@ -42,6 +44,30 @@ func NewSchemasCmd() *cobra.Command {
 	rootCmd.AddCommand(RemoveSchema())
 
 	return rootCmd
+}
+
+func ViewSubjectsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "subjects",
+		Short: "List of all registered subjects",
+		Example: heredoc.Doc(`
+			$ lenses-cli schema-registry subjects"
+		`),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			subjects, err := config.Client.GetSubjects()
+			if err != nil {
+				return err
+			}
+
+			return bite.PrintObject(cmd, subjects)
+		},
+	}
+
+	bite.CanPrintJSON(cmd)
+	bite.CanBeSilent(cmd)
+
+	return cmd
 }
 
 //ViewSchemaCmd returns the details of a particular schema
