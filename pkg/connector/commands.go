@@ -68,7 +68,7 @@ func NewConnectorsCommand() *cobra.Command {
 			if clusterName == "*" || clusterName == "" {
 				// if * then no clusterName given,
 				// fetch the connectors from all known clusters and print them.
-				clusters, err := getConnectClusters()
+				clusters, err := config.Client.GetConnectClusters()
 				if err != nil {
 					return err
 				}
@@ -160,7 +160,7 @@ func NewGetConnectorsPluginsCommand() *cobra.Command {
 
 			if clusterName == "*" {
 				// if * then no clusterName given, fetch the plugins from all known clusters and print them.
-				clusters, err := getConnectClusters()
+				clusters, err := config.Client.GetConnectClusters()
 				if err != nil {
 					golog.Errorf("Failed to connect clusters. [%s]", err.Error())
 					return err
@@ -212,7 +212,7 @@ func NewGetConnectorsClustersCommand() *cobra.Command {
 		Example:       `connectors clusters`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clusters, err := getConnectClusters()
+			clusters, err := config.Client.GetConnectClusters()
 			if err != nil {
 				golog.Errorf("Failed to read connect clusters. [%s]", err.Error())
 				return err
@@ -248,18 +248,6 @@ func NewGetConnectorsClustersCommand() *cobra.Command {
 	bite.CanPrintJSON(cmd)
 
 	return cmd
-}
-
-func getConnectClusters() (clusters []string, err error) {
-	connections, err := config.Client.GetConnections()
-
-	for _, conn := range connections {
-		if conn.TemplateName == "KafkaConnect" {
-			clusters = append(clusters, conn.Name)
-		}
-	}
-
-	return
 }
 
 //NewConnectorGroupCommand creates the `connector` command
