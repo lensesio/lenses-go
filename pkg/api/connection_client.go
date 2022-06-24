@@ -178,6 +178,19 @@ func (c *Client) CreateConnection(connectionName string, templateName string, co
 	return
 }
 
+// GetConnectClusters Read KafkaConnect clusters via connections API
+func (c *Client) GetConnectClusters() (clusters []string, err error) {
+	connections, err := c.GetConnections()
+
+	for _, conn := range connections {
+		if conn.TemplateName == "KafkaConnect" {
+			clusters = append(clusters, conn.Name)
+		}
+	}
+
+	return
+}
+
 // UpdateConnection updates a Lenses connection
 func (c *Client) UpdateConnection(connectionName string, newName string, configString string, configArray []ConnectionConfig, tags []string) (err error) {
 	if connectionName == "" {

@@ -72,12 +72,12 @@ func NewConnectorsCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				for _, cluster := range clusters {
-					clusterConnectorsNames, err := config.Client.GetConnectors(cluster.Name)
+				for _, clusterName := range clusters {
+					clusterConnectorsNames, err := config.Client.GetConnectors(clusterName)
 					if err != nil {
 						return err
 					}
-					connectorNames[cluster.Name] = append(connectorNames[cluster.Name], clusterConnectorsNames...)
+					connectorNames[clusterName] = append(connectorNames[clusterName], clusterConnectorsNames...)
 				}
 			} else {
 				names, err := config.Client.GetConnectors(clusterName)
@@ -166,8 +166,8 @@ func NewGetConnectorsPluginsCommand() *cobra.Command {
 					return err
 				}
 
-				for _, cluster := range clusters {
-					clusterPlugins, err := config.Client.GetConnectorPlugins(cluster.Name)
+				for _, clusterName := range clusters {
+					clusterPlugins, err := config.Client.GetConnectorPlugins(clusterName)
 					if err != nil {
 						golog.Errorf("Failed to find connector pugins. [%s]", err.Error())
 						return err
@@ -214,19 +214,19 @@ func NewGetConnectorsClustersCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusters, err := config.Client.GetConnectClusters()
 			if err != nil {
-				golog.Errorf("Failed to connect clusters. [%s]", err.Error())
+				golog.Errorf("Failed to read connect clusters. [%s]", err.Error())
 				return err
 			}
 
 			sort.Slice(clusters, func(i, j int) bool {
-				return clusters[i].Name < clusters[j].Name
+				return clusters[i] < clusters[j]
 			})
 
 			if namesOnly {
 				var b strings.Builder
 
-				for i, cl := range clusters {
-					b.WriteString(fmt.Sprintf("%s", cl.Name))
+				for i, clusterName := range clusters {
+					b.WriteString(fmt.Sprintf("%s", clusterName))
 					if !noNewLine && len(clusters)-1 != i {
 						// add new line if enabled and not last, note that we use the fmt.Println below
 						// even if newLine is disabled (for unix terminals mostly).

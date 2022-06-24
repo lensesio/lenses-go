@@ -705,12 +705,6 @@ type ConnectCluster struct {
 
 const connectClustersKey = "lenses.kafka.connect.clusters"
 
-// GetConnectClusters returns the `lenses.connect.clusters` key from the lenses configuration (`GetConfig`).
-func (c *Client) GetConnectClusters() (clusters []ConnectCluster, err error) {
-	err = c.GetConfigEntry(&clusters, connectClustersKey)
-	return
-}
-
 // LSQL API
 
 // LSQLValidation contains the necessary information about an invalid lenses query, see `ValidateLSQL`.
