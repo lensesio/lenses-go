@@ -178,6 +178,7 @@ func (c *Client) CreateConnection(connectionName string, templateName string, co
 	return
 }
 
+// GetConnectClusters Read KafkaConnect clusters via connections API
 func (c *Client) GetConnectClusters() (clusters []string, err error) {
 	connections, err := c.GetConnections()
 
