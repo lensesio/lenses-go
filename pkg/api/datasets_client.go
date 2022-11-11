@@ -15,12 +15,7 @@ type UpdateDatasetDescription struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
-// DatasetTag Struct
-type DatasetTag struct {
-	Name string `json:"name" yaml:"name"`
-}
-
-//UpdateDatasetTags struct
+// UpdateDatasetTags struct
 type UpdateDatasetTags struct {
 	Tags []DatasetTag `json:"tags" yaml:"tags"`
 }
