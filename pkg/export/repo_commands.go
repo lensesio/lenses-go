@@ -11,7 +11,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/config"
 )
 
-//InitRepoCommand creates the `init-repo` command
+// InitRepoCommand creates the `init-repo` command
 func InitRepoCommand() *cobra.Command {
 	var gitURL string
 	var gitSupport bool

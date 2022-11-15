@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewGetQuotasCommand creates `quotas` command
+// NewGetQuotasCommand creates `quotas` command
 func NewGetQuotasCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "quotas",
@@ -34,7 +34,7 @@ func NewGetQuotasCommand() *cobra.Command {
 	return cmd
 }
 
-//NewQuotaGroupCommand creates `quota` command
+// NewQuotaGroupCommand creates `quota` command
 func NewQuotaGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "quota",
@@ -50,7 +50,7 @@ func NewQuotaGroupCommand() *cobra.Command {
 	return root
 }
 
-//NewQuotaUsersSubGroupCommand creates `quota users` command
+// NewQuotaUsersSubGroupCommand creates `quota users` command
 func NewQuotaUsersSubGroupCommand() *cobra.Command {
 	var (
 		configRaw string
@@ -175,7 +175,7 @@ func NewQuotaUsersSubGroupCommand() *cobra.Command {
 	return rootSub
 }
 
-//NewQuotaClientsSubGroupCommand creates `quota clients` command
+// NewQuotaClientsSubGroupCommand creates `quota clients` command
 func NewQuotaClientsSubGroupCommand() *cobra.Command {
 	var (
 		configRaw string

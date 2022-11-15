@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportPoliciesCommand creates `export policies` command
+// NewExportPoliciesCommand creates `export policies` command
 func NewExportPoliciesCommand() *cobra.Command {
 	var name, ID string
 

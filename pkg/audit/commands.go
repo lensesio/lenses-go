@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewGetAuditEntriesCommand  creates the `audits` command
+// NewGetAuditEntriesCommand  creates the `audits` command
 func NewGetAuditEntriesCommand() *cobra.Command {
 	var (
 		sse                  bool
@@ -82,7 +82,7 @@ func NewGetAuditEntriesCommand() *cobra.Command {
 	return cmd
 }
 
-//DeleteAuditEntriesCommand  creates the `audits delete` command
+// DeleteAuditEntriesCommand  creates the `audits delete` command
 func DeleteAuditEntriesCommand() *cobra.Command {
 	var olderThanTimestamp int64
 

@@ -16,7 +16,7 @@ import (
 
 var output, role, endpoint, token, fromFile, secretsFile, appSecretsFile, connectorFile, workerFile string
 
-//NewSecretsGroupCommand creates `secrets` command
+// NewSecretsGroupCommand creates `secrets` command
 func NewSecretsGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -39,7 +39,7 @@ secrets app azure --client-id xxxx --client-secret xxxx --tenant-id xxxxx --outp
 	return cmd
 }
 
-//NewAppGroupCommand creates `secrets app` command
+// NewAppGroupCommand creates `secrets app` command
 func NewAppGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -87,7 +87,7 @@ secrets app azure --client-id xxxx --client-secret xxxx --tenant-id xxxxx --outp
 	return cmd
 }
 
-//NewConnectGroupCommand creates `secrets connect` command
+// NewConnectGroupCommand creates `secrets connect` command
 func NewConnectGroupCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -161,7 +161,7 @@ secrets connect azure --vault-name lenses --client-id xxxx --client-secret xxxx 
 	return cmd
 }
 
-//NewVaultCommand creates `secrets connect vault` command
+// NewVaultCommand creates `secrets connect vault` command
 func NewVaultCommand(appType string) *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -227,7 +227,7 @@ secrets app vault --vault-role lenses --vault-token XYZ	--vault-addr http://127.
 	return cmd
 }
 
-//NewAzureCommand get secrets for azure by app type
+// NewAzureCommand get secrets for azure by app type
 func NewAzureCommand(appType string) *cobra.Command {
 	var clientID, clientSecret, tenantID, dns, vaultName string
 
@@ -335,7 +335,7 @@ secrets app azure --vault-name lenses --client-id xxxx --client-secret xxxx --te
 	return cmd
 }
 
-//NewEnvCommand secrets from environment variables
+// NewEnvCommand secrets from environment variables
 func NewEnvCommand(appType string) *cobra.Command {
 
 	cmd := &cobra.Command{

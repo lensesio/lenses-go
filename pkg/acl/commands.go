@@ -78,7 +78,7 @@ func NewACLGroupCommand() *cobra.Command {
 	return cmd
 }
 
-//NewCreateOrUpdateACLCommand creates `acl set` command
+// NewCreateOrUpdateACLCommand creates `acl set` command
 func NewCreateOrUpdateACLCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "set",
@@ -105,7 +105,7 @@ func NewCreateOrUpdateACLCommand() *cobra.Command {
 	return cmd
 }
 
-//NewDeleteACLCommand creates `acl delete` command
+// NewDeleteACLCommand creates `acl delete` command
 func NewDeleteACLCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",

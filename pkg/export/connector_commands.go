@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportConnectorsCommand creates `export connectors` command
+// NewExportConnectorsCommand creates `export connectors` command
 func NewExportConnectorsCommand() *cobra.Command {
 	var name, cluster string
 

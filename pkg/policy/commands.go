@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewGetPoliciesCommand creates `policies` command
+// NewGetPoliciesCommand creates `policies` command
 func NewGetPoliciesCommand() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
@@ -50,7 +50,7 @@ func NewGetPoliciesCommand() *cobra.Command {
 	return cmd
 }
 
-//NewGetPoliciesObfuscationCommand creates `policies redactions` command
+// NewGetPoliciesObfuscationCommand creates `policies redactions` command
 func NewGetPoliciesObfuscationCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "redactions",
@@ -74,7 +74,7 @@ func NewGetPoliciesObfuscationCommand() *cobra.Command {
 	return cmd
 }
 
-//NewGetPoliciesImpactTypesCommand  creates `policies impact-types` command
+// NewGetPoliciesImpactTypesCommand  creates `policies impact-types` command
 func NewGetPoliciesImpactTypesCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -100,7 +100,7 @@ func NewGetPoliciesImpactTypesCommand() *cobra.Command {
 	return cmd
 }
 
-//NewPolicyGroupCommand creates `policy` command
+// NewPolicyGroupCommand creates `policy` command
 func NewPolicyGroupCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "policy",
@@ -122,7 +122,7 @@ policy delete --id 1
 	return cmd
 }
 
-//NewViewPolicyCommand creates `policy view` command
+// NewViewPolicyCommand creates `policy view` command
 func NewViewPolicyCommand() *cobra.Command {
 	var name string
 
@@ -159,7 +159,7 @@ func NewViewPolicyCommand() *cobra.Command {
 	return cmd
 }
 
-//NewCreatePolicyCommand creates `policy create` command
+// NewCreatePolicyCommand creates `policy create` command
 func NewCreatePolicyCommand() *cobra.Command {
 	var policy api.DataPolicyRequest
 	var fields string
@@ -219,16 +219,16 @@ func NewCreatePolicyCommand() *cobra.Command {
 	return cmd
 }
 
-//NewUpdatePolicyCommand creates `policy update` command
+// NewUpdatePolicyCommand creates `policy update` command
 func NewUpdatePolicyCommand() *cobra.Command {
 	var policy api.DataPolicyUpdateRequest
 	var fields string
 	var datasets string
 
 	cmd := &cobra.Command{
-		Use:   "update",
-		Short: "Update a policy",
-		Example: `policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --datasets myTopic1,myTopic2 --fields myfield1,myfield2		`,
+		Use:              "update",
+		Short:            "Update a policy",
+		Example:          `policy update --id 1 --name my-policy --category my-category --impact HIGH --redaction First-1 --datasets myTopic1,myTopic2 --fields myfield1,myfield2		`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -281,7 +281,7 @@ func NewUpdatePolicyCommand() *cobra.Command {
 	return cmd
 }
 
-//NewDeletePolicyCommand creates `policy delete` command
+// NewDeletePolicyCommand creates `policy delete` command
 func NewDeletePolicyCommand() *cobra.Command {
 	var id string
 

@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportAclsCommand creates `import acls` command
+// NewImportAclsCommand creates `import acls` command
 func NewImportAclsCommand() *cobra.Command {
 	var path string
 

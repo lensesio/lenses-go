@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportGroupsCommand creates `export users`
+// NewExportGroupsCommand creates `export users`
 func NewExportGroupsCommand() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{

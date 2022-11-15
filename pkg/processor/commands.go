@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewGetProcessorsCommand creates `processors` command
+// NewGetProcessorsCommand creates `processors` command
 func NewGetProcessorsCommand() *cobra.Command {
 	var name, clusterName, namespace string
 
@@ -77,7 +77,7 @@ func NewGetProcessorsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewProcessorsLogsCommand creates `processors logs` command
+// NewProcessorsLogsCommand creates `processors logs` command
 func NewProcessorsLogsCommand() *cobra.Command {
 	var (
 		clusterName, podName, namespace string
@@ -120,7 +120,7 @@ func NewProcessorsLogsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewProcessorGroupCommand creates `processor` command
+// NewProcessorGroupCommand creates `processor` command
 func NewProcessorGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "processor",
@@ -141,7 +141,7 @@ func NewProcessorGroupCommand() *cobra.Command {
 	return root
 }
 
-//NewProcessorViewCommand creates `processor view` command
+// NewProcessorViewCommand creates `processor view` command
 func NewProcessorViewCommand() *cobra.Command {
 	var id string
 
@@ -171,7 +171,7 @@ func NewProcessorViewCommand() *cobra.Command {
 	return cmd
 }
 
-//NewProcessorCreateCommand creates `processor create` command
+// NewProcessorCreateCommand creates `processor create` command
 func NewProcessorCreateCommand() *cobra.Command {
 	// the processorName and sql are the required.
 	var processor api.CreateProcessorFilePayload
@@ -212,7 +212,7 @@ func NewProcessorCreateCommand() *cobra.Command {
 	return cmd
 }
 
-//NewProcessorPauseCommand creates `processor pause` command
+// NewProcessorPauseCommand creates `processor pause` command
 func NewProcessorPauseCommand() *cobra.Command {
 	var processorID, processorName, clusterName, namespace string
 
@@ -246,7 +246,7 @@ func NewProcessorPauseCommand() *cobra.Command {
 	return cmd
 }
 
-//NewProcessorResumeCommand creates `processor resume` command
+// NewProcessorResumeCommand creates `processor resume` command
 func NewProcessorResumeCommand() *cobra.Command {
 	var processorID, processorName, clusterName, namespace string
 
@@ -280,7 +280,7 @@ func NewProcessorResumeCommand() *cobra.Command {
 	return cmd
 }
 
-//NewProcessorUpdateRunnersCommand creates `processor update` command
+// NewProcessorUpdateRunnersCommand creates `processor update` command
 func NewProcessorUpdateRunnersCommand() *cobra.Command {
 
 	var (
@@ -324,7 +324,7 @@ func NewProcessorUpdateRunnersCommand() *cobra.Command {
 	return cmd
 }
 
-//NewProcessorDeleteCommand creates `processor delete` command
+// NewProcessorDeleteCommand creates `processor delete` command
 func NewProcessorDeleteCommand() *cobra.Command {
 	var processorID, processorName, clusterName, namespace string
 
@@ -377,7 +377,7 @@ type (
 	}
 )
 
-//NewListDeploymentTargetsCommand lists the available deployment targets
+// NewListDeploymentTargetsCommand lists the available deployment targets
 func NewListDeploymentTargetsCommand() *cobra.Command {
 	var clusterName, targetType string
 

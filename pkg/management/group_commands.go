@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewGroupsCommand creates the `groups` command
+// NewGroupsCommand creates the `groups` command
 func NewGroupsCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "groups",
@@ -37,7 +37,7 @@ func NewGroupsCommand() *cobra.Command {
 	return root
 }
 
-//NewGetGroupCommand creates `groups get`
+// NewGetGroupCommand creates `groups get`
 func NewGetGroupCommand() *cobra.Command {
 	var (
 		groupName     string
@@ -75,7 +75,7 @@ groups get --name=MyGroup --dataNamespaces
 	return cmd
 }
 
-//NewCreateGroupCommand creates a new group
+// NewCreateGroupCommand creates a new group
 func NewCreateGroupCommand() *cobra.Command {
 	var (
 		group         api.Group
@@ -107,7 +107,7 @@ groups create --name MyGroup --description "My test group" --applicationPermissi
 	return cmd
 }
 
-//NewUpdateGroupCommand creates a new group
+// NewUpdateGroupCommand creates a new group
 func NewUpdateGroupCommand() *cobra.Command {
 	var (
 		group         api.Group
@@ -140,7 +140,7 @@ groups update --name MyGroup --description "My test group" --applicationPermissi
 	return cmd
 }
 
-//NewDeleteGroupCommand creates a new group
+// NewDeleteGroupCommand creates a new group
 func NewDeleteGroupCommand() *cobra.Command {
 	var name string
 
@@ -168,7 +168,7 @@ func NewDeleteGroupCommand() *cobra.Command {
 	return cmd
 }
 
-//NewCloneGroupCommand clones a group
+// NewCloneGroupCommand clones a group
 func NewCloneGroupCommand() *cobra.Command {
 	var name, cloneName string
 

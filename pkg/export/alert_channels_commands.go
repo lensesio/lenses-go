@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportAlertChannelsCommand creates `export alert-channels` command
+// NewExportAlertChannelsCommand creates `export alert-channels` command
 func NewExportAlertChannelsCommand() *cobra.Command {
 	var alertChannelName string
 

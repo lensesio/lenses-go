@@ -2,7 +2,7 @@ package management
 
 import "github.com/lensesio/lenses-go/pkg/api"
 
-//GroupView the view model for group to be printed
+// GroupView the view model for group to be printed
 type GroupView struct {
 	Name                       string          `json:"name" yaml:"name" header:"name"`
 	Namespaces                 []api.Namespace `json:"namespaces,omitempty" yaml:"namespaces" header:"Namespaces,count"`
@@ -24,7 +24,7 @@ func PrintGroup(g api.Group) GroupView {
 	}
 }
 
-//TokenView the view model for token to be printed
+// TokenView the view model for token to be printed
 type TokenView struct {
 	Name  string `json:"name" yaml:"name" header:"Service Account"`
 	Token string `json:"token" yaml:"token" header:"Token"`

@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewConnectorsCommand creates the `connectors` command
+// NewConnectorsCommand creates the `connectors` command
 func NewConnectorsCommand() *cobra.Command {
 	var (
 		clusterName string
@@ -146,7 +146,7 @@ func NewConnectorsCommand() *cobra.Command {
 	return root
 }
 
-//NewGetConnectorsPluginsCommand creates the `connectors plugins` command
+// NewGetConnectorsPluginsCommand creates the `connectors plugins` command
 func NewGetConnectorsPluginsCommand() *cobra.Command {
 	var clusterName string
 
@@ -199,7 +199,7 @@ func NewGetConnectorsPluginsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewGetConnectorsClustersCommand creates the `connectors plugins` command
+// NewGetConnectorsClustersCommand creates the `connectors plugins` command
 func NewGetConnectorsClustersCommand() *cobra.Command {
 	var (
 		namesOnly bool
@@ -250,7 +250,7 @@ func NewGetConnectorsClustersCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorGroupCommand creates the `connector` command
+// NewConnectorGroupCommand creates the `connector` command
 func NewConnectorGroupCommand() *cobra.Command {
 	var clusterName, name string
 	root := &cobra.Command{
@@ -296,7 +296,7 @@ func NewConnectorGroupCommand() *cobra.Command {
 	return root
 }
 
-//NewConnectorCreateCommand creates the `connector create` command
+// NewConnectorCreateCommand creates the `connector create` command
 func NewConnectorCreateCommand() *cobra.Command {
 	var (
 		configRaw string
@@ -346,7 +346,7 @@ func NewConnectorCreateCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorUpdateCommand creates the `connector update` command
+// NewConnectorUpdateCommand creates the `connector update` command
 func NewConnectorUpdateCommand() *cobra.Command {
 	var (
 		configRaw string
@@ -418,7 +418,7 @@ func NewConnectorUpdateCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorGetConfigCommand creates the `connector config` command
+// NewConnectorGetConfigCommand creates the `connector config` command
 func NewConnectorGetConfigCommand() *cobra.Command {
 	var clusterName, name string
 
@@ -452,7 +452,7 @@ func NewConnectorGetConfigCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorGetStatusCommand creates the `connector status` command
+// NewConnectorGetStatusCommand creates the `connector status` command
 func NewConnectorGetStatusCommand() *cobra.Command {
 	var clusterName, name string
 
@@ -486,7 +486,7 @@ func NewConnectorGetStatusCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorPauseCommand creates the `connector pause` command
+// NewConnectorPauseCommand creates the `connector pause` command
 func NewConnectorPauseCommand() *cobra.Command {
 	var clusterName, name string
 
@@ -517,7 +517,7 @@ func NewConnectorPauseCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorResumeCommand creates the `connector resume` command
+// NewConnectorResumeCommand creates the `connector resume` command
 func NewConnectorResumeCommand() *cobra.Command {
 	var clusterName, name string
 
@@ -548,7 +548,7 @@ func NewConnectorResumeCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorRestartCommand creates the `connector restart` command
+// NewConnectorRestartCommand creates the `connector restart` command
 func NewConnectorRestartCommand() *cobra.Command {
 	var clusterName, name string
 
@@ -578,7 +578,7 @@ func NewConnectorRestartCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorGetTasksCommand creates the `connector tasks` command
+// NewConnectorGetTasksCommand creates the `connector tasks` command
 func NewConnectorGetTasksCommand() *cobra.Command {
 	var clusterName, name string
 
@@ -611,7 +611,7 @@ func NewConnectorGetTasksCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorTaskGroupCommand creates the `connector task` command
+// NewConnectorTaskGroupCommand creates the `connector task` command
 func NewConnectorTaskGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "task",
@@ -627,7 +627,7 @@ func NewConnectorTaskGroupCommand() *cobra.Command {
 	return rootSub
 }
 
-//NewConnectorGetCurrentTaskStatusCommand creates the `connector task status` command
+// NewConnectorGetCurrentTaskStatusCommand creates the `connector task status` command
 func NewConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 	var (
 		clusterName, name string
@@ -666,7 +666,7 @@ func NewConnectorGetCurrentTaskStatusCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorTaskRestartCommand creates the `connector task restart` command
+// NewConnectorTaskRestartCommand creates the `connector task restart` command
 func NewConnectorTaskRestartCommand() *cobra.Command {
 	var (
 		clusterName, name string
@@ -702,7 +702,7 @@ func NewConnectorTaskRestartCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConnectorDeleteCommand creates the `connector task delete` command
+// NewConnectorDeleteCommand creates the `connector task delete` command
 func NewConnectorDeleteCommand() *cobra.Command {
 	var clusterName, name string
 

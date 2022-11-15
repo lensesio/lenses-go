@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewServiceAccountsCommand creates the `groups` command
+// NewServiceAccountsCommand creates the `groups` command
 func NewServiceAccountsCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "serviceaccounts",
@@ -36,7 +36,7 @@ func NewServiceAccountsCommand() *cobra.Command {
 	return root
 }
 
-//NewGetServiceAccountCommand creates `serviceaccounts get`
+// NewGetServiceAccountCommand creates `serviceaccounts get`
 func NewGetServiceAccountCommand() *cobra.Command {
 	var name string
 
@@ -66,7 +66,7 @@ serviceaccounts get --name=svcacc
 	return cmd
 }
 
-//NewCreateServiceAccountCommand creates`serviceaccounts create`
+// NewCreateServiceAccountCommand creates`serviceaccounts create`
 func NewCreateServiceAccountCommand() *cobra.Command {
 	var svcacc api.ServiceAccount
 
@@ -95,7 +95,7 @@ serviceaccounts create --name john --owner admin --groups MyGroup1 --groups MyGr
 	return cmd
 }
 
-//NewUpdateServiceAccountCommand creates`serviceaccounts update`
+// NewUpdateServiceAccountCommand creates`serviceaccounts update`
 func NewUpdateServiceAccountCommand() *cobra.Command {
 	var svcacc api.ServiceAccount
 
@@ -123,7 +123,7 @@ serviceaccounts update --name john --owner admin --groups MyGroup1 --groups MyGr
 	return cmd
 }
 
-//NewDeleteServiceAccountCommand creates  `serviceaccounts delete`
+// NewDeleteServiceAccountCommand creates  `serviceaccounts delete`
 func NewDeleteServiceAccountCommand() *cobra.Command {
 	var name string
 
@@ -151,7 +151,7 @@ func NewDeleteServiceAccountCommand() *cobra.Command {
 	return cmd
 }
 
-//NewRevokeServiceAccountCommand creates  `serviceaccounts revoke`
+// NewRevokeServiceAccountCommand creates  `serviceaccounts revoke`
 func NewRevokeServiceAccountCommand() *cobra.Command {
 	var name, token string
 

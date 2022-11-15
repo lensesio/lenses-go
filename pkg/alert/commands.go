@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewAlertGroupCommand creates the `alert` command
+// NewAlertGroupCommand creates the `alert` command
 func NewAlertGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "alert",
@@ -31,7 +31,7 @@ func NewAlertGroupCommand() *cobra.Command {
 	return root
 }
 
-//NewGetAlertsCommand creates the `alerts` command
+// NewGetAlertsCommand creates the `alerts` command
 func NewGetAlertsCommand() *cobra.Command {
 	var (
 		pageSize int
@@ -61,7 +61,7 @@ func NewGetAlertsCommand() *cobra.Command {
 	return cmd
 }
 
-//DeleteAlertEventsCommand  creates the `alerts delete` command
+// DeleteAlertEventsCommand  creates the `alerts delete` command
 func DeleteAlertEventsCommand() *cobra.Command {
 	var olderThanTimestamp int64
 
@@ -89,7 +89,7 @@ func DeleteAlertEventsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewGetAlertSettingsCommand creates the `alert settings` command
+// NewGetAlertSettingsCommand creates the `alert settings` command
 func NewGetAlertSettingsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "settings",
@@ -113,7 +113,7 @@ func NewGetAlertSettingsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewAlertSettingGroupCommand creates the `alert setting` command
+// NewAlertSettingGroupCommand creates the `alert setting` command
 func NewAlertSettingGroupCommand() *cobra.Command {
 	var (
 		id     int
@@ -198,7 +198,7 @@ func NewUpdateAlertSettingsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewGetAlertSettingConditionsCommand creates `alert setting conditions`
+// NewGetAlertSettingConditionsCommand creates `alert setting conditions`
 func NewGetAlertSettingConditionsCommand() *cobra.Command {
 	var alertID int
 
@@ -227,7 +227,7 @@ func NewGetAlertSettingConditionsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewAlertSettingConditionGroupCommand creates `alert setting condition`
+// NewAlertSettingConditionGroupCommand creates `alert setting condition`
 func NewAlertSettingConditionGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "condition",
@@ -243,7 +243,7 @@ func NewAlertSettingConditionGroupCommand() *cobra.Command {
 	return rootSub
 }
 
-//NewSetAlertSettingConditionCommand creates `alert condition set` command
+// NewSetAlertSettingConditionCommand creates `alert condition set` command
 func NewSetAlertSettingConditionCommand() *cobra.Command {
 
 	var (
@@ -414,7 +414,7 @@ alert setting condition set ./alert_cond.yml`
 	return cmd
 }
 
-//NewDeleteAlertSettingConditionCommand creates `alert condition delete` command
+// NewDeleteAlertSettingConditionCommand creates `alert condition delete` command
 func NewDeleteAlertSettingConditionCommand() *cobra.Command {
 	var (
 		alertID       int

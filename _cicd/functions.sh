@@ -47,7 +47,8 @@ lint() {
 }
 
 format-check() {
-    go install golang.org/x/tools/cmd/goimports@latest
+    # pin version so that a new goimports does not tank our build.
+    go install golang.org/x/tools/cmd/goimports@v0.3.0
 
     export PATH=$PATH:$GOPATH/bin
     GOFORMATOUT=$(goimports -l cmd/ pkg/ test/)

@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportAuditChannelsCommand creates `export audit-channels` command
+// NewExportAuditChannelsCommand creates `export audit-channels` command
 func NewExportAuditChannelsCommand() *cobra.Command {
 	var auditChannelName string
 

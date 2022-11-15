@@ -67,14 +67,14 @@ type Threshold struct {
 	Messages int    `json:"messages" yaml:"messages"`
 }
 
-//ProducerAlertSettings is the struct used for importing/exporting alert settings
+// ProducerAlertSettings is the struct used for importing/exporting alert settings
 type ProducerAlertSettings struct {
 	ID               int                       `json:"alert" yaml:"alert"`
 	Description      string                    `json:"description" yaml:"description"`
 	ConditionDetails []AlertConditionRequestv1 `json:"conditions" yaml:"conditions"`
 }
 
-//ConsumerAlertSettings is the struct used for importing/exporting consumer alert settings
+// ConsumerAlertSettings is the struct used for importing/exporting consumer alert settings
 type ConsumerAlertSettings struct {
 	ID               int                               `json:"alert" yaml:"alert"`
 	Description      string                            `json:"description" yaml:"description"`
@@ -247,7 +247,8 @@ func (c *Client) EnableAlertSetting(id int, enable bool) error {
 }
 
 // AlertSettingCondition - used to represent alert settings,
-//   `ConditionDsl` is generic to handle both "Consumer lag" and "Data Produced" rules
+//
+//	`ConditionDsl` is generic to handle both "Consumer lag" and "Data Produced" rules
 type AlertSettingCondition struct {
 	ID           string                 `json:"id,omitempty" header:"ID,text"`
 	ConditionDsl map[string]interface{} `json:"conditionDsl" header:"conditionDsl,text"`

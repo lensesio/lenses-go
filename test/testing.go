@@ -30,35 +30,35 @@ var (
 	}
 )
 
-//CheckStringContains check if string contains the expected value
+// CheckStringContains check if string contains the expected value
 func CheckStringContains(t *testing.T, got, expected string) {
 	if !strings.Contains(got, expected) {
 		t.Errorf("Expected to contain: \n %v\nGot:\n %v\n", expected, got)
 	}
 }
 
-//CheckStringOmits check if string doesn't contain the expected value
+// CheckStringOmits check if string doesn't contain the expected value
 func CheckStringOmits(t *testing.T, got, expected string) {
 	if strings.Contains(got, expected) {
 		t.Errorf("Expected to not contain: \n %v\nGot: %v", expected, got)
 	}
 }
 
-//EmptyRun an empty run
+// EmptyRun an empty run
 func EmptyRun(*cobra.Command, []string) {}
 
-//ExecuteCommand execute a command
+// ExecuteCommand execute a command
 func ExecuteCommand(root *cobra.Command, args ...string) (output string, err error) {
 	_, output, err = executeCommandC(root, args...)
 	return output, err
 }
 
-//ResetCommandLineFlagSet resets the flagset
+// ResetCommandLineFlagSet resets the flagset
 func ResetCommandLineFlagSet() {
 	pflag.CommandLine = pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
 }
 
-//TestingHTTPClient tests an http client
+// TestingHTTPClient tests an http client
 func TestingHTTPClient(handler http.Handler) (*http.Client, func()) {
 	s := httptest.NewServer(handler)
 

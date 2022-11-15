@@ -133,21 +133,22 @@ type (
 // to validate the login.
 //
 // Usage:
-// c, err := api.OpenLiveConnection(api.LiveConfiguration{
-//    [...]
-// })
 //
-// c.On(api.KafkaMessageResponse, func(pub api.LivePublisher, response api.LiveResponse) error {
-//    [...]
-// })
+//	c, err := api.OpenLiveConnection(api.LiveConfiguration{
+//	   [...]
+//	})
 //
-// c.On(api.WildcardResponse, func(pub api.LivePublisher, response api.LiveResponse) error {
-//    [...catch all messages]
-// })
+//	c.On(api.KafkaMessageResponse, func(pub api.LivePublisher, response api.LiveResponse) error {
+//	   [...]
+//	})
 //
-// c.OnSuccess(func(cub api.LivePublisher, response api.LiveResponse) error{
-//    pub.Publish(api.SubscribeRequest, 2, `{"sqls": ["SELECT * FROM reddit_posts LIMIT 3"]}`)
-// }) also OnKafkaMessage, OnError, OnHeartbeat, OnInvalidRequest.
+//	c.On(api.WildcardResponse, func(pub api.LivePublisher, response api.LiveResponse) error {
+//	   [...catch all messages]
+//	})
+//
+//	c.OnSuccess(func(cub api.LivePublisher, response api.LiveResponse) error{
+//	   pub.Publish(api.SubscribeRequest, 2, `{"sqls": ["SELECT * FROM reddit_posts LIMIT 3"]}`)
+//	}) also OnKafkaMessage, OnError, OnHeartbeat, OnInvalidRequest.
 //
 // If at least one listener returned an error then the communication is terminated.
 func OpenLiveConnection(config LiveConfiguration) (*LiveConnection, error) {

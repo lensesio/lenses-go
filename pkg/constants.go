@@ -1,6 +1,6 @@
 package pkg
 
-//ERRORS
+// ERRORS
 const (
 	ErrResourceNotFoundMessage      = 404
 	ErrResourceNotAccessibleMessage = 403
@@ -8,7 +8,7 @@ const (
 	ErrResourceInternal             = 500
 )
 
-//Paths
+// Paths
 const (
 	SQLPath        = "apps/sql"
 	ConnectorsPath = "apps/connectors"

@@ -460,7 +460,7 @@ func (c *Client) Logout() error {
 	return resp.Body.Close()
 }
 
-//QueryFiltering used to add query params in an API request
+// QueryFiltering used to add query params in an API request
 type QueryFiltering struct {
 	PageSize     int
 	Page         int
@@ -709,12 +709,13 @@ const connectClustersKey = "lenses.kafka.connect.clusters"
 
 // LSQLValidation contains the necessary information about an invalid lenses query, see `ValidateLSQL`.
 // Example Error:
-// {
-//     "IsValid": false,
-//     "Line": 4,
-//     "Column": 1,
-//     "Message": "Invalid syntax.Encountered \"LIIT\" at line 4, column 1.\nWas expecting one of:\n    <EOF> ... "
-// }
+//
+//	{
+//	    "IsValid": false,
+//	    "Line": 4,
+//	    "Column": 1,
+//	    "Message": "Invalid syntax.Encountered \"LIIT\" at line 4, column 1.\nWas expecting one of:\n    <EOF> ... "
+//	}
 type LSQLValidation struct {
 	IsValid bool   `json:"isValid"`
 	Line    int    `json:"line"`
@@ -1915,10 +1916,8 @@ func (c *CreateUpdateConnectorPayload) ApplyAndValidateName() error {
 // CreateConnector creates a new connector.
 // It returns the current connector info if successful.
 //
-//
 // name (string) – Name of the connector to create
 // config (map) – Config parameters for the connector. All values should be strings.
-//
 //
 // Look `UpdateConnector` too.
 func (c *Client) CreateConnector(clusterName, name string, config ConnectorConfig) (connector Connector, err error) {
@@ -3544,7 +3543,7 @@ type Suggestions struct {
 	Text    string `json:"text"`
 }
 
-//SQLValidationResponse is a the validation response from Lenses
+// SQLValidationResponse is a the validation response from Lenses
 type SQLValidationResponse struct {
 	Input       string            `json:"input"`
 	Caret       int               `json:"caret"`
@@ -3629,7 +3628,7 @@ type DataPolicy struct {
 	LastUpdatedUser string    `json:"lastUpdatedUser" yaml:"lastUpdatedUser" header:"Updated By,text"`
 }
 
-//DataPolicyTablePrint holds a data policy for bit table printing
+// DataPolicyTablePrint holds a data policy for bit table printing
 type DataPolicyTablePrint struct {
 	ID              string           `json:"id" yaml:"id" header:"ID"`
 	Name            string           `json:"name" yaml:"name" header:"Name"`

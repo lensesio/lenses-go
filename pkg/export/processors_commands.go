@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportProcessorsCommand creates `export processors` command
+// NewExportProcessorsCommand creates `export processors` command
 func NewExportProcessorsCommand() *cobra.Command {
 	var name, cluster, namespace, id string
 

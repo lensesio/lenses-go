@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportSchemasCmd to read schemas from files
+// NewImportSchemasCmd to read schemas from files
 func NewImportSchemasCmd() *cobra.Command {
 	var path string
 	var name string
@@ -52,7 +52,7 @@ func NewImportSchemasCmd() *cobra.Command {
 	return cmd
 }
 
-//ReadSchemas to read the files and import one by one
+// ReadSchemas to read the files and import one by one
 func ReadSchemas(client *api.Client, cmd *cobra.Command, filePath string) error {
 	files, err := utils.FindFiles(filePath)
 	if err != nil {

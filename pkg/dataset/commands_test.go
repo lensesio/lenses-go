@@ -20,7 +20,7 @@ const datasetResponse = `
 }
 `
 
-//stubsAPIEndpoint returns an handler for a given request method/PATH, failing back to a 501 error when these do not match.
+// stubsAPIEndpoint returns an handler for a given request method/PATH, failing back to a 501 error when these do not match.
 func stubAPIEndpoint(method, path string, t *testing.T, f http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == method && r.URL.Path == path {

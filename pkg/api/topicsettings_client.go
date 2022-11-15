@@ -14,7 +14,7 @@ type MinMax struct {
 	Max int `json:"max,omitempty" yaml:"max,omitempty"`
 }
 
-//DefaultMax contains Default and Max keys
+// DefaultMax contains Default and Max keys
 type DefaultMax struct {
 	Default int64 `json:"default,omitempty" yaml:"default,omitempty"`
 	Max     int64 `json:"max" yaml:"max"`

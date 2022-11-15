@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewGetAlertChannelsCommand creates the `alertchannels` command
+// NewGetAlertChannelsCommand creates the `alertchannels` command
 func NewGetAlertChannelsCommand() *cobra.Command {
 	var (
 		page         int
@@ -64,7 +64,7 @@ func NewGetAlertChannelsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewDeleteAlertChannelCommand creates `alertchannels delete` command
+// NewDeleteAlertChannelCommand creates `alertchannels delete` command
 func NewDeleteAlertChannelCommand() *cobra.Command {
 	var (
 		channelID string

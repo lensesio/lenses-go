@@ -23,12 +23,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-//CreateDirectory creates a directory with full permissions
+// CreateDirectory creates a directory with full permissions
 func CreateDirectory(directoryPath string) error {
 	return os.MkdirAll(directoryPath, 0777)
 }
 
-//DecryptAES decrypting AES
+// DecryptAES decrypting AES
 func decryptAES(key, h []byte) ([]byte, error) {
 	iv := h[:aes.BlockSize]
 	h = h[aes.BlockSize:]
@@ -44,7 +44,7 @@ func decryptAES(key, h []byte) ([]byte, error) {
 	return h, nil
 }
 
-//DecryptString descryptin encrypted string with keybase
+// DecryptString descryptin encrypted string with keybase
 func DecryptString(encryptedRaw string, keyBase string) (plainTextString string, err error) {
 	encrypted, err := base64.URLEncoding.DecodeString(encryptedRaw)
 	if err != nil {
@@ -63,7 +63,7 @@ func DecryptString(encryptedRaw string, keyBase string) (plainTextString string,
 	return string(decrypted), nil
 }
 
-//EncryptAES encrypts data with provided key
+// EncryptAES encrypts data with provided key
 func EncryptAES(key, data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -84,7 +84,7 @@ func EncryptAES(key, data []byte) ([]byte, error) {
 	return out, nil
 }
 
-//EncryptString encrypts plain string with the provided keybase (AES)
+// EncryptString encrypts plain string with the provided keybase (AES)
 func EncryptString(plain string, keyBase string) (string, error) {
 	key := ToHash(keyBase)
 	encrypted, err := EncryptAES(key, []byte(plain))
@@ -95,7 +95,7 @@ func EncryptString(plain string, keyBase string) (string, error) {
 	return base64.URLEncoding.EncodeToString(encrypted), nil
 }
 
-//Fetch data from a file with a provided prefix
+// Fetch data from a file with a provided prefix
 func Fetch(fromFile, prefix string) ([]string, error) {
 	var vars []string
 	if fromFile != "" {
@@ -122,7 +122,7 @@ func Fetch(fromFile, prefix string) ([]string, error) {
 	return vars, nil
 }
 
-//GetEnvVars returns the environments variables
+// GetEnvVars returns the environments variables
 func GetEnvVars(prefix string) []string {
 	var vars []string
 
@@ -141,7 +141,7 @@ func GetEnvVars(prefix string) []string {
 	return vars
 }
 
-//FindFiles finds the files in provided directory
+// FindFiles finds the files in provided directory
 func FindFiles(dir string) ([]fs.DirEntry, error) {
 	allFiles, err := os.ReadDir(dir)
 
@@ -166,7 +166,7 @@ func isValidImportFile(fileName string) bool {
 	return regex.MatchString(fileName)
 }
 
-//PrintLogLines prints lines as logs
+// PrintLogLines prints lines as logs
 func PrintLogLines(logs []api.LogLine) error {
 	golog.SetTimeFormat("")
 
@@ -179,7 +179,7 @@ func PrintLogLines(logs []api.LogLine) error {
 	return nil
 }
 
-//PrettyPrint prints json with pretty identation
+// PrettyPrint prints json with pretty identation
 func PrettyPrint(b []byte) ([]byte, error) {
 	var out bytes.Buffer
 	err := json.Indent(&out, b, "", "  ")
@@ -202,7 +202,7 @@ func ReadLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-//RichLog based on level logs properly
+// RichLog based on level logs properly
 func RichLog(level string, log string) {
 	switch strings.ToLower(level) {
 	case "info":
@@ -216,7 +216,7 @@ func RichLog(level string, log string) {
 	}
 }
 
-//StringInSlice check if a string is in slice
+// StringInSlice check if a string is in slice
 func StringInSlice(str string, list []string) bool {
 	for _, v := range list {
 		if v == str {
@@ -226,19 +226,19 @@ func StringInSlice(str string, list []string) bool {
 	return false
 }
 
-//ToHash hashes with SHA256 the provided string
+// ToHash hashes with SHA256 the provided string
 func ToHash(plain string) []byte {
 	h := sha256.Sum256([]byte(plain))
 	return h[:]
 }
 
-//ToYaml transforms interface data to Yaml
+// ToYaml transforms interface data to Yaml
 func ToYaml(o interface{}) ([]byte, error) {
 	y, err := yaml.Marshal(o)
 	return y, err
 }
 
-//WalkPropertyValueFromArgs walks the proerty values from arguments
+// WalkPropertyValueFromArgs walks the proerty values from arguments
 func WalkPropertyValueFromArgs(args []string, actionFunc func(property, value string) error) error {
 	if len(args) < 2 {
 		return fmt.Errorf("at least two arguments are required, the first is the property name and the second is the actual property's value")
@@ -260,7 +260,7 @@ func WalkPropertyValueFromArgs(args []string, actionFunc func(property, value st
 	return nil
 }
 
-//WriteByteFile writes to a file from byte data
+// WriteByteFile writes to a file from byte data
 func WriteByteFile(fileName string, data []byte) error {
 
 	os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
@@ -287,7 +287,7 @@ func WriteByteFile(fileName string, data []byte) error {
 	return nil
 }
 
-//WriteStringFile writes to a file from string data
+// WriteStringFile writes to a file from string data
 func WriteStringFile(fileName string, data []string) error {
 
 	os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
@@ -316,7 +316,7 @@ func WriteStringFile(fileName string, data []string) error {
 	return nil
 }
 
-//WriteBytesFile write bytes to a file to basepath with filename and the given format
+// WriteBytesFile write bytes to a file to basepath with filename and the given format
 func WriteBytesFile(landscapeDir, basePath, fileName string, data []byte) error {
 
 	dir := fmt.Sprintf("%s/%s", landscapeDir, basePath)
@@ -351,7 +351,7 @@ func WriteBytesFile(landscapeDir, basePath, fileName string, data []byte) error 
 	return nil
 }
 
-//WriteFile write a file to basepath with filename and the given format
+// WriteFile write a file to basepath with filename and the given format
 func WriteFile(landscapeDir, basePath, fileName, format string, resource interface{}) error {
 	if format == "YAML" {
 		return WriteYAML(landscapeDir, basePath, fileName, resource)
@@ -360,7 +360,7 @@ func WriteFile(landscapeDir, basePath, fileName, format string, resource interfa
 	return WriteJSON(landscapeDir, basePath, fileName, resource)
 }
 
-//WriteJSON write JSON to a file to basepath with filename
+// WriteJSON write JSON to a file to basepath with filename
 func WriteJSON(landscapeDir, basePath, fileName string, resource interface{}) error {
 
 	y, err := json.Marshal(resource)
@@ -372,7 +372,7 @@ func WriteJSON(landscapeDir, basePath, fileName string, resource interface{}) er
 	return WriteBytesFile(landscapeDir, basePath, fileName, y)
 }
 
-//WriteYAML write YAMLto a file to basepath with filename
+// WriteYAML write YAMLto a file to basepath with filename
 func WriteYAML(landscapeDir, basePath, fileName string, resource interface{}) error {
 
 	y, err := ToYaml(resource)

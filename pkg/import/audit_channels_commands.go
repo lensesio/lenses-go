@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportAuditChannelsCommand handles the CLI sub-command 'import audit-channels'
+// NewImportAuditChannelsCommand handles the CLI sub-command 'import audit-channels'
 func NewImportAuditChannelsCommand() *cobra.Command {
 	var path string
 

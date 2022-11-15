@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewSchemasCmd is the groupd command for the schema-registry module
+// NewSchemasCmd is the groupd command for the schema-registry module
 func NewSchemasCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use: "schema-registry",
@@ -46,7 +46,7 @@ func NewSchemasCmd() *cobra.Command {
 	return rootCmd
 }
 
-//ViewSubjectsCmd returns an overview of registered subjects
+// ViewSubjectsCmd returns an overview of registered subjects
 func ViewSubjectsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "subjects",
@@ -71,7 +71,7 @@ func ViewSubjectsCmd() *cobra.Command {
 	return cmd
 }
 
-//ViewSchemaCmd returns the details of a particular schema
+// ViewSchemaCmd returns the details of a particular schema
 func ViewSchemaCmd() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
@@ -111,7 +111,7 @@ func ViewSchemaCmd() *cobra.Command {
 	return cmd
 }
 
-//WriteSchemaCmd creates a schema if not exists, updates it otherwise.
+// WriteSchemaCmd creates a schema if not exists, updates it otherwise.
 func WriteSchemaCmd() *cobra.Command {
 	var request api.WriteSchemaReq
 	var name string
@@ -155,7 +155,7 @@ func WriteSchemaCmd() *cobra.Command {
 	return cmd
 }
 
-//SetSchemaCompatibility sets the compatibility for a schema
+// SetSchemaCompatibility sets the compatibility for a schema
 func SetSchemaCompatibility() *cobra.Command {
 	var request api.SetSchemaCompatibilityReq
 	var name string
@@ -193,7 +193,7 @@ func SetSchemaCompatibility() *cobra.Command {
 	return cmd
 }
 
-//SetGlobalCompatibility sets the default compatibility
+// SetGlobalCompatibility sets the default compatibility
 func SetGlobalCompatibility() *cobra.Command {
 	var request api.SetGlobalCompatibilityReq
 
@@ -229,7 +229,7 @@ func SetGlobalCompatibility() *cobra.Command {
 	return cmd
 }
 
-//RemoveSchemaVersion removes a particular version of a schema
+// RemoveSchemaVersion removes a particular version of a schema
 func RemoveSchemaVersion() *cobra.Command {
 	var name string
 	var version string
@@ -267,7 +267,7 @@ func RemoveSchemaVersion() *cobra.Command {
 	return cmd
 }
 
-//RemoveSchema removes a particular schema
+// RemoveSchema removes a particular schema
 func RemoveSchema() *cobra.Command {
 	var name string
 

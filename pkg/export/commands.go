@@ -45,7 +45,7 @@ var systemTopicExclusions = []string{
 var topicExclusions string
 var prefix string
 
-//NewExportGroupCommand creates the `export` command
+// NewExportGroupCommand creates the `export` command
 func NewExportGroupCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",

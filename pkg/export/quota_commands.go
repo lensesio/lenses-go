@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportQuotasCommand creates `export quotas` command
+// NewExportQuotasCommand creates `export quotas` command
 func NewExportQuotasCommand() *cobra.Command {
 
 	cmd := &cobra.Command{

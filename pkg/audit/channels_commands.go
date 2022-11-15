@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewGetAuditChannelsCommand creates the `auditchannels` command
+// NewGetAuditChannelsCommand creates the `auditchannels` command
 func NewGetAuditChannelsCommand() *cobra.Command {
 	var (
 		page         int
@@ -67,7 +67,7 @@ func NewGetAuditChannelsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewDeleteAuditChannelCommand creates `auditchannels delete` command
+// NewDeleteAuditChannelCommand creates `auditchannels delete` command
 func NewDeleteAuditChannelCommand() *cobra.Command {
 	var (
 		channelID string

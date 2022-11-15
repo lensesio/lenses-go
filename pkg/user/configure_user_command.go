@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewGetConfigurationContextsCommand creates `contexts` command
+// NewGetConfigurationContextsCommand creates `contexts` command
 func NewGetConfigurationContextsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "contexts",
@@ -43,7 +43,7 @@ func NewGetConfigurationContextsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConfigurationContextCommand creates `context` command
+// NewConfigurationContextCommand creates `context` command
 func NewConfigurationContextCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "context",
@@ -75,7 +75,7 @@ func NewConfigurationContextCommand() *cobra.Command {
 	return root
 }
 
-//NewDeleteConfigurationContextCommand creates `context delete` command
+// NewDeleteConfigurationContextCommand creates `context delete` command
 func NewDeleteConfigurationContextCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "delete",
@@ -117,7 +117,7 @@ func NewDeleteConfigurationContextCommand() *cobra.Command {
 	return cmd
 }
 
-//NewUpdateConfigurationContextCommand creates `context set` command
+// NewUpdateConfigurationContextCommand creates `context set` command
 func NewUpdateConfigurationContextCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "set",
@@ -166,7 +166,7 @@ func NewUpdateConfigurationContextCommand() *cobra.Command {
 	return cmd
 }
 
-//NewUseContextCommand creates `context use` command
+// NewUseContextCommand creates `context use` command
 func NewUseContextCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "use",
@@ -195,7 +195,7 @@ func NewUseContextCommand() *cobra.Command {
 	return cmd
 }
 
-//NewConfigureCommand creates `configure` command
+// NewConfigureCommand creates `configure` command
 func NewConfigureCommand(name string) *cobra.Command {
 	var (
 		reset       bool
@@ -491,7 +491,7 @@ Docs at https://docs.lenses.io
 	return cmd
 }
 
-//NewLoginCommand create `login` command
+// NewLoginCommand create `login` command
 func NewLoginCommand(app *bite.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "login",
