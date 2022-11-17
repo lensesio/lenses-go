@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/kataras/golog"
 	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/pkg/acl"
 	"github.com/lensesio/lenses-go/pkg/alert"
@@ -117,6 +118,7 @@ func setup(cmd *cobra.Command, args []string) error {
 }
 
 func main() {
+	golog.Default.SetOutput(os.Stderr)
 
 	if buildRevision != "" {
 		app.HelpTemplate = bite.HelpTemplate{
