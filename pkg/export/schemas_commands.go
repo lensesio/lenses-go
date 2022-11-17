@@ -2,6 +2,7 @@ package export
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -52,17 +53,37 @@ func NewExportSchemasCmd() *cobra.Command {
 
 // WriteSchemas to a file
 func WriteSchemas(cmd *cobra.Command, client *api.Client, name string) error {
-	golog.Infof("Writing schemas to [%s]", landscapeDir)
-
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	if name != "" {
-		schema, err := client.GetSchema(name)
-		if err != nil {
+		return writeSchema(output, client, name)
+	}
+
+	subjects, err := client.GetSubjects()
+	if err != nil {
+		return err
+	}
+	for _, sub := range subjects {
+		if err := writeSchema(output, client, sub.Name); err != nil {
 			return err
 		}
-		fileName := fmt.Sprintf("%s.%s", strings.ToLower(strings.ReplaceAll(schema.Name, " ", "_")), strings.ToLower(output))
-
-		return utils.WriteFile(landscapeDir, pkg.SchemasPath, fileName, output, schema)
 	}
+	return nil
+}
+
+func writeSchema(outputFormat string, client *api.Client, name string) error {
+
+	schema, err := client.GetSchema(name)
+	if err != nil {
+		return err
+	}
+
+	fileName := fmt.Sprintf("%s.%s", strings.ToLower(strings.ReplaceAll(schema.Name, " ", "_")), strings.ToLower(outputFormat))
+	filePath := filepath.Join(landscapeDir, pkg.SchemasPath, fileName)
+
+	if err := utils.WriteFile(landscapeDir, pkg.SchemasPath, fileName, outputFormat, schema); err != nil {
+		return err
+	}
+	golog.Infof("exported to file '%s'", filePath)
+
 	return nil
 }

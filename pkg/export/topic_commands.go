@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportTopicsCommand creates `export topics` command
+// NewExportTopicsCommand creates `export topics` command
 func NewExportTopicsCommand() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{

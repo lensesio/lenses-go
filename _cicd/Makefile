@@ -55,7 +55,7 @@ docker-build: ##
 	    --user $(shell id --user):$(shell id --group) \
 	    --env HOME=/tmp/cli-cache/home \
 	    --env GOPATH=/tmp/cli-cache/go/ \
-	    golang:1.14 /src/_cicd/functions.sh build
+	    golang:1.19 /src/_cicd/functions.sh build
 
 docker-cross-build: ##
 	docker run --rm --volume $(shell dirname $(shell pwd)):/src --workdir /src \
@@ -63,7 +63,7 @@ docker-cross-build: ##
 	    --user $(shell id --user):$(shell id --group) \
 	    --env HOME=/tmp/cli-cache/home \
 	    --env GOPATH=/tmp/cli-cache/go \
-	    golang:1.14 /src/_cicd/functions.sh cross-build
+	    golang:1.19 /src/_cicd/functions.sh cross-build
 
 docker-build-shell: ##
 	docker run --user $(shell id --user):$(shell id --group) -it \
@@ -72,7 +72,7 @@ docker-build-shell: ##
 	    --env HOME=/tmp/cli-cache/home \
 	    --env GOPATH=/tmp/cli-cache/go \
 	    --workdir /src --rm \
-	    golang:1.14 bash
+	    golang:1.19 bash
 
 docker-gcloud-build: ##
 	docker run -it --volume $(shell cd .. && pwd):/src \

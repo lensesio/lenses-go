@@ -24,14 +24,14 @@ var LivePrefixState struct {
 
 var sqlQuery string
 
-//Executor sturct
+// Executor sturct
 type Executor struct {
 	interactiveCmd *cobra.Command
 	client         *api.Client
 	sqlHistoryPath string
 }
 
-//NewExecutor creates a new executor
+// NewExecutor creates a new executor
 func NewExecutor(interactiveCmd *cobra.Command, client *api.Client, sqlHistoryPath string) *Executor {
 	return &Executor{
 		interactiveCmd: interactiveCmd,
@@ -40,12 +40,12 @@ func NewExecutor(interactiveCmd *cobra.Command, client *api.Client, sqlHistoryPa
 	}
 }
 
-//ChangeLivePrefix changes the prefix
+// ChangeLivePrefix changes the prefix
 func (e *Executor) ChangeLivePrefix() (string, bool) {
 	return LivePrefixState.LivePrefix, LivePrefixState.IsEnable
 }
 
-//Execute execute an SQL query
+// Execute execute an SQL query
 func (e *Executor) Execute(sql string) {
 	if strings.HasPrefix(sql, "!") {
 		trimmed := strings.Trim(sql, " ")

@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportPoliciesCommand creates `import policies` ommand
+// NewImportPoliciesCommand creates `import policies` ommand
 func NewImportPoliciesCommand() *cobra.Command {
 	var path string
 

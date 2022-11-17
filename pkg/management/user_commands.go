@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewUsersCommand creates the `groups` command
+// NewUsersCommand creates the `groups` command
 func NewUsersCommand() *cobra.Command {
 	var groupNames []string
 	root := &cobra.Command{
@@ -59,7 +59,7 @@ users --groups Group1 --groups Group2
 	return root
 }
 
-//NewGetUserCommand creates `groups get`
+// NewGetUserCommand creates `groups get`
 func NewGetUserCommand() *cobra.Command {
 	var userName string
 
@@ -83,7 +83,7 @@ func NewGetUserCommand() *cobra.Command {
 	return cmd
 }
 
-//NewCreateUserCommand creates a new user
+// NewCreateUserCommand creates a new user
 func NewCreateUserCommand() *cobra.Command {
 	var user api.UserMember
 
@@ -125,7 +125,7 @@ users create --username john --password secretpass --security basic --groups MyG
 	return cmd
 }
 
-//NewUpdateUserCommand creates a new user
+// NewUpdateUserCommand creates a new user
 func NewUpdateUserCommand() *cobra.Command {
 	var user api.UserMember
 
@@ -167,7 +167,7 @@ users update --username john --email johndoe@mail.com --groups MyGroup
 	return cmd
 }
 
-//NewDeleteUserCommand deletes a new user
+// NewDeleteUserCommand deletes a new user
 func NewDeleteUserCommand() *cobra.Command {
 	var username string
 
@@ -195,7 +195,7 @@ func NewDeleteUserCommand() *cobra.Command {
 	return cmd
 }
 
-//NewPasswordUserCommand updates user password
+// NewPasswordUserCommand updates user password
 func NewPasswordUserCommand() *cobra.Command {
 	var username, password string
 

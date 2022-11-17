@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewLogsCommandGroup creates `logs` command
+// NewLogsCommandGroup creates `logs` command
 func NewLogsCommandGroup() *cobra.Command {
 
 	root := &cobra.Command{
@@ -28,7 +28,7 @@ func NewLogsCommandGroup() *cobra.Command {
 	return root
 }
 
-//NewGetLogsInfoCommand creates `logs info` command
+// NewGetLogsInfoCommand creates `logs info` command
 func NewGetLogsInfoCommand(asObjects *bool) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "info",
@@ -53,7 +53,7 @@ func NewGetLogsInfoCommand(asObjects *bool) *cobra.Command {
 	return cmd
 }
 
-//NewGetLogsMetricsCommand creates `logs metrics` command
+// NewGetLogsMetricsCommand creates `logs metrics` command
 func NewGetLogsMetricsCommand(asObjects *bool) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "metrics",

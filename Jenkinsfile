@@ -19,7 +19,7 @@ pipeline {
 
     environment {
         // Build stage variables
-        DOCKER_GO_IMG = 'golang:1.17'
+        DOCKER_GO_IMG = 'golang:1.19'
         DOCKER_GO_CACHE = '/tmp/cli-cache'
         DOCKER_GO_ARGS = "--volume /tmp:/tmp " +
           "--env HOME=${DOCKER_GO_CACHE}/home " +
@@ -63,6 +63,9 @@ pipeline {
                     //     echo "Cleaning up docker build cache"
                     //     // sh 'sudo rm -rf /tmp/cli-cache'
                     // }
+
+                    // Remove cache for all builds as main release branches have drifted and cannot be reused (temp fix)
+                    sh 'sudo rm -rf /tmp/cli-cache'
 
                     echo "Set BUILD_MODE to: ${env.BUILD_MODE}"
 

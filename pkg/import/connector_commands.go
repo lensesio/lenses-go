@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportConnectorsCommand create `import connectors`
+// NewImportConnectorsCommand create `import connectors`
 func NewImportConnectorsCommand() *cobra.Command {
 	var path string
 	var interval string

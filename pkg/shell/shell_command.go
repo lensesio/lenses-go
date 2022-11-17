@@ -16,7 +16,7 @@ import (
 
 var sqlHistoryPath = fmt.Sprintf("%s/history", api.DefaultConfigurationHomeDir)
 
-//NewInteractiveCommand creates `shell` command
+// NewInteractiveCommand creates `shell` command
 func NewInteractiveCommand() *cobra.Command {
 
 	cmd := &cobra.Command{

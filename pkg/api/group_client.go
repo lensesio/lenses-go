@@ -8,7 +8,7 @@ import (
 
 const groupPath = "api/v1/group"
 
-//Namespace the payload object for namespaces
+// Namespace the payload object for namespaces
 type Namespace struct {
 	Wildcards   []string `json:"wildcards" yaml:"wildcards" header:"Wildcards"`
 	Permissions []string `json:"permissions" yaml:"permissions" header:"Permissions"`
@@ -16,7 +16,7 @@ type Namespace struct {
 	Instance    string   `json:"instance" yaml:"instance" header:"instance"`
 }
 
-//Group the payload object
+// Group the payload object
 type Group struct {
 	Name                       string      `json:"name" yaml:"name" header:"Name"`
 	Description                string      `json:"description,omitempty" yaml:"description" header:"Description"`
@@ -28,7 +28,7 @@ type Group struct {
 	ConnectClustersPermissions []string    `json:"connectClustersPermissions" yaml:"connectClustersPermissions" header:"Connect clusters access"`
 }
 
-//GetGroups returns the list of groups
+// GetGroups returns the list of groups
 func (c *Client) GetGroups() (groups []Group, err error) {
 	resp, err := c.Do(http.MethodGet, groupPath, contentTypeJSON, nil)
 	if err != nil {
@@ -38,7 +38,7 @@ func (c *Client) GetGroups() (groups []Group, err error) {
 	return
 }
 
-//GetGroup returns the group by the provided name
+// GetGroup returns the group by the provided name
 func (c *Client) GetGroup(name string) (group Group, err error) {
 	if name == "" {
 		err = errRequired("name")
@@ -55,7 +55,7 @@ func (c *Client) GetGroup(name string) (group Group, err error) {
 	return
 }
 
-//CreateGroup creates a group
+// CreateGroup creates a group
 func (c *Client) CreateGroup(group *Group) error {
 	if group.Name == "" {
 		return errRequired("name")
@@ -73,7 +73,7 @@ func (c *Client) CreateGroup(group *Group) error {
 	return err
 }
 
-//DeleteGroup deletes a group
+// DeleteGroup deletes a group
 func (c *Client) DeleteGroup(name string) error {
 	if name == "" {
 		return errRequired("name")
@@ -87,7 +87,7 @@ func (c *Client) DeleteGroup(name string) error {
 	return nil
 }
 
-//UpdateGroup updates a group
+// UpdateGroup updates a group
 func (c *Client) UpdateGroup(group *Group) error {
 	if group.Name == "" {
 		return errRequired("name")
@@ -106,7 +106,7 @@ func (c *Client) UpdateGroup(group *Group) error {
 	return nil
 }
 
-//CloneGroup clones a group
+// CloneGroup clones a group
 func (c *Client) CloneGroup(currentName string, newName string) error {
 	if currentName == "" {
 		return errRequired("name")

@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewSchemasCmd is the groupd command for the schema-registry module
+// NewSchemasCmd is the groupd command for the schema-registry module
 func NewSchemasCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use: "schema-registry",
@@ -21,6 +21,7 @@ func NewSchemasCmd() *cobra.Command {
 			Use this command to operate on various aspects of the
 			Schema Registry. You can:
 
+			- View all subjects
 			- View an "AVRO" or "PROTOBUF" Schema.
 			- Create or Update a particular Schema.
 			- Delete a "Schema" or a "Version".
@@ -34,6 +35,7 @@ func NewSchemasCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
+	rootCmd.AddCommand(ViewSubjectsCmd())
 	rootCmd.AddCommand(ViewSchemaCmd())
 	rootCmd.AddCommand(WriteSchemaCmd())
 	rootCmd.AddCommand(SetSchemaCompatibility())
@@ -44,7 +46,32 @@ func NewSchemasCmd() *cobra.Command {
 	return rootCmd
 }
 
-//ViewSchemaCmd returns the details of a particular schema
+// ViewSubjectsCmd returns an overview of registered subjects
+func ViewSubjectsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "subjects",
+		Short: "List of all registered subjects",
+		Example: heredoc.Doc(`
+			$ lenses-cli schema-registry subjects"
+		`),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			subjects, err := config.Client.GetSubjects()
+			if err != nil {
+				return err
+			}
+
+			return bite.PrintObject(cmd, subjects)
+		},
+	}
+
+	bite.CanPrintJSON(cmd)
+	bite.CanBeSilent(cmd)
+
+	return cmd
+}
+
+// ViewSchemaCmd returns the details of a particular schema
 func ViewSchemaCmd() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
@@ -84,7 +111,7 @@ func ViewSchemaCmd() *cobra.Command {
 	return cmd
 }
 
-//WriteSchemaCmd creates a schema if not exists, updates it otherwise.
+// WriteSchemaCmd creates a schema if not exists, updates it otherwise.
 func WriteSchemaCmd() *cobra.Command {
 	var request api.WriteSchemaReq
 	var name string
@@ -128,7 +155,7 @@ func WriteSchemaCmd() *cobra.Command {
 	return cmd
 }
 
-//SetSchemaCompatibility sets the compatibility for a schema
+// SetSchemaCompatibility sets the compatibility for a schema
 func SetSchemaCompatibility() *cobra.Command {
 	var request api.SetSchemaCompatibilityReq
 	var name string
@@ -166,7 +193,7 @@ func SetSchemaCompatibility() *cobra.Command {
 	return cmd
 }
 
-//SetGlobalCompatibility sets the default compatibility
+// SetGlobalCompatibility sets the default compatibility
 func SetGlobalCompatibility() *cobra.Command {
 	var request api.SetGlobalCompatibilityReq
 
@@ -202,7 +229,7 @@ func SetGlobalCompatibility() *cobra.Command {
 	return cmd
 }
 
-//RemoveSchemaVersion removes a particular version of a schema
+// RemoveSchemaVersion removes a particular version of a schema
 func RemoveSchemaVersion() *cobra.Command {
 	var name string
 	var version string
@@ -240,7 +267,7 @@ func RemoveSchemaVersion() *cobra.Command {
 	return cmd
 }
 
-//RemoveSchema removes a particular schema
+// RemoveSchema removes a particular schema
 func RemoveSchema() *cobra.Command {
 	var name string
 

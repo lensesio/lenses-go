@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportGroupsCommand creates `import groups` command
+// NewImportGroupsCommand creates `import groups` command
 func NewImportGroupsCommand() *cobra.Command {
 	var path string
 

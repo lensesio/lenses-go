@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportQuotasCommand creates `import quotas` command
+// NewImportQuotasCommand creates `import quotas` command
 func NewImportQuotasCommand() *cobra.Command {
 	var path string
 

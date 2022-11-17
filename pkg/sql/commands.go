@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//InteractiveShell parameter to enable shell as interactive
+// InteractiveShell parameter to enable shell as interactive
 var InteractiveShell bool
 var sqlLiveStream, sqlStats, sqlKeys, sqlKeysOnly, sqlMeta bool
 var gCmd *cobra.Command
@@ -218,7 +218,7 @@ func runSQL(cmd *cobra.Command, sql string, meta bool, keys bool, keysOnly bool,
 	return conn.Wait(ch)
 }
 
-//NewLiveLSQLCommand creates `query` command
+// NewLiveLSQLCommand creates `query` command
 func NewLiveLSQLCommand() *cobra.Command {
 
 	cmd := &cobra.Command{

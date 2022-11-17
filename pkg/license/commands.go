@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewLicenseGroupCommand creates the `license` command
+// NewLicenseGroupCommand creates the `license` command
 func NewLicenseGroupCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "license",
@@ -29,7 +29,7 @@ lenses-cli license update --license-file <license.json>`,
 	return cmd
 }
 
-//NewLicenseGetCommand creates the `license get` subcommand
+// NewLicenseGetCommand creates the `license get` subcommand
 func NewLicenseGetCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "get",
@@ -50,7 +50,7 @@ func NewLicenseGetCommand() *cobra.Command {
 	return cmd
 }
 
-//NewLicenseUpdateCommand creates the `license update` subcommand
+// NewLicenseUpdateCommand creates the `license update` subcommand
 func NewLicenseUpdateCommand() *cobra.Command {
 	var licenseFilePath string
 

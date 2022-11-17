@@ -23,23 +23,26 @@ type CommandTest struct {
 
 // RunCommandTests runs all set test scenarios
 // *** USAGE ***
-// func TestFooCommands(t *testing.T) {
-// 	scenarios := make(map[string]test.CommandTest)
-// 	scenarios["'Foo' command should throw error without args"] =
-// 		test.CommandTest{
-// 			Cmd:     NewRootCommand,
-// 			CmdArgs: []string{"foo"},11
-// 			ShouldContainErrors: []string{`No args set!`},
-// 		}
-// 	scenarios["'Foo' command run successfully with args"] =
-// 	test.CommandTest{
-// 		Cmd:     NewRootCommand,
-// 		CmdArgs: []string{"foo","bar"},11
-// 		ShouldContain: []string{`Run smoothly!`},
-// 	}
+//
+//	func TestFooCommands(t *testing.T) {
+//		scenarios := make(map[string]test.CommandTest)
+//		scenarios["'Foo' command should throw error without args"] =
+//			test.CommandTest{
+//				Cmd:     NewRootCommand,
+//				CmdArgs: []string{"foo"},11
+//				ShouldContainErrors: []string{`No args set!`},
+//			}
+//		scenarios["'Foo' command run successfully with args"] =
+//		test.CommandTest{
+//			Cmd:     NewRootCommand,
+//			CmdArgs: []string{"foo","bar"},11
+//			ShouldContain: []string{`Run smoothly!`},
+//		}
+//
 // // Both tests will run
-// 	test.RunCommandTests(t, scenarios)
-// }
+//
+//		test.RunCommandTests(t, scenarios)
+//	}
 func RunCommandTests(t *testing.T, cmdTests map[string]CommandTest) {
 	for description, cmdTest := range cmdTests {
 		t.Run(description, func(t *testing.T) {

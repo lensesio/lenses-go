@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportAclsCommand creates `export acls` command
+// NewExportAclsCommand creates `export acls` command
 func NewExportAclsCommand() *cobra.Command {
 
 	cmd := &cobra.Command{

@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportServiceAccountsCommand creates `export serviceaccounts`
+// NewExportServiceAccountsCommand creates `export serviceaccounts`
 func NewExportServiceAccountsCommand() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{

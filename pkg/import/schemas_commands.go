@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kataras/golog"
 	"github.com/lensesio/lenses-go/pkg"
 	"github.com/lensesio/lenses-go/pkg/api"
 	config "github.com/lensesio/lenses-go/pkg/configs"
@@ -17,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportSchemasCmd to read schemas from files
+// NewImportSchemasCmd to read schemas from files
 func NewImportSchemasCmd() *cobra.Command {
 	var path string
 	var name string
@@ -35,7 +36,7 @@ func NewImportSchemasCmd() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path = fmt.Sprintf("%s/%s", path, pkg.SchemasPath)
+			path = fmt.Sprintf("%s/%s/", path, pkg.SchemasPath)
 			err := ReadSchemas(config.Client, cmd, path)
 			return errors.Wrapf(err, "Failed to read schemas")
 		},
@@ -51,7 +52,7 @@ func NewImportSchemasCmd() *cobra.Command {
 	return cmd
 }
 
-//ReadSchemas to read the files and import one by one
+// ReadSchemas to read the files and import one by one
 func ReadSchemas(client *api.Client, cmd *cobra.Command, filePath string) error {
 	files, err := utils.FindFiles(filePath)
 	if err != nil {
@@ -59,7 +60,6 @@ func ReadSchemas(client *api.Client, cmd *cobra.Command, filePath string) error 
 	}
 
 	for _, file := range files {
-		println(file)
 		var schema api.WriteSchemaReq
 		var fileName = file.Name()
 
@@ -69,11 +69,10 @@ func ReadSchemas(client *api.Client, cmd *cobra.Command, filePath string) error 
 
 		schemaName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
-		println("NAME:", schemaName)
 		if err := client.WriteSchema(schemaName, schema); err != nil {
 			return errors.Wrapf(err, "Could not import Schemas [%s]", fileName)
 		}
-		fmt.Printf(utils.GREEN("✓ Imported Schemas from [%s]\n"), fileName)
+		golog.Infof("imported schema from file '%s'", filePath)
 	}
 
 	return nil

@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportGroupCommand creates `import` command
+// NewImportGroupCommand creates `import` command
 func NewImportGroupCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "import",

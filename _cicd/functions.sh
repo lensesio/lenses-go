@@ -40,14 +40,15 @@ setup() {
 
 lint() {
     # download misc. deps
-    go get -u golang.org/x/lint/golint
+    go install golang.org/x/lint/golint@latest
 
     export PATH=$PATH:$GOPATH/bin
     golint -set_exit_status $(go list ./... | grep -v /vendor/)
 }
 
 format-check() {
-    go get -u golang.org/x/tools/cmd/goimports
+    # pin version so that a new goimports does not tank our build.
+    go install golang.org/x/tools/cmd/goimports@v0.3.0
 
     export PATH=$PATH:$GOPATH/bin
     GOFORMATOUT=$(goimports -l cmd/ pkg/ test/)

@@ -8,7 +8,7 @@ import (
 
 const serviceAccountPath = "api/v1/serviceaccount"
 
-//ServiceAccount the service account data transfer object
+// ServiceAccount the service account data transfer object
 type ServiceAccount struct {
 	Name   string   `json:"name" yaml:"name" header:"Name"`
 	Owner  string   `json:"owner,omitempty" yaml:"owner,omitempty" header:"Owner"`
@@ -16,12 +16,12 @@ type ServiceAccount struct {
 	Token  string   `json:"token,omitempty" yaml:"token,omitempty"`
 }
 
-//CreateSvcAccPayload the data transfer object when we create a new service account
+// CreateSvcAccPayload the data transfer object when we create a new service account
 type CreateSvcAccPayload struct {
 	Token string `json:"token,omitempty"`
 }
 
-//GetServiceAccounts returns the list of service accounts
+// GetServiceAccounts returns the list of service accounts
 func (c *Client) GetServiceAccounts() (serviceAccounts []ServiceAccount, err error) {
 	resp, err := c.Do(http.MethodGet, serviceAccountPath, contentTypeJSON, nil)
 	if err != nil {
@@ -31,7 +31,7 @@ func (c *Client) GetServiceAccounts() (serviceAccounts []ServiceAccount, err err
 	return
 }
 
-//GetServiceAccount returns the service account by the provided name
+// GetServiceAccount returns the service account by the provided name
 func (c *Client) GetServiceAccount(name string) (serviceAccount ServiceAccount, err error) {
 	if name == "" {
 		err = errRequired("name")
@@ -48,7 +48,7 @@ func (c *Client) GetServiceAccount(name string) (serviceAccount ServiceAccount, 
 	return
 }
 
-//CreateServiceAccount creates a service account
+// CreateServiceAccount creates a service account
 func (c *Client) CreateServiceAccount(serviceAccount *ServiceAccount) (token CreateSvcAccPayload, err error) {
 	if serviceAccount.Name == "" {
 		err = errRequired("name")
@@ -72,7 +72,7 @@ func (c *Client) CreateServiceAccount(serviceAccount *ServiceAccount) (token Cre
 	return
 }
 
-//DeleteServiceAccount deletes a service account
+// DeleteServiceAccount deletes a service account
 func (c *Client) DeleteServiceAccount(name string) error {
 	if name == "" {
 		return errRequired("name")
@@ -86,7 +86,7 @@ func (c *Client) DeleteServiceAccount(name string) error {
 	return nil
 }
 
-//UpdateServiceAccount updates a service account
+// UpdateServiceAccount updates a service account
 func (c *Client) UpdateServiceAccount(serviceAccount *ServiceAccount) error {
 	if serviceAccount.Name == "" {
 		return errRequired("name")
@@ -108,7 +108,7 @@ func (c *Client) UpdateServiceAccount(serviceAccount *ServiceAccount) error {
 	return nil
 }
 
-//RevokeServiceAccountToken returns the service account token for the provided name
+// RevokeServiceAccountToken returns the service account token for the provided name
 func (c *Client) RevokeServiceAccountToken(name string, newToken string) (token CreateSvcAccPayload, err error) {
 	if name == "" {
 		err = errRequired("name")

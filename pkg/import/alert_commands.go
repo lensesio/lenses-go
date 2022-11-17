@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportAlertSettingsCommand create `import alert-settings` command
+// NewImportAlertSettingsCommand create `import alert-settings` command
 func NewImportAlertSettingsCommand() *cobra.Command {
 	var path string
 

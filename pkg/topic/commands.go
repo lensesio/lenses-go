@@ -19,7 +19,7 @@ type topicView struct {
 	KeySchema   json.RawMessage `json:"keySchema" yaml:"-"`
 }
 
-//NewTopicsGroupCommand creates `topics` command
+// NewTopicsGroupCommand creates `topics` command
 func NewTopicsGroupCommand() *cobra.Command {
 	var namesOnly, unwrap bool
 
@@ -81,7 +81,7 @@ func NewTopicsGroupCommand() *cobra.Command {
 	return root
 }
 
-//NewGetAvailableTopicConfigKeysCommand creates `topics keys` command
+// NewGetAvailableTopicConfigKeysCommand creates `topics keys` command
 func NewGetAvailableTopicConfigKeysCommand() *cobra.Command {
 	var unwrap bool
 
@@ -117,7 +117,7 @@ func NewGetAvailableTopicConfigKeysCommand() *cobra.Command {
 	return cmd
 }
 
-//NewTopicsMetadataSubgroupCommand cfreates `topics metadata` command
+// NewTopicsMetadataSubgroupCommand cfreates `topics metadata` command
 func NewTopicsMetadataSubgroupCommand() *cobra.Command {
 	var topicName string
 
@@ -175,7 +175,7 @@ func NewTopicsMetadataSubgroupCommand() *cobra.Command {
 	return rootSub
 }
 
-//NewTopicMetadataDeleteCommand creates `topics metadata delete` command
+// NewTopicMetadataDeleteCommand creates `topics metadata delete` command
 func NewTopicMetadataDeleteCommand() *cobra.Command {
 	var topicName string
 
@@ -206,7 +206,7 @@ func NewTopicMetadataDeleteCommand() *cobra.Command {
 	return cmd
 }
 
-//NewTopicMetadataCreateCommand creates `topics metadata create` command
+// NewTopicMetadataCreateCommand creates `topics metadata create` command
 func NewTopicMetadataCreateCommand() *cobra.Command {
 	var meta api.TopicMetadata
 
@@ -243,7 +243,7 @@ func NewTopicMetadataCreateCommand() *cobra.Command {
 	return cmd
 }
 
-//NewTopicGroupCommand creates `topic` command
+// NewTopicGroupCommand creates `topic` command
 func NewTopicGroupCommand() *cobra.Command {
 	var topicName string
 
@@ -281,7 +281,7 @@ func NewTopicGroupCommand() *cobra.Command {
 	return root
 }
 
-//NewTopicCreateCommand creates `topic create` command
+// NewTopicCreateCommand creates `topic create` command
 func NewTopicCreateCommand() *cobra.Command {
 	var (
 		configsRaw string
@@ -332,7 +332,7 @@ func NewTopicCreateCommand() *cobra.Command {
 	return cmd
 }
 
-//NewTopicDeleteCommand creates `topic delete` command
+// NewTopicDeleteCommand creates `topic delete` command
 func NewTopicDeleteCommand() *cobra.Command {
 	var (
 		topicName string
@@ -382,7 +382,7 @@ func NewTopicDeleteCommand() *cobra.Command {
 	return cmd
 }
 
-//NewTopicUpdateCommand creates `topic update` command
+// NewTopicUpdateCommand creates `topic update` command
 func NewTopicUpdateCommand() *cobra.Command {
 	var (
 		configsRaw string

@@ -5,12 +5,12 @@ import (
 	config "github.com/lensesio/lenses-go/pkg/configs"
 )
 
-//SetupMasterContext add a new context named "master" in Config
+// SetupMasterContext add a new context named "master" in Config
 func SetupMasterContext() {
 	SetupContext(api.DefaultContextKey, ClientConfig, auth)
 }
 
-//SetupContext add a new context in Config
+// SetupContext add a new context in Config
 func SetupContext(contextName string, clientConfig api.ClientConfig, basicAuth api.BasicAuthentication) {
 	SetupConfigManager()
 	config.Manager.Config.AddContext(contextName, &clientConfig)
@@ -18,14 +18,14 @@ func SetupContext(contextName string, clientConfig api.ClientConfig, basicAuth a
 	config.Manager.Config.GetCurrent().Authentication = basicAuth
 }
 
-//SetupConfigManager setup a new empty config manager if not done already
+// SetupConfigManager setup a new empty config manager if not done already
 func SetupConfigManager() {
 	if config.Manager == nil {
 		config.Manager = config.NewEmptyConfigManager()
 	}
 }
 
-//ResetConfigManager reset the config manager
+// ResetConfigManager reset the config manager
 func ResetConfigManager() {
 	config.Manager = nil
 }

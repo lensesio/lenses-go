@@ -9,7 +9,7 @@ import (
 
 const commandModeName = "mode"
 
-//NewGetConfigsCommand creates the `configs` command
+// NewGetConfigsCommand creates the `configs` command
 func NewGetConfigsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "configs",
@@ -51,7 +51,7 @@ func NewGetConfigsCommand() *cobra.Command {
 	return cmd
 }
 
-//NewGetModeCommand creates the `mode` command
+// NewGetModeCommand creates the `mode` command
 func NewGetModeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:                   commandModeName,

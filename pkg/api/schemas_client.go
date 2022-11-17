@@ -8,12 +8,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-//Tags Struct
+// Tags Struct
 type Tags struct {
 	Name string `json:"name"`
 }
 
-//Version Struct
+// Version Struct
 type Version struct {
 	ID      int    `json:"id"`
 	Version int    `json:"version"`
@@ -21,7 +21,7 @@ type Version struct {
 	Format  string `json:"format"`
 }
 
-//GetSchemaRes Struct
+// GetSchemaRes Struct
 type GetSchemaRes struct {
 	Name           string   `json:"name"`
 	ConnectionName string   `json:"connectionName"`
@@ -37,12 +37,47 @@ type GetSchemaRes struct {
 	SourceType     string   `json:"sourceType"`
 }
 
-//GetSchemaReq Struct
-type GetSchemaReq struct {
-	Name string `json:"name"`
+// DatasetsResp struct maps to the `api/v1/datasets` response payload
+type DatasetsResp struct {
+	Datasets struct {
+		Values []struct {
+			Name          string `json:"name"`
+			Format        string `json:"format"`
+			Version       int    `json:"version"`
+			Compatibility string `json:"compatibility"`
+		} `json:"values"`
+		PagesAmount int `json:"pagesAmount"`
+		TotalCount  int `json:"totalCount"`
+	} `json:"datasets"`
+	SourceTypes []string `json:"sourceTypes"`
 }
 
-//GetSchema returns the details of a schema
+// Subjects struct is used at 'schema-registy subjects' cmd
+type Subjects []struct {
+	Name          string `json:"name" yaml:"name" header:"name"`
+	Format        string `json:"format" yaml:"format" header:"format"`
+	Version       int    `json:"version" yaml:"version" header:"latest version"`
+	Compatibility string `json:"compatibility" yaml:"compatibility" header:"compatibility"`
+}
+
+// GetSubjects retrieves all registered subjects
+func (c *Client) GetSubjects() (subs Subjects, err error) {
+
+	resp, err := c.Do(http.MethodGet, "api/v1/datasets?pageSize=99999&connections=schema-registry", "gzip", nil)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	var datasets DatasetsResp
+	if err = c.ReadJSON(resp, &datasets); err != nil {
+		return
+	}
+
+	return (Subjects)(datasets.Datasets.Values), nil
+}
+
+// GetSchema returns the details of a schema
 func (c *Client) GetSchema(name string) (response GetSchemaRes, err error) {
 	const basePath = "api/v1/datasets/schema-registry"
 	path := fmt.Sprintf("%s/%s", basePath, name)
@@ -68,13 +103,13 @@ func (c *Client) GetSchema(name string) (response GetSchemaRes, err error) {
 	return
 }
 
-//WriteSchemaReq Struct
+// WriteSchemaReq Struct
 type WriteSchemaReq struct {
 	Format string `json:"format"`
 	Schema string `json:"schema"`
 }
 
-//WriteSchema creates a schema if it doens't exist, updates it otherwise
+// WriteSchema creates a schema if it doens't exist, updates it otherwise
 func (c *Client) WriteSchema(name string, request WriteSchemaReq) (err error) {
 	const basePath = "api/v1/sr/default/subject"
 	path := fmt.Sprintf("%s/%s/current-version", basePath, name)
@@ -105,12 +140,12 @@ func (c *Client) WriteSchema(name string, request WriteSchemaReq) (err error) {
 	return
 }
 
-//SetSchemaCompatibilityReq Struct
+// SetSchemaCompatibilityReq Struct
 type SetSchemaCompatibilityReq struct {
 	Compatibility string `json:"compatibility"`
 }
 
-//SetSchemaCompatibility set the compatibility of a schema
+// SetSchemaCompatibility set the compatibility of a schema
 func (c *Client) SetSchemaCompatibility(name string, request SetSchemaCompatibilityReq) (err error) {
 	const basePath = "api/v1/sr/default/subject"
 	path := fmt.Sprintf("%s/%s/config", basePath, name)
@@ -139,12 +174,12 @@ func (c *Client) SetSchemaCompatibility(name string, request SetSchemaCompatibil
 	return
 }
 
-//SetGlobalCompatibilityReq Struct
+// SetGlobalCompatibilityReq Struct
 type SetGlobalCompatibilityReq struct {
 	Compatibility string `json:"compatibility"`
 }
 
-//SetGlobalCompatibility set the default compatibility of the schema registry
+// SetGlobalCompatibility set the default compatibility of the schema registry
 func (c *Client) SetGlobalCompatibility(request SetGlobalCompatibilityReq) (err error) {
 	const basePath = "api/v1/sr/default/config"
 
@@ -168,7 +203,7 @@ func (c *Client) SetGlobalCompatibility(request SetGlobalCompatibilityReq) (err 
 	return
 }
 
-//RemoveSchemaVersion removes a particular schema version
+// RemoveSchemaVersion removes a particular schema version
 func (c *Client) RemoveSchemaVersion(name string, version string) (err error) {
 	const basePath = "api/v1/sr/default/subject"
 	path := fmt.Sprintf("%s/%s/version/%s", basePath, name, version)
@@ -192,7 +227,7 @@ func (c *Client) RemoveSchemaVersion(name string, version string) (err error) {
 	return
 }
 
-//RemoveSchema removes the schema and all its versions
+// RemoveSchema removes the schema and all its versions
 func (c *Client) RemoveSchema(name string) (err error) {
 	const basePath = "api/v1/sr/default/subject"
 	path := fmt.Sprintf("%s/%s", basePath, name)

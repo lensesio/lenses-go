@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportConnectorsCommand creates `export connectors` command
+// NewExportConnectorsCommand creates `export connectors` command
 func NewExportConnectorsCommand() *cobra.Command {
 	var name, cluster string
 
@@ -57,13 +57,13 @@ func writeConnectors(cmd *cobra.Command, client *api.Client, clusterName string,
 
 	for _, cluster := range clusters {
 
-		connectorNames, err := client.GetConnectors(cluster.Name)
+		connectorNames, err := client.GetConnectors(cluster)
 		if err != nil {
 			golog.Error(err)
 			return err
 		}
 
-		if clusterName != "" && cluster.Name != clusterName {
+		if clusterName != "" && cluster != clusterName {
 			continue
 		}
 
@@ -77,7 +77,7 @@ func writeConnectors(cmd *cobra.Command, client *api.Client, clusterName string,
 				continue
 			}
 
-			connector, err := client.GetConnector(cluster.Name, connectorName)
+			connector, err := client.GetConnector(cluster, connectorName)
 			if err != nil {
 				return err
 			}
@@ -89,13 +89,13 @@ func writeConnectors(cmd *cobra.Command, client *api.Client, clusterName string,
 			request := connector.ConnectorAsRequest()
 
 			output := strings.ToUpper(bite.GetOutPutFlag(cmd))
-			fileName := fmt.Sprintf("connector-%s-%s.%s", strings.ToLower(cluster.Name), strings.ToLower(connectorName), strings.ToLower(output))
+			fileName := fmt.Sprintf("connector-%s-%s.%s", strings.ToLower(cluster), strings.ToLower(connectorName), strings.ToLower(output))
 
 			if output == "TABLE" {
 				output = "YAML"
 			}
 
-			golog.Debugf("Exporting connector [%s.%s] to [%s%s]", cluster.Name, connectorName, landscapeDir, fileName)
+			golog.Debugf("Exporting connector [%s.%s] to [%s%s]", cluster, connectorName, landscapeDir, fileName)
 			if err := utils.WriteFile(landscapeDir, pkg.ConnectorsPath, fileName, output, request); err != nil {
 				return err
 			}

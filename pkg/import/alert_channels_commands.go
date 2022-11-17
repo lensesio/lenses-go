@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportAlertChannelsCommand handles the CLI sub-command 'import alert-channels'
+// NewImportAlertChannelsCommand handles the CLI sub-command 'import alert-channels'
 func NewImportAlertChannelsCommand() *cobra.Command {
 	var path string
 

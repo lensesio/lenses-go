@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewExportAlertsCommand creates `export alert-settings` command
+// NewExportAlertsCommand creates `export alert-settings` command
 func NewExportAlertsCommand() *cobra.Command {
 
 	cmd := &cobra.Command{

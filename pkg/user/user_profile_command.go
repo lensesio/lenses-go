@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewUserGroupCommand creates `user` command
+// NewUserGroupCommand creates `user` command
 func NewUserGroupCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:              "user",
@@ -34,7 +34,7 @@ func NewUserGroupCommand() *cobra.Command {
 	return root
 }
 
-//NewUserProfileGroupCommand creates `users profile` command
+// NewUserProfileGroupCommand creates `users profile` command
 func NewUserProfileGroupCommand() *cobra.Command {
 	rootSub := &cobra.Command{
 		Use:              "profile",
@@ -66,7 +66,7 @@ func NewUserProfileGroupCommand() *cobra.Command {
 	return rootSub
 }
 
-//NewCreateUserProfilePropertyValueCommand creates `profile user set` command
+// NewCreateUserProfilePropertyValueCommand creates `profile user set` command
 func NewCreateUserProfilePropertyValueCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "set",
@@ -93,7 +93,7 @@ func NewCreateUserProfilePropertyValueCommand() *cobra.Command {
 	return cmd
 }
 
-//NewDeleteUserProfilePropertyValueCommand creates `profile user delete` command
+// NewDeleteUserProfilePropertyValueCommand creates `profile user delete` command
 func NewDeleteUserProfilePropertyValueCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "delete",

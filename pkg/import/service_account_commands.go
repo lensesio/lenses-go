@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewImportServiceAccountsCommand creates `import serviceaccounts` command
+// NewImportServiceAccountsCommand creates `import serviceaccounts` command
 func NewImportServiceAccountsCommand() *cobra.Command {
 	var path string
 
