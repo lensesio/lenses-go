@@ -47,6 +47,7 @@ type listDatasetsOutput struct {
 // ListDatasetsCmd defines the cobra command to list datasets.
 func ListDatasetsCmd() *cobra.Command {
 	var max int
+	var plain bool // If set, list plain dataset names without make up.
 	var query string
 	records := newEnumFlag(api.RecordCountAll, api.RecordCountEmpty, api.RecordCountNonEmpty)
 	var connections []string
@@ -69,7 +70,7 @@ func ListDatasetsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var os []listDatasetsOutput
+			var outs []listDatasetsOutput
 			for _, ds := range res {
 				var o listDatasetsOutput
 				switch v := ds.(type) {
@@ -107,9 +108,17 @@ func ListDatasetsCmd() *cobra.Command {
 				default:
 					return fmt.Errorf("unknown type: %T", ds)
 				}
-				os = append(os, o)
+				outs = append(outs, o)
 			}
-			return bite.PrintObject(cmd, os)
+			if !plain {
+				return bite.PrintObject(cmd, outs)
+			}
+			names := make([]string, len(outs))
+			for i, o := range outs {
+				names[i] = o.Name
+			}
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), strings.Join(names, "\n"))
+			return err
 		},
 	}
 
@@ -117,6 +126,7 @@ func ListDatasetsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&max, "max", 0, "Maximum number of results to return.")
 	cmd.Flags().Var(&records, "records", "Filter the amount of records. Allowed values: "+strings.Join(records.allowedValues(), ", ")+".")
 	cmd.Flags().StringSliceVar(&connections, "connections", nil, "Connection names to filter by. All connections will be included when no value is supplied.")
+	cmd.Flags().BoolVar(&plain, "plain", false, "List only the names of the data sources without make up.")
 
 	return cmd
 }
