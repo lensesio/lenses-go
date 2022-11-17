@@ -342,15 +342,36 @@ func NewTopicDeleteCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:              "delete",
-		Short:            "Delete a topic",
-		Example:          `topic delete --name="topic1" [--partition=0 --offset=1260]`,
+		Use:   "delete",
+		Short: "Delete a topic",
+		Example: `topic delete --name="topic1" [--partition=0 --offset=1260]
+topic delete [topic]...`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
+		// The "arguments OR flags behaviour" is not great but solely to
+		// remain compatible.
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 && (topicName != "" || fromPartition >= 0 || toOffset >= 0) {
+				return fmt.Errorf("either specify only the names as arguments, OR the name [partition, offset] as flags")
+			}
+			if len(args) == 0 {
+				if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": topicName}); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := config.Client
-			if err := bite.CheckRequiredFlags(cmd, bite.FlagPair{"name": topicName}); err != nil {
-				return err
+
+			// Arguments style?
+			if len(args) > 0 {
+				for _, topic := range args {
+					if err := client.DeleteTopic(topic); err != nil {
+						return fmt.Errorf("delete topic %q: %w", topic, err)
+					}
+				}
+				return nil
 			}
 
 			if fromPartition >= 0 && toOffset >= 0 {
