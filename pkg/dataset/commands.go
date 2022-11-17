@@ -35,6 +35,8 @@ func NewDatasetGroupCmd() *cobra.Command {
 	return cmd
 }
 
+// listDatasetsOutput is a common denominator of the various dataset objects
+// sent to the output, modelled after the UI.
 type listDatasetsOutput struct {
 	Name       string      `header:"name"`
 	Size       interface{} `header:"size"`
@@ -47,15 +49,18 @@ func ListDatasetsCmd() *cobra.Command {
 	var max int
 	var query string
 	records := newEnumFlag(api.RecordCountAll, api.RecordCountEmpty, api.RecordCountNonEmpty)
+	var connections []string
 
 	cmd := &cobra.Command{
 		Use:              "list",
 		Short:            "Lists the datasets",
+		Example:          `dataset list --connections kafka --records empty`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params := api.ListDatasetsParameters{
 				RecordCount: records.optPtr(),
+				Connections: connections,
 			}
 			if query != "" {
 				params.Query = &query
@@ -111,6 +116,7 @@ func ListDatasetsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&query, "query", "", "A search keyword to match dataset, fields and description against.")
 	cmd.Flags().IntVar(&max, "max", 0, "Maximum number of results to return.")
 	cmd.Flags().Var(&records, "records", "Filter the amount of records. Allowed values: "+strings.Join(records.allowedValues(), ", ")+".")
+	cmd.Flags().StringSliceVar(&connections, "connections", nil, "Connection names to filter by. All connections will be included when no value is supplied.")
 
 	return cmd
 }
@@ -260,8 +266,8 @@ func derefOrNA(i *int) interface{} {
 // enumFlag is a flag that can only get assigned values that are in the set of
 // allowed values. It implements pflag.Value.
 type enumFlag[T ~string] struct {
-	allowed []T
-	value   T
+	allowed []T // The set of possible values the flag can assume.
+	value   T   // The value assigned to it after Set()ting it.
 }
 
 func newEnumFlag[T ~string](vs ...T) enumFlag[T] {
