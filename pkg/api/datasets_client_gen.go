@@ -67,7 +67,8 @@ type ListDatasetsParameters struct {
 	IncludeSystemEntities *bool        // Optional. A flag to include in the search also system entities (e.g. Kafka's `__consumer_offsets` topic).
 	IncludeMetadata       *bool        // Optional. Whether to search only by table name, or also to include field names/documentation (defaults to true).
 	Format                []string     // Optional. Schema format. Relevant only when sourceType is `ScheamRegistrySubject`.
-	RecordCount           *RecordCount // Optional. Controls filter of empty and non-empty topics based on the number of records in it.
+	HasRecords            *bool        // Optional. TODO.
+	Compacted             *bool        // Optional. TODO.
 }
 
 // ListDatasetsPg hides ListDatasets' paging.
@@ -120,11 +121,14 @@ func (c *Client) ListDatasets(reqParams ListDatasetsParameters) (res Results, er
 	if reqParams.IncludeMetadata != nil {
 		query.Add("includeMetadata", strconv.FormatBool(*reqParams.IncludeMetadata)) // Optional.
 	}
-	for _, v := range reqParams.Format {
+	for _, v := range reqParams.Format { // Optional.
 		query.Add("format", v)
 	}
-	if reqParams.RecordCount != nil {
-		query.Add("recordCount", string(*reqParams.RecordCount))
+	if reqParams.HasRecords != nil { // Optional.
+		query.Add("hasRecords", strconv.FormatBool(*reqParams.HasRecords))
+	}
+	if reqParams.Compacted != nil { // Optional.
+		query.Add("compacted", strconv.FormatBool(*reqParams.Compacted))
 	}
 	resp, err := c.Do(
 		http.MethodGet,

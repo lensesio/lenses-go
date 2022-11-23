@@ -290,10 +290,6 @@ func (m *mockDatasetsClient) ListDatasetsPg(params api.ListDatasetsParameters, m
 	return m.outVs, m.outErr
 }
 
-func genPtr[T any](s T) *T {
-	return &s
-}
-
 func TestListDatasetsCmd(t *testing.T) {
 	for _, stim := range []struct {
 		givenArgs       []string
@@ -308,15 +304,35 @@ func TestListDatasetsCmd(t *testing.T) {
 		},
 		{
 			givenArgs:    []string{"--output=plain", "--query=qqq"},
-			expectParams: api.ListDatasetsParameters{Query: genPtr("qqq")},
+			expectParams: api.ListDatasetsParameters{Query: ptrTo("qqq")},
 		},
 		{
 			givenArgs: []string{"--output=plain", "--max=42"},
 			expectMax: 42,
 		},
 		{
-			givenArgs:    []string{"--output=plain", "--records=nonEmpty"},
-			expectParams: api.ListDatasetsParameters{RecordCount: genPtr(api.RecordCountNonEmpty)},
+			givenArgs:    []string{"--output=plain", "--has-records=true"},
+			expectParams: api.ListDatasetsParameters{HasRecords: ptrTo(true)},
+		},
+		{
+			givenArgs:    []string{"--output=plain", "--has-records=false"},
+			expectParams: api.ListDatasetsParameters{HasRecords: ptrTo(false)},
+		},
+		{
+			givenArgs:    []string{"--output=plain", "--has-records=any"},
+			expectParams: api.ListDatasetsParameters{HasRecords: nil},
+		},
+		{
+			givenArgs:    []string{"--output=plain", "--compacted=true"},
+			expectParams: api.ListDatasetsParameters{Compacted: ptrTo(true)},
+		},
+		{
+			givenArgs:    []string{"--output=plain", "--compacted=false"},
+			expectParams: api.ListDatasetsParameters{Compacted: ptrTo(false)},
+		},
+		{
+			givenArgs:    []string{"--output=plain", "--compacted=any"},
+			expectParams: api.ListDatasetsParameters{Compacted: nil},
 		},
 		{
 			givenArgs:    []string{"--output=plain", "--connections=a", "--connections=b,c"},

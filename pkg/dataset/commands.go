@@ -98,7 +98,8 @@ func summariseDatasetMatches(res []api.DatasetMatch) ([]listDatasetsSummary, err
 func ListDatasetsCmd(cl datasetsLister) *cobra.Command {
 	var max int
 	var query string
-	records := newEnumFlag(api.RecordCountAll, api.RecordCountEmpty, api.RecordCountNonEmpty)
+	hasRecords := newDefaultingOptionalBool("any")
+	compacted := newDefaultingOptionalBool("any")
 	var connections []string
 
 	cmd := &cobra.Command{
@@ -109,7 +110,8 @@ func ListDatasetsCmd(cl datasetsLister) *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params := api.ListDatasetsParameters{
-				RecordCount: records.optPtr(),
+				HasRecords:  hasRecords.optBool(),
+				Compacted:   compacted.optBool(),
 				Connections: connections,
 			}
 			if query != "" {
@@ -120,7 +122,7 @@ func ListDatasetsCmd(cl datasetsLister) *cobra.Command {
 				return err
 			}
 			// Full objects for JSON or YAML.
-			if biteIsJsonOrYamlOutput(cmd) {
+			if biteIsJSONOrYAMLOutput(cmd) {
 				return bite.PrintObject(cmd, res)
 			}
 			// Summarise for table or plain output.
@@ -142,14 +144,16 @@ func ListDatasetsCmd(cl datasetsLister) *cobra.Command {
 
 	cmd.Flags().StringVar(&query, "query", "", "A search keyword to match dataset, fields and description against.")
 	cmd.Flags().IntVar(&max, "max", 0, "Maximum number of results to return.")
-	cmd.Flags().Var(&records, "records", "Filter the amount of records. Allowed values: "+strings.Join(records.allowedValues(), ", ")+".")
+	cmd.Flags().Var(&hasRecords, "has-records", "Record filter. List only datasets with non-zero, zero or any number of records. Allowed values: "+hasRecords.allowedVals())
+	cmd.Flags().Var(&compacted, "compacted", "Compaction filter. Lists only topics that are compacted, non-compacted or any compaction state. Implies Kafka source type. Allowed values: "+compacted.allowedVals())
 	cmd.Flags().StringSliceVar(&connections, "connections", nil, "Connection names to filter by. All connections will be included when no value is supplied.")
+	cmd.Flags()
 
 	return cmd
 }
 
 // based on bite.PrintObject.
-func biteIsJsonOrYamlOutput(cmd *cobra.Command) bool {
+func biteIsJSONOrYAMLOutput(cmd *cobra.Command) bool {
 	outputFlagValue := bite.GetOutPutFlag(cmd)
 	return strings.ToUpper(outputFlagValue) == "JSON" || strings.ToUpper(outputFlagValue) == "YAML"
 }
@@ -293,6 +297,37 @@ func RemoveDatasetTagsCmd() *cobra.Command {
 	return cmd
 }
 
+type optionalBool struct {
+	enumFlag[string]
+	def string
+}
+
+func newDefaultingOptionalBool(def string) optionalBool {
+	return optionalBool{
+		enumFlag: newDefaultingEnumFlag(def, "true", "false", "any"),
+		def:      def,
+	}
+}
+
+func (o optionalBool) allowedVals() string {
+	return strings.Join(o.allowedValues(), ", ")
+}
+
+func (o *optionalBool) optBool() *bool {
+	switch o.value {
+	case "true":
+		return ptrTo(true)
+	case "false":
+		return ptrTo(false)
+	default:
+		return nil
+	}
+}
+
+func ptrTo[T any](s T) *T {
+	return &s
+}
+
 func derefOrNA(i *int) interface{} {
 	if i == nil {
 		return "N/A"
@@ -305,6 +340,10 @@ func derefOrNA(i *int) interface{} {
 type enumFlag[T ~string] struct {
 	allowed []T // The set of possible values the flag can assume.
 	value   T   // The value assigned to it after Set()ting it.
+}
+
+func newDefaultingEnumFlag[T ~string](def T, vs ...T) enumFlag[T] {
+	return enumFlag[T]{value: def, allowed: vs}
 }
 
 func newEnumFlag[T ~string](vs ...T) enumFlag[T] {
