@@ -139,3 +139,48 @@ func TestListDatasetsUnmarshalling(t *testing.T) {
 	assert.Equal(t, 5, e.Shard)
 	assert.Equal(t, "TWLONG", k.KeyType)
 }
+
+type polyX struct {
+	Type   string
+	Common *int `json:",omitempty"`
+	X      int
+}
+
+type polyY struct {
+	Type   string
+	Common *int `json:",omitempty"`
+	Y      int
+}
+
+func TestPolyTypeObjUnmarshaller(t *testing.T) {
+	expect := []any{
+		polyX{Type: "x", Common: genPtr(5), X: 1},
+		polyX{Type: "x", Common: genPtr(2), X: 2},
+		polyY{Type: "y", Common: genPtr(42), Y: 1337},
+		polyY{Type: "y", Common: nil, Y: 31337},
+	}
+	var raws []json.RawMessage
+	for _, o := range expect {
+		bs, err := json.Marshal(o)
+		require.NoError(t, err)
+		raws = append(raws, bs)
+	}
+
+	p := polyTypeObjUnmarshaller[any, string]{
+		discriminatorKey: "Type",
+		type2ptr: func(s string) any {
+			return map[string]any{
+				"x": &polyX{},
+				"y": &polyY{},
+			}[s]
+		},
+	}
+	got, err := p.unmarshalSlice(raws)
+	require.NoError(t, err)
+
+	assert.Equal(t, expect, got)
+}
+
+func genPtr[T any](v T) *T {
+	return &v
+}

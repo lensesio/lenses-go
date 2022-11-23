@@ -207,11 +207,13 @@ func (pdm *PageDatasetMatch) UnmarshalJSON(data []byte) error {
 	pdm.TotalCount = partial.TotalCount
 	polyObj := polyTypeObjUnmarshaller[DatasetMatch, SourceType]{
 		discriminatorKey: "sourceType",
-		type2ptr: map[SourceType]any{
-			SourceTypeElastic:               &Elastic{},
-			SourceTypeKafka:                 &Kafka{},
-			SourceTypePostgres:              &Postgres{},
-			SourceTypeSchemaRegistrySubject: &SchemaRegistrySubject{},
+		type2ptr: func(s SourceType) any {
+			return map[SourceType]any{
+				SourceTypeElastic:               &Elastic{},
+				SourceTypeKafka:                 &Kafka{},
+				SourceTypePostgres:              &Postgres{},
+				SourceTypeSchemaRegistrySubject: &SchemaRegistrySubject{},
+			}[s]
 		},
 	}
 	var err error
@@ -227,8 +229,8 @@ func (pdm *PageDatasetMatch) UnmarshalJSON(data []byte) error {
 // unmarshals json.RawMessages into the correct Go type based on this
 // information.
 type polyTypeObjUnmarshaller[T any, K ~string] struct {
-	discriminatorKey string    // JSON key whose value contains the object's type.
-	type2ptr         map[K]any // A map from type name to a pointer to corresponding Go type.
+	discriminatorKey string      // JSON key whose value contains the object's type.
+	type2ptr         func(K) any // A mapping func from type name to a pointer to corresponding Go type. Nil if unknown type.
 }
 
 // unmarshalSlice calls unmarshal for a slice.
@@ -258,8 +260,8 @@ func (t polyTypeObjUnmarshaller[T, K]) unmarshal(d json.RawMessage) (o T, err er
 	if !ok {
 		return o, fmt.Errorf("key %q is not of type string but: %T", t.discriminatorKey, tn)
 	}
-	destTypePtr, ok := t.type2ptr[K(tns)] // A pointer to the correct Go type.
-	if !ok {
+	destTypePtr := t.type2ptr(K(tns)) // A pointer to the correct Go type.
+	if destTypePtr == nil {
 		return o, fmt.Errorf("no corresponding go type defined for type: %q", tns)
 	}
 	y := reflect.ValueOf(destTypePtr)

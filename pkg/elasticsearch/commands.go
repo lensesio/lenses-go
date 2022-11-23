@@ -25,7 +25,6 @@ func IndexesCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("Failed to retrieve indexes. Error: [%s]", err.Error())
 			}
-
 			return bite.PrintObject(cmd, indexes)
 		},
 	}

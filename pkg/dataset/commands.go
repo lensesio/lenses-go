@@ -17,8 +17,12 @@ const metadataLong = `Description:
   Be aware, that you need the "UpdateMetadata" permission to execute the command
 `
 
+type datasetsLister interface {
+	ListDatasetsPg(params api.ListDatasetsParameters, maxResults int) (vs []api.DatasetMatch, err error)
+}
+
 // NewDatasetGroupCmd Group Cmd
-func NewDatasetGroupCmd() *cobra.Command {
+func NewDatasetGroupCmd(cl datasetsLister) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "dataset",
 		Short:            "Use the dataset command to set user-defined metadata on Kafka topics and ES indices",
@@ -27,7 +31,7 @@ func NewDatasetGroupCmd() *cobra.Command {
 		Args:             cobra.NoArgs,
 	}
 
-	cmd.AddCommand(ListDatasetsCmd())
+	cmd.AddCommand(ListDatasetsCmd(cl))
 	cmd.AddCommand(UpdateDatasetDescriptionCmd())
 	cmd.AddCommand(UpdateDatasetTagsCmd())
 	cmd.AddCommand(RemoveDatasetDescriptionCmd())
@@ -35,19 +39,64 @@ func NewDatasetGroupCmd() *cobra.Command {
 	return cmd
 }
 
-// listDatasetsOutput is a common denominator of the various dataset objects
-// sent to the output, modelled after the UI.
-type listDatasetsOutput struct {
+// listDatasetsSummary is a common denominator of the various dataset objects
+// suitable for rendering as a table. Modelled after the UI.
+type listDatasetsSummary struct {
 	Name       string      `header:"name"`
 	Size       interface{} `header:"size"`
 	Records    interface{} `header:"records"`
 	DataSource string      `header:"data source"`
 }
 
+// summariseDatasetMatches summarises the "polymorphic" and deep
+// api.DatasetMatch into a listDatasetsSummary.
+func summariseDatasetMatches(res []api.DatasetMatch) ([]listDatasetsSummary, error) {
+	var outs []listDatasetsSummary
+	for _, ds := range res {
+		var o listDatasetsSummary
+		switch v := ds.(type) {
+		case api.Elastic:
+			o = listDatasetsSummary{
+				Name:       v.Name,
+				Size:       derefOrNA(v.SizeBytes),
+				Records:    derefOrNA(v.Records),
+				DataSource: string(api.SourceTypeElastic),
+			}
+		case api.Kafka:
+			o = listDatasetsSummary{
+				Name:       v.Name,
+				Size:       derefOrNA(v.SizeBytes),
+				Records:    derefOrNA(v.Records),
+				DataSource: string(api.SourceTypeKafka),
+			}
+			if v.IsCompacted { // Hide total number of records if compacted; the UI does this as well.
+				o.Records = derefOrNA(nil)
+			}
+		case api.Postgres:
+			o = listDatasetsSummary{
+				Name:       v.Name,
+				Size:       derefOrNA(v.SizeBytes),
+				Records:    derefOrNA(v.Records),
+				DataSource: string(api.SourceTypePostgres),
+			}
+		case api.SchemaRegistrySubject:
+			o = listDatasetsSummary{
+				Name:       v.Name,
+				Size:       derefOrNA(v.SizeBytes),
+				Records:    derefOrNA(v.Records),
+				DataSource: string(api.SourceTypeSchemaRegistrySubject),
+			}
+		default:
+			return nil, fmt.Errorf("unknown type: %T", ds)
+		}
+		outs = append(outs, o)
+	}
+	return outs, nil
+}
+
 // ListDatasetsCmd defines the cobra command to list datasets.
-func ListDatasetsCmd() *cobra.Command {
+func ListDatasetsCmd(cl datasetsLister) *cobra.Command {
 	var max int
-	var plain bool // If set, list plain dataset names without make up.
 	var query string
 	records := newEnumFlag(api.RecordCountAll, api.RecordCountEmpty, api.RecordCountNonEmpty)
 	var connections []string
@@ -66,55 +115,24 @@ func ListDatasetsCmd() *cobra.Command {
 			if query != "" {
 				params.Query = &query
 			}
-			res, err := config.Client.ListDatasetsPg(params, max)
+			res, err := cl.ListDatasetsPg(params, max)
 			if err != nil {
 				return err
 			}
-			var outs []listDatasetsOutput
-			for _, ds := range res {
-				var o listDatasetsOutput
-				switch v := ds.(type) {
-				case api.Elastic:
-					o = listDatasetsOutput{
-						Name:       v.Name,
-						Size:       derefOrNA(v.SizeBytes),
-						Records:    derefOrNA(v.Records),
-						DataSource: string(api.SourceTypeElastic),
-					}
-				case api.Kafka:
-					o = listDatasetsOutput{
-						Name:       v.Name,
-						Size:       derefOrNA(v.SizeBytes),
-						Records:    derefOrNA(v.Records),
-						DataSource: string(api.SourceTypeKafka),
-					}
-					if v.IsCompacted { // Hide total number of records if compacted; the UI does this as well.
-						o.Records = derefOrNA(nil)
-					}
-				case api.Postgres:
-					o = listDatasetsOutput{
-						Name:       v.Name,
-						Size:       derefOrNA(v.SizeBytes),
-						Records:    derefOrNA(v.Records),
-						DataSource: string(api.SourceTypePostgres),
-					}
-				case api.SchemaRegistrySubject:
-					o = listDatasetsOutput{
-						Name:       v.Name,
-						Size:       derefOrNA(v.SizeBytes),
-						Records:    derefOrNA(v.Records),
-						DataSource: string(api.SourceTypeSchemaRegistrySubject),
-					}
-				default:
-					return fmt.Errorf("unknown type: %T", ds)
-				}
-				outs = append(outs, o)
+			// Full objects for JSON or YAML.
+			if biteIsJsonOrYamlOutput(cmd) {
+				return bite.PrintObject(cmd, res)
 			}
-			if !plain {
-				return bite.PrintObject(cmd, outs)
+			// Summarise for table or plain output.
+			sum, err := summariseDatasetMatches(res)
+			if err != nil {
+				return fmt.Errorf("summarise datasets: %w", err)
 			}
-			names := make([]string, len(outs))
-			for i, o := range outs {
+			if !plainOutput(cmd) {
+				return bite.PrintObject(cmd, sum)
+			}
+			names := make([]string, len(sum))
+			for i, o := range sum {
 				names[i] = o.Name
 			}
 			_, err = fmt.Fprintln(cmd.OutOrStdout(), strings.Join(names, "\n"))
@@ -126,9 +144,18 @@ func ListDatasetsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&max, "max", 0, "Maximum number of results to return.")
 	cmd.Flags().Var(&records, "records", "Filter the amount of records. Allowed values: "+strings.Join(records.allowedValues(), ", ")+".")
 	cmd.Flags().StringSliceVar(&connections, "connections", nil, "Connection names to filter by. All connections will be included when no value is supplied.")
-	cmd.Flags().BoolVar(&plain, "plain", false, "List only the names of the data sources without make up.")
 
 	return cmd
+}
+
+// based on bite.PrintObject.
+func biteIsJsonOrYamlOutput(cmd *cobra.Command) bool {
+	outputFlagValue := bite.GetOutPutFlag(cmd)
+	return strings.ToUpper(outputFlagValue) == "JSON" || strings.ToUpper(outputFlagValue) == "YAML"
+}
+
+func plainOutput(cmd *cobra.Command) bool {
+	return bite.GetOutPutFlag(cmd) == "plain"
 }
 
 // UpdateDatasetDescriptionCmd updates the Dataset Metadata

@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/pkg/api"
 	config "github.com/lensesio/lenses-go/pkg/configs"
 	"github.com/lensesio/lenses-go/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const datasetResponse = `
@@ -45,7 +48,7 @@ func TestNewDatasetGroupCmdSuccess(t *testing.T) {
 
 	config.Client = client
 
-	cmd := NewDatasetGroupCmd()
+	cmd := NewDatasetGroupCmd(nil)
 	var outputValue string
 
 	cmd.PersistentFlags().StringVar(&outputValue, "output", "json", "")
@@ -272,4 +275,77 @@ func TestNewDatasetUpdateMetadataCmdFailureNoName(t *testing.T) {
 	assert.NotEmpty(t, output)
 
 	config.Client = nil
+}
+
+type mockDatasetsClient struct {
+	inListParams api.ListDatasetsParameters
+	inMaxResults int
+	outVs        []api.DatasetMatch
+	outErr       error
+}
+
+func (m *mockDatasetsClient) ListDatasetsPg(params api.ListDatasetsParameters, maxResults int) (vs []api.DatasetMatch, err error) {
+	m.inListParams = params
+	m.inMaxResults = maxResults
+	return m.outVs, m.outErr
+}
+
+func genPtr[T any](s T) *T {
+	return &s
+}
+
+func TestListDatasetsCmd(t *testing.T) {
+	for _, stim := range []struct {
+		givenArgs       []string
+		expectParams    api.ListDatasetsParameters
+		expectMax       int
+		givenMatches    []api.DatasetMatch
+		givenErr        error
+		optExpectStdOut string
+	}{
+		{
+			givenArgs: []string{"--output=plain"},
+		},
+		{
+			givenArgs:    []string{"--output=plain", "--query=qqq"},
+			expectParams: api.ListDatasetsParameters{Query: genPtr("qqq")},
+		},
+		{
+			givenArgs: []string{"--output=plain", "--max=42"},
+			expectMax: 42,
+		},
+		{
+			givenArgs:    []string{"--output=plain", "--records=nonEmpty"},
+			expectParams: api.ListDatasetsParameters{RecordCount: genPtr(api.RecordCountNonEmpty)},
+		},
+		{
+			givenArgs:    []string{"--output=plain", "--connections=a", "--connections=b,c"},
+			expectParams: api.ListDatasetsParameters{Connections: []string{"a", "b", "c"}},
+		},
+		{
+			givenArgs: []string{"--output=plain"},
+			givenMatches: []api.DatasetMatch{
+				api.Elastic{Name: "el"},
+				api.Kafka{Name: "kaf"},
+				api.Postgres{Name: "pg"},
+				api.SchemaRegistrySubject{Name: "sr"},
+			},
+			optExpectStdOut: "el\nkaf\npg\nsr\n",
+		},
+	} {
+		t.Run(strings.Join(stim.givenArgs, " "), func(t *testing.T) {
+			m := &mockDatasetsClient{outVs: stim.givenMatches, outErr: stim.givenErr}
+			cmd := ListDatasetsCmd(m)
+			var outputValue string
+			bite.RegisterOutPutFlag(cmd, &outputValue)
+			stdOut, err := test.ExecuteCommand(cmd, stim.givenArgs...)
+			require.NoError(t, err)
+			t.Log(stdOut)
+			assert.Equal(t, stim.expectParams, m.inListParams)
+			assert.Equal(t, stim.expectMax, m.inMaxResults)
+			if stim.optExpectStdOut != "" {
+				assert.Equal(t, stim.optExpectStdOut, stdOut)
+			}
+		})
+	}
 }

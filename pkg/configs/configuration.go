@@ -263,8 +263,16 @@ func SetupConfigManager(set *pflag.FlagSet) {
 	Manager = NewConfigurationManager(set)
 }
 
-// Client used for the rest of the commands
-var Client *api.Client
+// Client used for the rest of the commands. The majority of the code relies on
+// this client being available as a global variable. While this technically
+// works, it's not great for testing via dependency injecting either a mocked or
+// real implementation. To fascilitate this without a massive refactor, we
+// promise now that Client always points to the same api.Client, and contents of
+// it will get updated on client instantation. This allows dependency injection
+// of "the thing that will become the client" into wherever it is needed before
+// the thing becomes the client. Not too elegant, but it works and saves a lot
+// of work.
+var Client *api.Client = &api.Client{}
 
 // SetupClient setups a new API client
 func SetupClient() (err error) {
@@ -285,7 +293,10 @@ func SetupClient() (err error) {
 			time.Sleep(5 * time.Second)
 		}
 	}
-	Client, err = api.OpenConnection(*Manager.Config.GetCurrent())
+	c, err := api.OpenConnection(*Manager.Config.GetCurrent())
+	if err == nil {
+		*Client = *c
+	}
 	return
 }
 

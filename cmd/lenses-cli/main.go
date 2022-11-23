@@ -234,7 +234,7 @@ func main() {
 	app.AddCommand(initcontainer.NewInitConCommand())
 
 	app.AddCommand(topicsettings.NewTopicSettingsCmd())
-	app.AddCommand(dataset.NewDatasetGroupCmd())
+	app.AddCommand(dataset.NewDatasetGroupCmd(config.Client))
 	app.AddCommand(schemas.NewSchemasCmd())
 
 	// Add provision command for dynamic config
