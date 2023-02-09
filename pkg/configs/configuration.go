@@ -275,7 +275,7 @@ var Client *api.Client = &api.Client{}
 
 // SetupClient setups a new API client
 func SetupClient() (err error) {
-	Client, err = api.OpenConnection(*Manager.Config.GetCurrent())
+	c, err := api.OpenConnection(*Manager.Config.GetCurrent())
 	if err != nil && Manager.WaitForLenses {
 		host := Manager.Config.GetCurrent().Host
 		for {
@@ -283,12 +283,17 @@ func SetupClient() (err error) {
 			golog.Infof("waiting for host '%s' to respond...", host)
 			time.Sleep(5 * time.Second)
 
-			Client, err = api.OpenConnection(*Manager.Config.GetCurrent())
+			c, err = api.OpenConnection(*Manager.Config.GetCurrent())
 			if err == nil {
 				golog.Infof("connection to '%s' succeeded!", host)
 				break
 			}
 		}
+	}
+	// Keep our oath that Client always points to the same api.Client -- but
+	// populate it.
+	if err == nil {
+		*Client = *c
 	}
 	return err
 }
