@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,13 +15,13 @@ import (
 	"github.com/spf13/pflag"
 )
 
-//DefaultConfigFilepath the default config file path
+// DefaultConfigFilepath the default config file path
 var DefaultConfigFilepath = filepath.Join(api.DefaultConfigurationHomeDir, "lenses-cli.yml")
 
-//Manager the config manager
+// Manager the config manager
 var Manager *ConfigurationManager
 
-//ConfigurationManager manager for config
+// ConfigurationManager manager for config
 type ConfigurationManager struct {
 	Config *api.Config
 	// flags below.
@@ -50,7 +49,7 @@ type ConfigurationManager struct {
   7.1 if "configure" command then must show the create configuration survey. (PASS)
 */
 
-//NewConfigurationManager creates a configuration
+// NewConfigurationManager creates a configuration
 func NewConfigurationManager(set *pflag.FlagSet) *ConfigurationManager {
 	m := &ConfigurationManager{
 		Config: &api.Config{
@@ -86,7 +85,7 @@ func NewConfigurationManager(set *pflag.FlagSet) *ConfigurationManager {
 	return m
 }
 
-//NewEmptyConfigManager creates an empty configuration
+// NewEmptyConfigManager creates an empty configuration
 func NewEmptyConfigManager() *ConfigurationManager {
 	return &ConfigurationManager{
 		Config: &api.Config{
@@ -97,7 +96,7 @@ func NewEmptyConfigManager() *ConfigurationManager {
 
 const currentContextEnvKey = "LENSES_CLI_CONTEXT"
 
-//Load loads the configuration
+// Load loads the configuration
 func (m *ConfigurationManager) Load() (bool, error) {
 	c := m.Config
 
@@ -177,7 +176,7 @@ func (m *ConfigurationManager) Load() (bool, error) {
 	return c.IsValid(), nil
 }
 
-//Save saves the configuration
+// Save saves the configuration
 func (m *ConfigurationManager) Save() error {
 	c := m.Config.Clone() // copy the configuration so all changes here will not be present after the save().
 
@@ -212,7 +211,7 @@ func (m *ConfigurationManager) Save() error {
 	return nil
 }
 
-//EncryptPassword encrypts the password by provided client configuration
+// EncryptPassword encrypts the password by provided client configuration
 func EncryptPassword(cfg *api.ClientConfig) error {
 	// if cfg.Kerberos.IsValid() && cfg.Password == "" { // if kerberos conf is valid and pass is empty here, skip encrypt, at least for now.
 	// 	return nil
@@ -241,7 +240,7 @@ func EncryptPassword(cfg *api.ClientConfig) error {
 	return nil
 }
 
-//DecryptPassword decrypts the password by provided client configuration
+// DecryptPassword decrypts the password by provided client configuration
 func DecryptPassword(cfg *api.ClientConfig) {
 	if auth, ok := cfg.IsBasicAuth(); ok && auth.Password != "" {
 		p, _ := utils.DecryptString(auth.Password, cfg.Host)
@@ -258,29 +257,26 @@ func DecryptPassword(cfg *api.ClientConfig) {
 
 }
 
-//SetupConfigManager config manager
+// SetupConfigManager config manager
 func SetupConfigManager(set *pflag.FlagSet) {
 	Manager = NewConfigurationManager(set)
 }
 
-//Client used for the rest of the commands
+// Client used for the rest of the commands
 var Client *api.Client
 
-//SetupClient setups a new API client
+// SetupClient setups a new API client
 func SetupClient() (err error) {
 	if Manager.WaitForLenses {
-		client := http.Client{
-			Timeout: 15 * time.Second,
-		}
 		host := Manager.Config.GetCurrent().Host
 		for {
 			golog.Infof("waiting for host '%s' to respond...", host)
-			resp, err := client.Get(host)
+			Client, err = api.OpenConnection(*Manager.Config.GetCurrent())
 			if err == nil {
 				golog.Infof("connection to '%s' succeeded!", host)
-				defer resp.Body.Close()
 				break
 			}
+			golog.Error(err)
 
 			time.Sleep(5 * time.Second)
 		}
