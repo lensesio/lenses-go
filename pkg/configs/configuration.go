@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -276,28 +275,22 @@ var Client *api.Client = &api.Client{}
 
 // SetupClient setups a new API client
 func SetupClient() (err error) {
-	if Manager.WaitForLenses {
-		client := http.Client{
-			Timeout: 15 * time.Second,
-		}
+	Client, err = api.OpenConnection(*Manager.Config.GetCurrent())
+	if err != nil && Manager.WaitForLenses {
 		host := Manager.Config.GetCurrent().Host
 		for {
+			golog.Error(err)
 			golog.Infof("waiting for host '%s' to respond...", host)
-			resp, err := client.Get(host)
+			time.Sleep(5 * time.Second)
+
+			Client, err = api.OpenConnection(*Manager.Config.GetCurrent())
 			if err == nil {
 				golog.Infof("connection to '%s' succeeded!", host)
-				defer resp.Body.Close()
 				break
 			}
-
-			time.Sleep(5 * time.Second)
 		}
 	}
-	c, err := api.OpenConnection(*Manager.Config.GetCurrent())
-	if err == nil {
-		*Client = *c
-	}
-	return
+	return err
 }
 
 func makeAuthFromFlags(user, pass, kerberosConf, kerberosRealm, kerberosKeytab, kerberosCCache string) (api.Authentication, bool) {
