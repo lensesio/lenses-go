@@ -59,7 +59,7 @@ const connectionGetResponse = `
 }
 `
 
-func TestConnectionGroupCommandSuccess(t *testing.T) {
+func TestGenericConnectionListCommandSuccess(t *testing.T) {
 	// setup http request handler
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(connectionListResponse))
@@ -75,7 +75,7 @@ func TestConnectionGroupCommandSuccess(t *testing.T) {
 	config.Client = client
 
 	// test `connections` command
-	cmd := NewConnectionGroupCommand()
+	cmd := NewGenericConnectionListCommand()
 	var outputValue string
 	cmd.PersistentFlags().StringVar(&outputValue, "output", "json", "")
 	output, err := test.ExecuteCommand(cmd)
@@ -92,7 +92,7 @@ func TestConnectionGroupCommandSuccess(t *testing.T) {
 	config.Client = nil
 }
 
-func TestConnectionGetCommandSuccess(t *testing.T) {
+func TestGenericConnectionGetCommandSuccess(t *testing.T) {
 	// setup http request handler
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(connectionGetResponse))
@@ -108,7 +108,7 @@ func TestConnectionGetCommandSuccess(t *testing.T) {
 	config.Client = client
 
 	// test `connections get` command
-	cmd := NewConnectionGetCommand()
+	cmd := NewGenericConnectionGetCommand()
 	var outputValue string
 	cmd.PersistentFlags().StringVar(&outputValue, "output", "json", "")
 	output, err := test.ExecuteCommand(cmd, "--name=TestConn0")
@@ -125,7 +125,7 @@ func TestConnectionGetCommandSuccess(t *testing.T) {
 	config.Client = nil
 }
 
-func TestConnectionCreateCommandSuccess(t *testing.T) {
+func TestGenericConnectionCreateCommandSuccess(t *testing.T) {
 	// setup http request handler
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(connectionListResponse))
@@ -141,8 +141,8 @@ func TestConnectionCreateCommandSuccess(t *testing.T) {
 	config.Client = client
 
 	// test `connections create` command
-	cmd := NewConnectionCreateCommand()
-	output, err := test.ExecuteCommand(cmd, "--name=TestConnection",
+	cmd := NewGenericConnectionCreateCommand()
+	output, err := test.ExecuteCommand(cmd, "--name=TestGenericConnection",
 		"--tag=t1",
 		"--tag=t2",
 		"--template-name=Slack",
@@ -155,7 +155,7 @@ func TestConnectionCreateCommandSuccess(t *testing.T) {
 	config.Client = nil
 }
 
-func TestConnectionUpdateCommandSuccess(t *testing.T) {
+func TestGenericConnectionUpdateCommandSuccess(t *testing.T) {
 	// setup http request handler
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(connectionListResponse))
@@ -171,8 +171,8 @@ func TestConnectionUpdateCommandSuccess(t *testing.T) {
 	config.Client = client
 
 	// test `connections update` command
-	cmd := NewConnectionUpdateCommand()
-	output, err := test.ExecuteCommand(cmd, "--name=TestConnection",
+	cmd := NewGenericConnectionUpdateCommand()
+	output, err := test.ExecuteCommand(cmd, "--name=TestGenericConnection",
 		"--tag=t3",
 		"--connection-config=[{\"key\":\"webhookUrl\",\"value\":\"https://hooks.slack.com/\"}]",
 	)
@@ -183,7 +183,7 @@ func TestConnectionUpdateCommandSuccess(t *testing.T) {
 	config.Client = nil
 }
 
-func TestConnectionDeleteCommandSuccess(t *testing.T) {
+func TestGenericConnectionDeleteCommandSuccess(t *testing.T) {
 	// setup http request handler
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(connectionListResponse))
@@ -199,7 +199,7 @@ func TestConnectionDeleteCommandSuccess(t *testing.T) {
 	config.Client = client
 
 	// test `connections delete` command
-	cmd := NewConnectionDeleteCommand()
+	cmd := NewGenericConnectionDeleteCommand()
 	output, err := test.ExecuteCommand(cmd, "--name=connection-name")
 
 	assert.Nil(t, err)

@@ -10,6 +10,7 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/google/go-cmp v0.5.4
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/vault/api v1.1.0
 	github.com/joho/godotenv v1.3.0
