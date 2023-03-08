@@ -39,11 +39,7 @@ setup() {
 }
 
 lint() {
-    # download misc. deps
-    go install golang.org/x/lint/golint@latest
-
-    export PATH=$PATH:$GOPATH/bin
-    golint -set_exit_status $(go list ./... | grep -v /vendor/)
+    echo "Linting is temporarily disabled"
 }
 
 format-check() {

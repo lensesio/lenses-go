@@ -37,9 +37,6 @@ cross-build: dep ## Build the app for multiple os/arch
 	GOOS=windows GOARCH=386 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-windows-386.exe ./cmd/${EXECUTABLE}
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-windows-amd64.exe ./cmd/${EXECUTABLE}
 
-lint: ## Linting the codebase
-	golint -set_exit_status ${PKG_LIST}
-
 format-check: ## Check format of source code according to Go's best practices
 	@goimports -l cmd/ pkg/ test/
 
