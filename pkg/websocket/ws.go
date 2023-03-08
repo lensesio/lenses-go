@@ -43,11 +43,11 @@ const (
 type (
 	//MetaData is a topic metadata returned by Lenses
 	MetaData struct {
-		Timestamp int `json:"timestamp"`
-		KeySize   int `json:"__keysize"`
-		ValueSize int `json:"__valuesize"`
-		Partition int `json:"partition"`
-		Offset    int `json:"offset"`
+		Timestamp interface{} `json:"timestamp"`
+		KeySize   int         `json:"__keysize"`
+		ValueSize int         `json:"__valuesize"`
+		Partition int         `json:"partition"`
+		Offset    int         `json:"offset"`
 	}
 
 	// Data is the data payload for a record returned from Lenses
