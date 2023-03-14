@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/lensesio/bite"
-	"github.com/lensesio/lenses-go/pkg"
-	"github.com/lensesio/lenses-go/pkg/api"
-	config "github.com/lensesio/lenses-go/pkg/configs"
+	"github.com/lensesio/lenses-go/v5/pkg"
+	"github.com/lensesio/lenses-go/v5/pkg/api"
+	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 	"github.com/spf13/cobra"
 )
 

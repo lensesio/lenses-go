@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/lensesio/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/v5/pkg"
 )
 
 // ChannelTemplate payload struct used for alert and audit

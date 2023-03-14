@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/lensesio/lenses-go/pkg/api"
+	"github.com/lensesio/lenses-go/v5/pkg/api"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"

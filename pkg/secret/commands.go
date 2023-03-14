@@ -9,7 +9,7 @@ import (
 
 	azure "github.com/Azure/go-autorest/autorest/azure"
 	golog "github.com/kataras/golog"
-	"github.com/lensesio/lenses-go/pkg/utils"
+	"github.com/lensesio/lenses-go/v5/pkg/utils"
 	cobra "github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )

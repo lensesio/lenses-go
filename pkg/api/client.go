@@ -16,7 +16,7 @@ import (
 	"unicode"
 
 	"github.com/kataras/golog"
-	"github.com/lensesio/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/v5/pkg"
 	"github.com/mitchellh/mapstructure"
 )
 

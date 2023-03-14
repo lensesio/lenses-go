@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lensesio/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/v5/pkg"
 )
 
 type FileMetadataEntity struct {

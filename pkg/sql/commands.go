@@ -13,8 +13,8 @@ import (
 
 	"github.com/kataras/golog"
 	"github.com/lensesio/bite"
-	config "github.com/lensesio/lenses-go/pkg/configs"
-	"github.com/lensesio/lenses-go/pkg/websocket"
+	config "github.com/lensesio/lenses-go/v5/pkg/configs"
+	"github.com/lensesio/lenses-go/v5/pkg/websocket"
 	"github.com/spf13/cobra"
 )
 

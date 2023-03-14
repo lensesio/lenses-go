@@ -5,7 +5,7 @@ import (
 
 	"github.com/kataras/golog"
 	"github.com/lensesio/bite"
-	config "github.com/lensesio/lenses-go/pkg/configs"
+	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 	cobra "github.com/spf13/cobra"
 )
 

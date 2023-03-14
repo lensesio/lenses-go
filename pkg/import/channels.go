@@ -6,8 +6,8 @@ import (
 	"reflect"
 
 	"github.com/lensesio/bite"
-	"github.com/lensesio/lenses-go/pkg/api"
-	"github.com/lensesio/lenses-go/pkg/utils"
+	"github.com/lensesio/lenses-go/v5/pkg/api"
+	"github.com/lensesio/lenses-go/v5/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

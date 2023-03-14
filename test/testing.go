@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lensesio/lenses-go/pkg/api"
+	"github.com/lensesio/lenses-go/v5/pkg/api"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

@@ -1,7 +1,7 @@
 package connection
 
 import (
-	"github.com/lensesio/lenses-go/pkg/api"
+	"github.com/lensesio/lenses-go/v5/pkg/api"
 	cobra "github.com/spf13/cobra"
 )
 

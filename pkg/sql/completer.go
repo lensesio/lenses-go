@@ -7,8 +7,8 @@ import (
 
 	"github.com/c-bata/go-prompt"
 	"github.com/kataras/golog"
-	"github.com/lensesio/lenses-go/pkg/api"
-	config "github.com/lensesio/lenses-go/pkg/configs"
+	"github.com/lensesio/lenses-go/v5/pkg/api"
+	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 )
 
 func checkValidation(validation api.SQLValidationResponse) bool {

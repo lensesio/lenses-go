@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/lensesio/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/v5/pkg"
 )
 
 // AlertSettingsPayload contains the alert's settings datastructure

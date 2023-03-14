@@ -1,4 +1,4 @@
-module github.com/lensesio/lenses-go
+module github.com/lensesio/lenses-go/v5
 
 go 1.19
 

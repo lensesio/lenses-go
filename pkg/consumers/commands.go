@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	config "github.com/lensesio/lenses-go/pkg/configs"
+	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 	"github.com/spf13/cobra"
 )
 

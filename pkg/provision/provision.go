@@ -14,8 +14,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lensesio/lenses-go/pkg"
-	"github.com/lensesio/lenses-go/pkg/api"
+	"github.com/lensesio/lenses-go/v5/pkg"
+	"github.com/lensesio/lenses-go/v5/pkg/api"
 	"github.com/mitchellh/mapstructure"
 )
 

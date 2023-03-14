@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/lensesio/lenses-go/pkg"
+	"github.com/lensesio/lenses-go/v5/pkg"
 )
 
 // GetAuditChannelTemplates returns all audit channel templates

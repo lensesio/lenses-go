@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/lensesio/bite"
-	"github.com/lensesio/lenses-go/pkg"
-	config "github.com/lensesio/lenses-go/pkg/configs"
+	"github.com/lensesio/lenses-go/v5/pkg"
+	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 	"github.com/spf13/cobra"
 )
 

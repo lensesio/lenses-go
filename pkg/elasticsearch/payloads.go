@@ -1,7 +1,7 @@
 package elasticsearch
 
 import (
-	"github.com/lensesio/lenses-go/pkg/api"
+	"github.com/lensesio/lenses-go/v5/pkg/api"
 )
 
 // IndexView type

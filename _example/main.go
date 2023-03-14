@@ -1,6 +1,6 @@
 package main
 
-import "github.com/lensesio/lenses-go"
+import "github.com/lensesio/lenses-go/v5"
 
 func main() {
 	// Prepare authentication using raw Username and Password.

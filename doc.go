@@ -182,29 +182,4 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-/*
-Package lenses is the Lenses' client API for Gophers.
-
-Source code and other details for the project are available at GitHub:
-
-   https://github.com/lensesio/lenses-go
-
-Current Version
-
-2.1.9
-
-Installation
-
-The only requirement is the Go Programming Language.
-
-    $ go get -u github.com/lensesio/lenses-go/cmd/lenses-cli
-
-Example code:
-
-CLI:
-
-    https://lenses.stream/dev/lenses-cli/
-
-*/
 package lenses

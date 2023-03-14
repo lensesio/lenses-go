@@ -14,7 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kataras/golog"
-	conf "github.com/lensesio/lenses-go/pkg/configs"
+	conf "github.com/lensesio/lenses-go/v5/pkg/configs"
 )
 
 // ResponseType is the corresponding message type for the response came from the back-end server to the client.
