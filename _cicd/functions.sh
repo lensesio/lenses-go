@@ -66,7 +66,7 @@ cross-build() {
     export CGO_ENABLED=0
     for GOOS in linux darwin windows; do
         # 386 not needed
-        for GOARCH in amd64; do
+        for GOARCH in amd64 arm64; do
             export GOOS GOARCH
             if [[ $BUILD_MODE == 'release' ]]; then
                 go build -ldflags "${LDFLAGS}" -v -o \
@@ -100,29 +100,31 @@ archive() {
     fi
 
     for GOOS in linux darwin windows; do
-        local _ARCHIVE_DIRECTORY=lenses-cli-$GOOS-amd64-${2}
+        for GOARCH in amd64 arm64; do
+            local _ARCHIVE_DIRECTORY=lenses-cli-$GOOS-${GOARCH}-${2}
 
-        mkdir ${_ARCHIVE_DIRECTORY}
-        cp ${WORKSPACE}/{LICENSE,README.md,NOTICE} ${_ARCHIVE_DIRECTORY}
+            mkdir ${_ARCHIVE_DIRECTORY}
+            cp ${WORKSPACE}/{LICENSE,README.md,NOTICE} ${_ARCHIVE_DIRECTORY}
 
-        case $GOOS in
-            linux|darwin)
-                mv lenses-cli-$GOOS-amd64 ${_ARCHIVE_DIRECTORY}/lenses-cli
-                tar czf lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.tar.gz --owner=root --group=root ${_ARCHIVE_DIRECTORY}
-                sha256sum lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.tar.gz > lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.tar.gz.sha256
-                ;;
-            windows)
-                mv lenses-cli-$GOOS-amd64 ${_ARCHIVE_DIRECTORY}/lenses-cli.exe
-                zip -r lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.zip ${_ARCHIVE_DIRECTORY}
-                sha256sum lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.zip > lenses-cli-$GOOS-amd64${_ARCHIVE_VERSION}.zip.sha256
-                ;;
-            *)
-                echo "Unexepected GOOS: $GOOS"
-                exit 1
-                ;;
-        esac
+            case $GOOS in
+                linux|darwin)
+                    mv lenses-cli-$GOOS-${GOARCH} ${_ARCHIVE_DIRECTORY}/lenses-cli
+                    tar czf lenses-cli-$GOOS-${GOARCH}${_ARCHIVE_VERSION}.tar.gz --owner=root --group=root ${_ARCHIVE_DIRECTORY}
+                    sha256sum lenses-cli-$GOOS-${GOARCH}${_ARCHIVE_VERSION}.tar.gz > lenses-cli-$GOOS-${GOARCH}${_ARCHIVE_VERSION}.tar.gz.sha256
+                    ;;
+                windows)
+                    mv lenses-cli-$GOOS-${GOARCH} ${_ARCHIVE_DIRECTORY}/lenses-cli.exe
+                    zip -r lenses-cli-$GOOS-${GOARCH}${_ARCHIVE_VERSION}.zip ${_ARCHIVE_DIRECTORY}
+                    sha256sum lenses-cli-$GOOS-${GOARCH}${_ARCHIVE_VERSION}.zip > lenses-cli-$GOOS-${GOARCH}${_ARCHIVE_VERSION}.zip.sha256
+                    ;;
+                *)
+                    echo "Unexepected GOOS: $GOOS"
+                    exit 1
+                    ;;
+            esac
 
-        rm -rf ${_ARCHIVE_DIRECTORY}
+            rm -rf ${_ARCHIVE_DIRECTORY}
+        done
     done
 
     find .
@@ -144,13 +146,19 @@ build-docker-img() {
 
     # Prepare a folder with the necssary files for the gcloud builder
     mkdir -p cli-docker/bin
-    cp lenses-cli-linux-amd64 cli-docker/bin
+    cp lenses-cli-linux-amd64 lenses-cli-linux-arm64 cli-docker/bin
     cp ${WORKSPACE}/Dockerfile cli-docker/
 
+    cat <<EOF | tee cli-docker/cloudbuild.yaml
+steps:
+- name: 'docker'
+  args: [ 'buildx', 'create', '--name', 'mybuilder', '--use' ]
+- name: 'docker'
+  args: [ 'buildx', 'build', '--platform', 'linux/arm64,linux/amd64', '-t', '${1}:${3}', '--push', '.']
+EOF
+
     # Submit the build job to gcloud builder
-    gcloud builds submit cli-docker \
-        --timeout=5m \
-        --tag ${1}:${3}
+    gcloud builds submit cli-docker --config cli-docker/cloudbuild.yaml --timeout=5m
     gcloud container images add-tag ${1}:${3} ${1}:${2}
 }
 

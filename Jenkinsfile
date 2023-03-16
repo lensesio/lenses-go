@@ -142,6 +142,12 @@ pipeline {
         // - lenses-cli-linux-amd64${ARCHIVE_SUFFIX}.tar.gz.sha256
         // - lenses-cli-windows-amd64${ARCHIVE_SUFFIX}.zip
         // - lenses-cli-windows-amd64${ARCHIVE_SUFFIX}.zip.sha256
+        // - lenses-cli-darwin-arm64${ARCHIVE_SUFFIX}.tar.gz
+        // - lenses-cli-darwin-arm64${ARCHIVE_SUFFIX}.tar.gz.sha256
+        // - lenses-cli-linux-arm64${ARCHIVE_SUFFIX}.tar.gz
+        // - lenses-cli-linux-arm64${ARCHIVE_SUFFIX}.tar.gz.sha256
+        // - lenses-cli-windows-arm64${ARCHIVE_SUFFIX}.zip
+        // - lenses-cli-windows-arm64${ARCHIVE_SUFFIX}.zip.sha256
         stage('Archive and Upload'){
             agent {
                 dockerfile {
@@ -175,6 +181,12 @@ pipeline {
                     archiveArtifacts artifacts: "lenses-cli-linux-amd64${ARCHIVE_SUFFIX}.tar.gz.sha256"
                     archiveArtifacts artifacts: "lenses-cli-windows-amd64${ARCHIVE_SUFFIX}.zip"
                     archiveArtifacts artifacts: "lenses-cli-windows-amd64${ARCHIVE_SUFFIX}.zip.sha256"
+                    archiveArtifacts artifacts: "lenses-cli-darwin-arm64${ARCHIVE_SUFFIX}.tar.gz"
+                    archiveArtifacts artifacts: "lenses-cli-darwin-arm64${ARCHIVE_SUFFIX}.tar.gz.sha256"
+                    archiveArtifacts artifacts: "lenses-cli-linux-arm64${ARCHIVE_SUFFIX}.tar.gz"
+                    archiveArtifacts artifacts: "lenses-cli-linux-arm64${ARCHIVE_SUFFIX}.tar.gz.sha256"
+                    archiveArtifacts artifacts: "lenses-cli-windows-arm64${ARCHIVE_SUFFIX}.zip"
+                    archiveArtifacts artifacts: "lenses-cli-windows-arm64${ARCHIVE_SUFFIX}.zip.sha256"
                 }
 
                 dir ('upload-artifacts') { deleteDir() }
