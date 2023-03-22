@@ -130,7 +130,7 @@ type genericConnectionClient interface {
 	GetConnection1(name string) (resp api.ConnectionJsonResponse, err error)
 	ListConnections() (resp []api.ConnectionSummaryResponse, err error)
 	TestConnection(reqBody api.TestConnectionAPIRequest) (err error)
-	UpdateConnection1(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error)
+	UpdateConnectionV1(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error)
 	DeleteConnection1(name string) (err error)
 }
 
@@ -217,7 +217,7 @@ func (f genericAPIAdapter) testConnection(name string, update *bool, obj any) (e
 }
 
 func (f genericAPIAdapter) updateConnection(name string, obj any, tags ...string) (resp api.AddConnectionResponse, err error) {
-	return f.genConnClient.UpdateConnection1(name, api.UpsertConnectionAPIRequest{
+	return f.genConnClient.UpdateConnectionV1(name, api.UpsertConnectionAPIRequest{
 		ConfigurationObject: obj,
 		Tags:                tags,
 		TemplateName:        &f.templateName,

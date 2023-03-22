@@ -14,7 +14,6 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/vault/api v1.1.0
 	github.com/joho/godotenv v1.3.0
-	github.com/json-iterator/go v1.1.12
 	github.com/kataras/golog v0.1.7
 	github.com/lensesio/bite v0.0.0-20201125135013-f88b399f1cad
 	github.com/lensesio/tableprinter v0.0.0-20201125135848-89e81fc956e7
@@ -72,8 +71,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.12 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
 	github.com/pkg/term v1.2.0-beta.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

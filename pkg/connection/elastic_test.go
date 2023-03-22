@@ -108,7 +108,7 @@ func (g *genConnMock) TestConnection(reqBody api.TestConnectionAPIRequest) (err 
 	g.testReq = &reqBody
 	return g.genErr
 }
-func (g *genConnMock) UpdateConnection1(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+func (g *genConnMock) UpdateConnectionV1(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
 	g.upName = &name
 	g.upReq = &reqBody
 	return g.upResp, g.genErr

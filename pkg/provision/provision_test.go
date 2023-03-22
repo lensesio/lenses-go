@@ -3,287 +3,386 @@ package provision
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"errors"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/lensesio/lenses-go/v5/pkg/api"
-	"gopkg.in/yaml.v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type MockHTTPClient struct{}
-
-var bodyAsBytes []byte
-
-func (m MockHTTPClient) Do(method, path, contentType string, send []byte, options ...api.RequestOption) (*http.Response, error) {
-
-	body := FileUploadResp{
-		"fdd0b728-7857-4da2-b016-00e51801719f",
-		"nofile",
-		1024,
-		"admin",
-	}
-
-	bodyAsBytes, _ = json.Marshal(body)
-	r := ioutil.NopCloser(bytes.NewReader(bodyAsBytes))
-	return &http.Response{StatusCode: 200,
-		Body: r}, nil
-}
-
-func (m MockHTTPClient) ReadResponseBody(resp *http.Response) ([]byte, error) {
-	return bodyAsBytes, nil
-}
-
-const (
-	rawURLInput = `
-a: Easy!
-b:
-  fileRef:
-    inline: "asdasdasda"
-  d: [3, 4]
-`
-	rawURLOutput = `
-a: Easy!
-b:
-  fileId: "fdd0b728-7857-4da2-b016-00e51801719f"
-  d: [3, 4]
-`
-
-	emptyFileRefInput = `
-a: Easy!
-b:
-  fileRef:
-`
-	invalidURLInput = `
-a: Easy!
-b:
-  fileRef:
-    URL: http_plain://acme.com
-`
-	nonExistanFileInput = `
-a: Easy!
-b:
-  fileRef:
-    filePath: /tmp/acme.txt
-`
-
-	validConfigInput = `
-license:
-  fileRef:
-    URL: http://acme.com
+const configOrder = `
 connections:
   kafka:
     tags: []
     templateName: Kafka
-    configurationObject:
-      kafkaBootstrapServers:
-        - SSL:///localhost:909093
-      protocol: SSL
-      sslKeystore:
-        fileRef:
-          inline: MIIFcwIBAzCCBSwGCSqGSIb3DQEHAaCCBR0EggUZMIIFFTCCBREGCSqGSIb3DQEHBqCCBQIwggT+AgEAMIIE9wYJKoZIhvcNAQcBMGYGCSqGSIb3DQEFDTBZMDgGCSqGSIb3DQEFDDArBBSZIsCyx6OD07VZBlkP1Wb1qGnasAICJxACASAwDAYIKoZIhvcNAgkFADAdBglghkgBZQMEASoEELIL4YHQocCrTZIlWZk7u4CAggSANkaRWh4bb5PQhDfeY+oMqUY7SVABU8fuyZYpTL3T9rOrmOlm9yq2lME/1CQYxlzr8pjv6tJfV2ciZNZde9eLfNTXtdRbFKZen0a1hfmvoSUHoEQReX7GQ7Cr/iACEW1nTZaZB9OiB3rF0h2eNtDlh+nMzr8QDwz8xye6sGSYKF2jhAn4IeAg/v+40/1Y+kjfK9MCOrLU593OqFZOJZGpm/oKE4pAsws+TiDMb25MiPeVgjLDJ4pY52fiIJLZ+t/jrNd/+8hfiAKpIRve4BtkMkfJMeOcRYUHoSdN+a6E//tPK0WdQIyoUEGZwmqCUnuLz9uXvnNFvBWb/ANduBudTPUaGUwOrMUBIvsZhDkh8uMw6aZ2L2Zy2IKDtvM10WERIDlY8qTa54JpxpeN/xMDSRpozLx07DETnUroFPHNCu7443gOTk21+6yLW3OlUQCf7kEbuT6yXOjD37ka27KAwf4ZfqPFAT3BmdtxAG/jwn58QbFIQHQ/Q4JwCIIUaG6Ke5GHcjm/Xip9RwAhF8SYtkFsxlBchez523hu4o83oTRLqh+pkvA4SoqkNvpAwrRMU/XYC55IeL8A99fxFsk2FN70iXksK8GuG54uInew8mMsIUEfX5IOwMAFQZ5NkVKMERCZcv1HrbjnrvSwLTa4st4VwOStZq67F437C9U1GobLXPyMMH0r+KnBHqgHQU+QLAhEmqt4SLR7TV3fGVdIqVC1wnBWQRoh+UmDcLGRB0R1Tv8a6vGhvQA7BUECtdRRbgMueRRL+Pkdh3wRTaVIvO24N5fTuAfsHKZKTRyvP0yaNOiJi+mkV/hueucCYJUXHDmV4kF2dlAiUXeSHF4jFx3aoYl9FjqUA7HMvOoK7i/CTDklK58qNE+Po7xPueX/scHRH626MB3l4gc7++Tug4XCQPVHzuVErWu1ybSb/rxFsD4fjyDh4hzab5iRjb+WyYORe6iFQiCaaDl3PpRtdckybl7N9wLsaU9FvhluJDVwbGYhYWNpnLv0WU3FE2bTODNLUW2H3vEuNNLtT8xsU/MEs/F7ScLUU+62wzAUCb09EO5jmocwcSXooGt0BUJqEEWK+GCr8dgwTmKWSUZ2VrOim9ag+wNXIsxrk31zlyd/f1JUQ6cIvnpYfAxKYk/jjBk26lXuVArZUS6Rmu/KzjEoplB450IQ2ihOJXdB7TxsnCquBNpM0z4pdfjXCBa/BoUjLBp90uLNoZbM8ZjaFb8Az8SL39jvZsMoplSONCRxZawgENiow1oWsLOg2vwad3u0E4erZ84pfyZkjDUTjDXDkuVcriMoeNgFqvnbXcS4qJmfJcFyfP0mpMLVigWbfNUx7A7jRvIj62Ma56nkshbpdHNN4f7Wsvas24fPwT80lU0dNMITqZXIRMkPYonN5wT/Spym19OBCuEb39IrOiaCFoLi2F9IW8QgKILMNXhQ8bNKH7i0+sql0NSDNl12x5aAkXwh+7ltP+HoXsV4TTFF1BhvViDVET55gbV8XhLSa6gh+A2UUu9l8OVKkoMqMD4wITAJBgUrDgMCGgUABBSpE4YA915s37bSch6n8X0QUkngAQQUX3TQXsAqVA7SPTvTb1HdfzxIyEECAwGGoA==
-      sslKeyPassword: fastdata
-      sslKeystorePassword: fastdata
-      sslTruststore:
-        fileRef:
-          inline: MIIFcwIBAzCCBSwGCSqGSIb3DQEHAaCCBR0EggUZMIIFFTCCBREGCSqGSIb3DQEHBqCCBQIwggT+AgEAMIIE9wYJKoZIhvcNAQcBMGYGCSqGSIb3DQEFDTBZMDgGCSqGSIb3DQEFDDArBBSZIsCyx6OD07VZBlkP1Wb1qGnasAICJxACASAwDAYIKoZIhvcNAgkFADAdBglghkgBZQMEASoEELIL4YHQocCrTZIlWZk7u4CAggSANkaRWh4bb5PQhDfeY+oMqUY7SVABU8fuyZYpTL3T9rOrmOlm9yq2lME/1CQYxlzr8pjv6tJfV2ciZNZde9eLfNTXtdRbFKZen0a1hfmvoSUHoEQReX7GQ7Cr/iACEW1nTZaZB9OiB3rF0h2eNtDlh+nMzr8QDwz8xye6sGSYKF2jhAn4IeAg/v+40/1Y+kjfK9MCOrLU593OqFZOJZGpm/oKE4pAsws+TiDMb25MiPeVgjLDJ4pY52fiIJLZ+t/jrNd/+8hfiAKpIRve4BtkMkfJMeOcRYUHoSdN+a6E//tPK0WdQIyoUEGZwmqCUnuLz9uXvnNFvBWb/ANduBudTPUaGUwOrMUBIvsZhDkh8uMw6aZ2L2Zy2IKDtvM10WERIDlY8qTa54JpxpeN/xMDSRpozLx07DETnUroFPHNCu7443gOTk21+6yLW3OlUQCf7kEbuT6yXOjD37ka27KAwf4ZfqPFAT3BmdtxAG/jwn58QbFIQHQ/Q4JwCIIUaG6Ke5GHcjm/Xip9RwAhF8SYtkFsxlBchez523hu4o83oTRLqh+pkvA4SoqkNvpAwrRMU/XYC55IeL8A99fxFsk2FN70iXksK8GuG54uInew8mMsIUEfX5IOwMAFQZ5NkVKMERCZcv1HrbjnrvSwLTa4st4VwOStZq67F437C9U1GobLXPyMMH0r+KnBHqgHQU+QLAhEmqt4SLR7TV3fGVdIqVC1wnBWQRoh+UmDcLGRB0R1Tv8a6vGhvQA7BUECtdRRbgMueRRL+Pkdh3wRTaVIvO24N5fTuAfsHKZKTRyvP0yaNOiJi+mkV/hueucCYJUXHDmV4kF2dlAiUXeSHF4jFx3aoYl9FjqUA7HMvOoK7i/CTDklK58qNE+Po7xPueX/scHRH626MB3l4gc7++Tug4XCQPVHzuVErWu1ybSb/rxFsD4fjyDh4hzab5iRjb+WyYORe6iFQiCaaDl3PpRtdckybl7N9wLsaU9FvhluJDVwbGYhYWNpnLv0WU3FE2bTODNLUW2H3vEuNNLtT8xsU/MEs/F7ScLUU+62wzAUCb09EO5jmocwcSXooGt0BUJqEEWK+GCr8dgwTmKWSUZ2VrOim9ag+wNXIsxrk31zlyd/f1JUQ6cIvnpYfAxKYk/jjBk26lXuVArZUS6Rmu/KzjEoplB450IQ2ihOJXdB7TxsnCquBNpM0z4pdfjXCBa/BoUjLBp90uLNoZbM8ZjaFb8Az8SL39jvZsMoplSONCRxZawgENiow1oWsLOg2vwad3u0E4erZ84pfyZkjDUTjDXDkuVcriMoeNgFqvnbXcS4qJmfJcFyfP0mpMLVigWbfNUx7A7jRvIj62Ma56nkshbpdHNN4f7Wsvas24fPwT80lU0dNMITqZXIRMkPYonN5wT/Spym19OBCuEb39IrOiaCFoLi2F9IW8QgKILMNXhQ8bNKH7i0+sql0NSDNl12x5aAkXwh+7ltP+HoXsV4TTFF1BhvViDVET55gbV8XhLSa6gh+A2UUu9l8OVKkoMqMD4wITAJBgUrDgMCGgUABBSpE4YA915s37bSch6n8X0QUkngAQQUX3TQXsAqVA7SPTvTb1HdfzxIyEECAwGGoA==
-      sslTruststorePassword: fastdata
+    configurationObject: {}
   schema-registry:
     templateName: SchemaRegiststries
     tags: []
-    configurationObject:
-      schemaRegistryUrls:
-        - http://0.0.0.0:80811
-      metricsPort: 9582
-      metricsType: JMX
-      metricsSsl: false
-      additionalProperties: {}
-`
-	validConfigOutput = `
-license:
-  fileRef:
-    URL: http://acme.com
-connections:
-  kafka:
+    configurationObject: {}
+  glue:
+    templateName: AWSGlueSchemaRegistry
     tags: []
-    templateName: Kafka
-    configurationObject:
-      kafkaBootstrapServers:
-        - SSL:///localhost:909093
-      protocol: SSL
-      sslKeystore:
-        fileId: "fdd0b728-7857-4da2-b016-00e51801719f"
-      sslKeyPassword: fastdata
-      sslKeystorePassword: fastdata
-      sslTruststore:
-        fileId: "fdd0b728-7857-4da2-b016-00e51801719f"
-      sslTruststorePassword: fastdata
-  schema-registry:
-    templateName: SchemaRegiststries
+    configurationObject: {}
+  aws:
+    templateName: AWS
     tags: []
-    configurationObject:
-      schemaRegistryUrls:
-        - http://0.0.0.0:80811
-      metricsPort: 9582
-      metricsType: JMX
-      metricsSsl: false
-      additionalProperties: {}
+    configurationObject: {}
 `
-)
 
-func Test_parseConfig(t *testing.T) {
-	// Mock HTTP client that always return '200' and a valid file upload response body
-	client := MockHTTPClient{}
-
-	type args struct {
-		input string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "first of its kind",
-			args: args{
-				rawURLInput,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty fileRef key",
-			args: args{
-				emptyFileRefInput,
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid URL value",
-			args: args{
-				invalidURLInput,
-			},
-			wantErr: true,
-		},
-		{
-			name: "non existant filepath reference",
-			args: args{
-				nonExistanFileInput,
-			},
-			wantErr: true,
-		},
-		{
-			name: "valid partial config",
-			args: args{
-				validConfigInput,
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var inputMap map[interface{}]interface{}
-
-			err := yaml.Unmarshal([]byte(tt.args.input), &inputMap)
-			if err != nil {
-				t.Fatalf("%s", err)
+func TestProvisionConnectionOrder(t *testing.T) {
+	awsSeen := false
+	mockAPI := &mockApiClient{
+		updateConnectionV1: func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+			if *reqBody.TemplateName != "AWS" {
+				assert.True(t, awsSeen, "aws should go before potential dependees")
 			}
-
-			err = parseConfig(inputMap, client)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseConfig() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-		})
+			awsSeen = awsSeen || *reqBody.TemplateName == "AWS"
+			return api.AddConnectionResponse{}, nil
+		},
+		updateConnectionV2: func(name string, reqBody api.UpsertConnectionAPIRequestV2) (resp api.AddConnectionResponse, err error) {
+			assert.True(t, awsSeen, "aws should go before potential dependees")
+			return api.AddConnectionResponse{}, nil
+		},
 	}
+	err := provision([]byte(configOrder), mockAPI, &mockGetter{})
+	require.NoError(t, err)
+	assert.True(t, awsSeen)
 }
 
-const (
-	noLicenseConfigInput = `
+const configGlueV2 = `
 connections:
-  kafka:
+  glue:
+    templateName: AWSGlueSchemaRegistry
     tags: []
-    templateName: Kafka
-    configurationObject:
-      kafkaBootstrapServers:
-        - PLAINTEXT:///localhost:9093
-      protocol: PLAINTEXT
-      additionalProperties:
-        proprtyOne: "1"
-        proprtyTwo: "2"
-`
-	noConnectionsConfigInput = `
-license:
-  fileRef:
-    URL: http://acme.com
+    configurationObject: {}
 `
 
-	invalidConnectionsStructureConfigInput = `
-license:
-  fileRef:
-    URL: http://acme.com
-
-connections:
-  - name: kafka
-    tags: []
-    templateName: Kafka
-    configurationObject:
-      kafkaBootstrapServers:
-        - PLAINTEXT:///localhost:9092
-      protocol: PLAINTEXT
-`
-)
-
-func Test_checkConfigValidity(t *testing.T) {
-	type args struct {
-		config string
+func TestProvisionGlueV2(t *testing.T) {
+	glueSeen := false
+	mockAPI := &mockApiClient{
+		updateConnectionV1: func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+			assert.False(t, *reqBody.TemplateName == "AWSGlueSchemaRegistry", "glue should go via v2")
+			return api.AddConnectionResponse{}, nil
+		},
+		updateConnectionV2: func(name string, reqBody api.UpsertConnectionAPIRequestV2) (resp api.AddConnectionResponse, err error) {
+			assert.True(t, *reqBody.TemplateName == "AWSGlueSchemaRegistry", "only glue should go via v2")
+			glueSeen = true
+			return api.AddConnectionResponse{}, nil
+		},
 	}
-	tests := []struct {
+	err := provision([]byte(configGlueV2), mockAPI, &mockGetter{})
+	require.NoError(t, err)
+	assert.True(t, glueSeen)
+}
+
+const configObjMap = `connections:
+  test:
+    tags: [a,b,c]
+    templateName: Test
+    configurationObject:
+      arr:
+        - a
+        - b
+      map: # The yaml lib maps maps to map[interface{}]interface{} which is incompatible with json's marshal.
+        hello: world
+        tedious: true
+      number: 123
+`
+
+func TestProvisionConfigToObjectMapping(t *testing.T) {
+	mockAPI := &mockApiClient{
+		updateConnectionV1: func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+			assert.Equal(t, "test", name)
+			assert.Equal(t, []string{"a", "b", "c"}, reqBody.Tags)
+			assert.Equal(t, "Test", *reqBody.TemplateName)
+			// Check the json marshalled result rather than walk the minefield
+			// of possible types.
+			j, _ := json.Marshal(reqBody.ConfigurationObject)
+			assert.JSONEq(t, `{"arr":["a","b"],"map":{"hello":"world","tedious":true},"number":123}`, string(j))
+			return api.AddConnectionResponse{}, nil
+		},
+	}
+	err := provision([]byte(configObjMap), mockAPI, &mockGetter{})
+	require.NoError(t, err)
+}
+
+const configInlineFileref = `connections:
+  test:
+    templateName: T
+    configurationObject:
+      x:
+        fileRef:
+          inline: hello cruel world
+`
+
+func TestFileRefInlineNoB64(t *testing.T) {
+	id := uuid.New()
+	updated := false
+	mockAPI := &mockApiClient{
+		uploadFileFromReader: func(fileName string, r io.Reader) (uuid.UUID, error) {
+			bs, _ := io.ReadAll(r)
+			assert.Equal(t, "hello cruel world", string(bs))
+			return id, nil
+		},
+		updateConnectionV1: func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+			// Check the json marshalled result rather than walk the minefield
+			// of possible types.
+			j, _ := json.Marshal(reqBody.ConfigurationObject)
+			assert.JSONEq(t, `{"x":{"fileId":"`+id.String()+`"}}`, string(j))
+			updated = true
+			return api.AddConnectionResponse{}, nil
+		},
+	}
+	err := provision([]byte(configInlineFileref), mockAPI, &mockGetter{})
+	require.NoError(t, err)
+	assert.True(t, updated)
+}
+
+const configInlineFilerefB64 = `connections:
+  test:
+    templateName: T
+    configurationObject:
+      x:
+        fileRef:
+          inline: aGVsbG8gY3J1ZWwgd29ybGQ=
+`
+
+func TestFileRefInlineB64(t *testing.T) {
+	id := uuid.New()
+	updated := false
+	mockAPI := &mockApiClient{
+		uploadFileFromReader: func(fileName string, r io.Reader) (uuid.UUID, error) {
+			bs, _ := io.ReadAll(r)
+			assert.Equal(t, "hello cruel world", string(bs))
+			return id, nil
+		},
+		updateConnectionV1: func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+			// Check the json marshalled result rather than walk the minefield
+			// of possible types.
+			j, _ := json.Marshal(reqBody.ConfigurationObject)
+			assert.JSONEq(t, `{"x":{"fileId":"`+id.String()+`"}}`, string(j))
+			updated = true
+			return api.AddConnectionResponse{}, nil
+		},
+	}
+	err := provision([]byte(configInlineFilerefB64), mockAPI, &mockGetter{})
+	require.NoError(t, err)
+	assert.True(t, updated)
+}
+
+const configURLFileref = `connections:
+  test:
+    templateName: T
+    configurationObject:
+      x:
+        fileRef:
+          url: https://example.com/123
+`
+
+func TestFileRefURL(t *testing.T) {
+	id := uuid.New()
+	updated := false
+	getter := &mockGetter{
+		get: func(url string) (resp *http.Response, err error) {
+			assert.Equal(t, "https://example.com/123", url)
+			return &http.Response{
+				StatusCode: 200,
+				Body:       io.NopCloser(strings.NewReader("i am a remote file"))}, nil
+		},
+	}
+	mockAPI := &mockApiClient{
+		uploadFileFromReader: func(fileName string, r io.Reader) (uuid.UUID, error) {
+			bs, _ := io.ReadAll(r)
+			assert.Equal(t, "https://example.com/123", fileName)
+			assert.Equal(t, "i am a remote file", string(bs))
+			return id, nil
+		},
+		updateConnectionV1: func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+			// Check the json marshalled result rather than walk the minefield
+			// of possible types.
+			j, _ := json.Marshal(reqBody.ConfigurationObject)
+			assert.JSONEq(t, `{"x":{"fileId":"`+id.String()+`"}}`, string(j))
+			updated = true
+			return api.AddConnectionResponse{}, nil
+		},
+	}
+	err := provision([]byte(configURLFileref), mockAPI, getter)
+	require.NoError(t, err)
+	assert.True(t, updated)
+}
+
+const configFileRefFilepath = `connections:
+  test:
+    templateName: T
+    configurationObject:
+      x:
+        fileRef:
+          filepath: ./testing/my-file.txt
+`
+
+func TestFileRefFilepath(t *testing.T) {
+	id := uuid.New()
+	updated := false
+	mockAPI := &mockApiClient{
+		uploadFileFromReader: func(fileName string, r io.Reader) (uuid.UUID, error) {
+			bs, _ := io.ReadAll(r)
+			assert.Equal(t, "my-file.txt", fileName)
+			assert.Equal(t, "hello", string(bs))
+			return id, nil
+		},
+		updateConnectionV1: func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+			// Check the json marshalled result rather than walk the minefield
+			// of possible types.
+			j, _ := json.Marshal(reqBody.ConfigurationObject)
+			assert.JSONEq(t, `{"x":{"fileId":"`+id.String()+`"}}`, string(j))
+			updated = true
+			return api.AddConnectionResponse{}, nil
+		},
+	}
+	err := provision([]byte(configFileRefFilepath), mockAPI, &mockGetter{})
+	require.NoError(t, err)
+	assert.True(t, updated)
+}
+
+const configLicence = `
+license:
+  fileRef:
+    inline: '{"key":"test"}'
+`
+
+func TestProvisionLicence(t *testing.T) {
+	updated := false
+	mockAPI := &mockApiClient{
+		updateLicense: func(license api.License) error {
+			assert.Equal(t, "test", license.Key)
+			updated = true
+			return nil
+		},
+	}
+	err := provision([]byte(configLicence), mockAPI, &mockGetter{})
+	require.NoError(t, err)
+	assert.True(t, updated)
+}
+
+func TestErrorScenario(t *testing.T) {
+	type probe struct {
 		name string
-		args args
-		err  error
-	}{
+		y    string
+		a    mockApiClient
+		g    mockGetter
+	}
+	ps := []probe{
 		{
-			name: "valid input",
-			args: args{
-				config: validConfigInput,
-			},
-			err: nil,
+			name: "NonexistentFile",
+			y:    strings.ReplaceAll(configFileRefFilepath, ".txt", ".invalid"),
 		},
 		{
-			name: "valid output",
-			args: args{
-				config: validConfigOutput,
-			},
-			err: nil,
+			name: "BadURL",
+			y:    strings.ReplaceAll(configURLFileref, "https", ""),
 		},
 		{
-			name: "no connections",
-			args: args{
-				config: noConnectionsConfigInput,
-			},
-			err: errMissingConnections,
+			name: "HTTPNetworkError",
+			y:    configURLFileref,
+			g:    mockGetter{func(url string) (resp *http.Response, err error) { return nil, errors.New("induced error") }},
 		},
 		{
-			name: "invalid connections structure",
-			args: args{
-				config: invalidConnectionsStructureConfigInput,
-			},
-			err: errInvalidConnectionsStruct,
+			name: "HTTPNon2xx",
+			y:    configURLFileref,
+			g: mockGetter{func(url string) (resp *http.Response, err error) {
+				return &http.Response{StatusCode: 404, Body: io.NopCloser(&bytes.Reader{})}, nil
+			}},
+		},
+		{
+			name: "APIUploadError",
+			y:    configFileRefFilepath,
+			a:    mockApiClient{uploadFileFromReader: func(fileName string, r io.Reader) (uuid.UUID, error) { return uuid.UUID{}, errors.New("induced error") }},
+		},
+		{
+			name: "MissingTemplateName",
+			y:    strings.ReplaceAll(configGlueV2, "templateName", "different"),
+		},
+		{
+			name: "MissingConfObj",
+			y:    strings.ReplaceAll(configGlueV2, "configurationObject", "different"),
+		},
+		{
+			name: "BrokenUpdateConnectionV1",
+			y:    configOrder,
+			a: mockApiClient{updateConnectionV1: func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+				return api.AddConnectionResponse{}, errors.New("induced error")
+			}},
+		},
+		{
+			name: "BrokenUpdateConnectionV2",
+			y:    configOrder,
+			a: mockApiClient{updateConnectionV2: func(name string, reqBody api.UpsertConnectionAPIRequestV2) (resp api.AddConnectionResponse, err error) {
+				return api.AddConnectionResponse{}, errors.New("induced error")
+			}},
+		},
+		{
+			name: "BrokenUpdateLicense",
+			y:    configLicence,
+			a:    mockApiClient{updateLicense: func(license api.License) error { return errors.New("induced error") }},
+		},
+		{
+			name: "BrokenUpdateLicense",
+			y:    strings.ReplaceAll(configLicence, "key", `"`),
 		},
 	}
-
-	for _, tt := range tests {
-		inputMap := make(map[interface{}]interface{})
-
-		t.Run(tt.name, func(t *testing.T) {
-			if uerr := yaml.Unmarshal([]byte(tt.args.config), &inputMap); uerr != nil {
-				t.Fatalf("failed to unmarshall config input, error = %v", uerr)
-			}
-
-			if err := checkConfigValidity(inputMap); err != tt.err {
-				t.Errorf("checkConfigValidity() error = %v, wanted error %v", err, tt.err)
-			}
+	for _, p := range ps {
+		t.Run(p.name, func(t *testing.T) {
+			err := provision([]byte(p.y), p.a, p.g)
+			assert.Error(t, err, "expected this to error")
+			t.Logf("As expected, we got an error:\n%s", err) // let a human judge how readable the message is.
 		})
 	}
+}
+
+type mockApiClient struct {
+	uploadFileFromReader func(fileName string, r io.Reader) (uuid.UUID, error)
+	updateLicense        func(license api.License) error
+	updateConnectionV1   func(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error)
+	updateConnectionV2   func(name string, reqBody api.UpsertConnectionAPIRequestV2) (resp api.AddConnectionResponse, err error)
+}
+
+func (m mockApiClient) UploadFileFromReader(fileName string, r io.Reader) (uuid.UUID, error) {
+	if m.uploadFileFromReader == nil {
+		return uuid.Nil, nil
+	}
+	return m.uploadFileFromReader(fileName, r)
+}
+func (m mockApiClient) UpdateLicense(license api.License) error {
+	if m.updateLicense == nil {
+		return nil
+	}
+	return m.updateLicense(license)
+}
+func (m mockApiClient) UpdateConnectionV1(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+	if m.updateConnectionV1 == nil {
+		return api.AddConnectionResponse{}, nil
+	}
+	return m.updateConnectionV1(name, reqBody)
+}
+func (m mockApiClient) UpdateConnectionV2(name string, reqBody api.UpsertConnectionAPIRequestV2) (resp api.AddConnectionResponse, err error) {
+	if m.updateConnectionV2 == nil {
+		return api.AddConnectionResponse{}, nil
+	}
+	return m.updateConnectionV2(name, reqBody)
+}
+
+type mockGetter struct {
+	get func(url string) (resp *http.Response, err error)
+}
+
+func (m mockGetter) Get(url string) (resp *http.Response, err error) {
+	if m.get == nil {
+		return &http.Response{}, nil
+	}
+	return m.get(url)
 }

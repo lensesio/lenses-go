@@ -16,6 +16,12 @@ type UpsertConnectionAPIRequest struct {
 	TemplateName        *string  `json:"templateName,omitempty"`        // Optional. The [template](#operation/listConnectionTemplates) of the connection.
 }
 
+type UpsertConnectionAPIRequestV2 struct {
+	Configuration any      `json:"configuration,omitempty"` // Optional. The configuration of the connection. The schema of this object is defined by the [template configuration](#operation/listConnectionTemplates).
+	Tags          []string `json:"tags"`                    // Optional.
+	TemplateName  *string  `json:"templateName,omitempty"`  // Optional. The [template](#operation/listConnectionTemplates) of the connection.
+}
+
 type TestConnectionAPIRequest struct {
 	Name                string `json:"name"`                          // Required.
 	TemplateName        string `json:"templateName"`                  // Required. The [template](#operation/listConnectionTemplates) of the connection.
@@ -822,10 +828,24 @@ func (c *Client) TestConnection(reqBody TestConnectionAPIRequest) (err error) {
 // Parameters:
 // - name: The name of the connection.
 // Tags: Connections.
-func (c *Client) UpdateConnection1(name string, reqBody UpsertConnectionAPIRequest) (resp AddConnectionResponse, err error) {
+func (c *Client) UpdateConnectionV1(name string, reqBody UpsertConnectionAPIRequest) (resp AddConnectionResponse, err error) {
 	err = c.do(
 		http.MethodPut,
 		fmt.Sprintf("/api/v1/connection/connections/%s", name),
+		reqBody, // request
+		&resp,   // response
+	)
+	return
+}
+
+// Updates the connection details.
+// Parameters:
+// - name: The name of the connection.
+// Tags: Connections.
+func (c *Client) UpdateConnectionV2(name string, reqBody UpsertConnectionAPIRequestV2) (resp AddConnectionResponse, err error) {
+	err = c.do(
+		http.MethodPut,
+		fmt.Sprintf("/api/v2/connection/connections/%s", name),
 		reqBody, // request
 		&resp,   // response
 	)
