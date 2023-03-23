@@ -34,8 +34,9 @@ func NewConnectionGroupCommand() *cobra.Command {
 		NewSchemaRegistryGroupCommand(upload),
 		NewZookeeperGroupCommand(upload),
 		// Those commands use the generic endpoints.
-		NewElasticsearchGroupCommand(config.Client, upload),
+		NewAWSGroupCommand(config.Client, upload),
 		NewDataDogGroupCommand(config.Client, upload),
+		NewElasticsearchGroupCommand(config.Client, upload),
 		NewPagerDutyGroupCommand(config.Client, upload),
 		NewPostgreSQLGroupCommand(config.Client, upload),
 		NewPrometheusAlertmanagerGroupCommand(config.Client, upload),

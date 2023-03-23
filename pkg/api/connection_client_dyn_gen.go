@@ -1,5 +1,12 @@
 package api
 
+type ConfigurationObjectAWS struct {
+	AccessKeyId     string  `json:"accessKeyId"`            // Required. Access key ID of an AWS IAM account.
+	SecretAccessKey string  `json:"secretAccessKey"`        // Required. Secret access key of an AWS IAM account.
+	Region          *string `json:"region,omitempty"`       // Optional. AWS region to connect to. If not provided, this is deferred to client configuration.
+	SessionToken    *string `json:"sessionToken,omitempty"` // Optional. Specifies the session token value that is required if you are using temporary security credentials that you retrieved directly from AWS STS operations.
+}
+
 type ConfigurationObjectElasticsearch struct {
 	Nodes    []string `json:"nodes"`              // Required. The nodes of the Elasticsearch cluster to connect to, e.g. https://hostname:port. Use the tab key to specify multiple nodes.
 	Password *string  `json:"password,omitempty"` // Optional. The password to connect to the Elasticsearch service.
