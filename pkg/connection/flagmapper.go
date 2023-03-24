@@ -254,6 +254,7 @@ func (p *flagMapper) trav(v reflect.Value) []flag {
 func kebabCase(s string) string {
 	s = strings.ReplaceAll(s, "HTTP", "Http") // hack hack hack...
 	s = strings.ReplaceAll(s, "URL", "Url")
+	s = strings.ReplaceAll(s, "AWS", "Aws")
 	prevU := false
 	o := ""
 	for i, r := range s {

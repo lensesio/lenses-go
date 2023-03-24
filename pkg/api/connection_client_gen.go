@@ -29,6 +29,13 @@ type TestConnectionAPIRequest struct {
 	Update              *bool  `json:"update,omitempty"`              // Optional. *true* if testing an update to an existing connection, *false* if testing a new connection.
 }
 
+type TestConnectionAPIRequestV2 struct {
+	Name          string `json:"name"`                    // Required.
+	TemplateName  string `json:"templateName"`            // Required. The [template](#operation/listConnectionTemplates) of the connection.
+	Configuration any    `json:"configuration,omitempty"` // Optional. The configuration of the connection. The schema of this object is defined by the [template configuration](#operation/listConnectionTemplates).
+	Update        *bool  `json:"update,omitempty"`        // Optional. *true* if testing an update to an existing connection, *false* if testing a new connection.
+}
+
 type Json map[string]interface{}
 
 type ConnectionPropertyJsonResponse struct {
@@ -818,6 +825,18 @@ func (c *Client) TestConnection(reqBody TestConnectionAPIRequest) (err error) {
 	err = c.do(
 		http.MethodPost,
 		"/api/v1/connection/connections/test",
+		reqBody, // request
+		nil,     // response
+	)
+	return
+}
+
+// Validates the connection.
+// Tags: Connections.
+func (c *Client) TestConnectionV2(reqBody TestConnectionAPIRequestV2) (err error) {
+	err = c.do(
+		http.MethodPost,
+		"/api/v2/connection/connections/test",
 		reqBody, // request
 		nil,     // response
 	)

@@ -37,6 +37,7 @@ func NewConnectionGroupCommand() *cobra.Command {
 		NewAWSGroupCommand(config.Client, upload),
 		NewDataDogGroupCommand(config.Client, upload),
 		NewElasticsearchGroupCommand(config.Client, upload),
+		NewGlueGroupCommand(config.Client, upload),
 		NewPagerDutyGroupCommand(config.Client, upload),
 		NewPostgreSQLGroupCommand(config.Client, upload),
 		NewPrometheusAlertmanagerGroupCommand(config.Client, upload),

@@ -82,13 +82,15 @@ type genConnMock struct {
 	getName *string
 	getResp api.ConnectionJsonResponse
 
-	upName *string
-	upReq  *api.UpsertConnectionAPIRequest
-	upResp api.AddConnectionResponse
+	upName  *string
+	upReq   *api.UpsertConnectionAPIRequest
+	upReqV2 *api.UpsertConnectionAPIRequestV2
+	upResp  api.AddConnectionResponse
 
 	delName *string
 
-	testReq *api.TestConnectionAPIRequest
+	testReq   *api.TestConnectionAPIRequest
+	testReqV2 *api.TestConnectionAPIRequestV2
 
 	listCalled bool
 	listResp   []api.ConnectionSummaryResponse
@@ -108,9 +110,18 @@ func (g *genConnMock) TestConnection(reqBody api.TestConnectionAPIRequest) (err 
 	g.testReq = &reqBody
 	return g.genErr
 }
+func (g *genConnMock) TestConnectionV2(reqBody api.TestConnectionAPIRequestV2) (err error) {
+	g.testReqV2 = &reqBody
+	return g.genErr
+}
 func (g *genConnMock) UpdateConnectionV1(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
 	g.upName = &name
 	g.upReq = &reqBody
+	return g.upResp, g.genErr
+}
+func (g *genConnMock) UpdateConnectionV2(name string, reqBody api.UpsertConnectionAPIRequestV2) (resp api.AddConnectionResponse, err error) {
+	g.upName = &name
+	g.upReqV2 = &reqBody
 	return g.upResp, g.genErr
 }
 func (g *genConnMock) DeleteConnection1(name string) (err error) {

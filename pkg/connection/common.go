@@ -227,3 +227,35 @@ func (f genericAPIAdapter) updateConnection(name string, obj any, tags ...string
 func (f genericAPIAdapter) deleteConnection(name string) (err error) {
 	return f.genConnClient.DeleteConnection1(name)
 }
+
+// apiv1ontov2Adapter exposes a v1 connection interface and talks to a v2
+// connection interface. Configuration objects handed over to this adapter's
+// update and test methods should implement a method with signature:
+//
+//	asV2Obj() T
+//
+// which provides the v2 version of the config object.
+type apiv1ontov2Adapter[T any] struct {
+	genericConnectionClientV2
+}
+
+func (a apiv1ontov2Adapter[T]) UpdateConnectionV1(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
+	return a.UpdateConnectionV2(name, api.UpsertConnectionAPIRequestV2{
+		Tags:         reqBody.Tags,
+		TemplateName: reqBody.TemplateName,
+		Configuration: reqBody.ConfigurationObject.(interface {
+			asV2Obj() T
+		}).asV2Obj(),
+	})
+}
+
+func (a apiv1ontov2Adapter[T]) TestConnection(reqBody api.TestConnectionAPIRequest) (err error) {
+	return a.TestConnectionV2(api.TestConnectionAPIRequestV2{
+		Name:         reqBody.Name,
+		TemplateName: reqBody.TemplateName,
+		Update:       reqBody.Update,
+		Configuration: reqBody.ConfigurationObject.(interface {
+			asV2Obj() T
+		}).asV2Obj(),
+	})
+}
