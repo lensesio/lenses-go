@@ -89,7 +89,7 @@ const configObjMap = `connections:
       arr:
         - a
         - b
-      map: # The yaml lib maps maps to map[interface{}]interface{} which is incompatible with json's marshal.
+      map: # The yaml v2 lib maps maps to map[interface{}]interface{} which is incompatible with json's marshal.
         hello: world
         tedious: true
       number: 123
@@ -193,7 +193,8 @@ func TestFileRefURL(t *testing.T) {
 			assert.Equal(t, "https://example.com/123", url)
 			return &http.Response{
 				StatusCode: 200,
-				Body:       io.NopCloser(strings.NewReader("i am a remote file"))}, nil
+				Body:       io.NopCloser(strings.NewReader("i am a remote file")),
+			}, nil
 		},
 	}
 	mockAPI := &mockApiClient{
@@ -266,6 +267,29 @@ func TestProvisionLicence(t *testing.T) {
 		},
 	}
 	err := provision([]byte(configLicence), mockAPI, &mockGetter{})
+	require.NoError(t, err)
+	assert.True(t, updated)
+}
+
+const configLicenceFilePath = `
+license:
+  fileRef:
+    filePath: ./testing/my-lic.json # Note the casing of "Path".
+`
+
+// TestProvisionLicenceFilePath tests that provision.yamls with a license
+// fileRef with a filePath key -- note the uppercase P that's not in the
+// struct's field's tag -- are processed correctly.
+func TestProvisionLicenceFilePath(t *testing.T) {
+	updated := false
+	mockAPI := &mockApiClient{
+		updateLicense: func(license api.License) error {
+			assert.Equal(t, "test", license.Key)
+			updated = true
+			return nil
+		},
+	}
+	err := provision([]byte(configLicenceFilePath), mockAPI, &mockGetter{})
 	require.NoError(t, err)
 	assert.True(t, updated)
 }
@@ -357,18 +381,21 @@ func (m mockApiClient) UploadFileFromReader(fileName string, r io.Reader) (uuid.
 	}
 	return m.uploadFileFromReader(fileName, r)
 }
+
 func (m mockApiClient) UpdateLicense(license api.License) error {
 	if m.updateLicense == nil {
 		return nil
 	}
 	return m.updateLicense(license)
 }
+
 func (m mockApiClient) UpdateConnectionV1(name string, reqBody api.UpsertConnectionAPIRequest) (resp api.AddConnectionResponse, err error) {
 	if m.updateConnectionV1 == nil {
 		return api.AddConnectionResponse{}, nil
 	}
 	return m.updateConnectionV1(name, reqBody)
 }
+
 func (m mockApiClient) UpdateConnectionV2(name string, reqBody api.UpsertConnectionAPIRequestV2) (resp api.AddConnectionResponse, err error) {
 	if m.updateConnectionV2 == nil {
 		return api.AddConnectionResponse{}, nil

@@ -8,15 +8,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/lensesio/lenses-go/v5/pkg/api"
 	"github.com/mitchellh/mapstructure"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type apiClient interface {
@@ -71,6 +73,31 @@ type FileRef struct {
 	Inline   string `yaml:"inline"`
 	URL      string `yaml:"URL"`
 	Filepath string `yaml:"filepath"`
+}
+
+// This is pretty cursed. The yaml lib is case-sensitive when it comes to
+// mapping keys to struct fields. Previous versions of the CLI accidentally
+// unknowingly introduced case-insensitivity. Turns out that there are
+// provision.yamls that use filePath instead of filepath. This is a hack to
+// maintain compatibility with those files.
+func (f *FileRef) UnmarshalYAML(value *yaml.Node) error {
+	m := map[string]string{}
+	if err := value.Decode(&m); err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch strings.ToLower(k) {
+		case "filepath":
+			f.Filepath = v
+		case "url":
+			f.URL = v
+		case "inline":
+			f.Inline = v
+		default:
+			// Silently discard unknown keys.
+		}
+	}
+	return nil
 }
 
 func fileRefToBytes(fileRef FileRef, getter httpGetter) (fileAsBytes []byte, fileName string, err error) {
@@ -167,23 +194,23 @@ func patchFileRef(c any, client apiClient, getter httpGetter) error {
 	return nil
 }
 
-func gatherFileRefs(input interface{}) []map[interface{}]interface{} {
+func gatherFileRefs(input interface{}) []map[string]interface{} {
 	// Inspired from from https://gist.github.com/niski84/a6a3b825b6704cc2cbfd39c97b89e640
-	in, ok := input.(map[interface{}]interface{})
+	in, ok := input.(map[string]interface{})
 	if !ok {
 		return nil
 	}
 
-	var out []map[interface{}]interface{}
+	var out []map[string]interface{}
 
 	for k, v := range in {
 		if k == "fileRef" {
 			out = append(out, in)
 		}
 
-		m, valueIsMap := v.(map[interface{}]interface{})
+		m, valueIsMap := v.(map[string]interface{})
 		// We only want to replace 'fileRef' for connections
-		if k != "license" && valueIsMap {
+		if valueIsMap {
 			out = append(out, gatherFileRefs(m)...)
 		}
 
@@ -217,6 +244,8 @@ func provision(yamlFileAsBytes []byte, client apiClient, getter httpGetter) erro
 	if err := yaml.Unmarshal(yamlFileAsBytes, &conf); err != nil {
 		return err
 	}
+
+	log.Printf("%#v", conf)
 
 	// Check if input file has the expected structure
 	if err := checkConfigValidity(conf); err != nil {
