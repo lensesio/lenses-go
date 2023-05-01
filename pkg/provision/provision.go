@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -244,8 +243,6 @@ func provision(yamlFileAsBytes []byte, client apiClient, getter httpGetter) erro
 	if err := yaml.Unmarshal(yamlFileAsBytes, &conf); err != nil {
 		return err
 	}
-
-	log.Printf("%#v", conf)
 
 	// Check if input file has the expected structure
 	if err := checkConfigValidity(conf); err != nil {
