@@ -32,7 +32,7 @@ type GetSchemaRes struct {
 	Format         string   `json:"format"`
 	Schema         string   `json:"schema"`
 	Version        int      `json:"version"`
-	SchemaID       int      `json:"schemaId"`
+	SchemaID       string   `json:"schemaId"`
 	Compatibility  string   `json:"compatibility"`
 	SourceType     string   `json:"sourceType"`
 }
@@ -62,7 +62,6 @@ type Subjects []struct {
 
 // GetSubjects retrieves all registered subjects
 func (c *Client) GetSubjects() (subs Subjects, err error) {
-
 	resp, err := c.Do(http.MethodGet, "api/v1/datasets?pageSize=99999&connections=schema-registry", "gzip", nil)
 	if err != nil {
 		return
@@ -88,7 +87,6 @@ func (c *Client) GetSchema(name string) (response GetSchemaRes, err error) {
 	}
 
 	resp, err := c.Do(http.MethodGet, path, contentTypeJSON, nil)
-
 	if err != nil {
 		return
 	}
@@ -127,7 +125,6 @@ func (c *Client) WriteSchema(name string, request WriteSchemaReq) (err error) {
 	}
 
 	payload, err := json.Marshal(request)
-
 	if err != nil {
 		return errors.Wrap(err, "Request failed")
 	}
@@ -159,7 +156,6 @@ func (c *Client) SetSchemaCompatibility(name string, request SetSchemaCompatibil
 	}
 
 	payload, err := json.Marshal(request)
-
 	if err != nil {
 		return errors.Wrap(err, "Request failed")
 	}
@@ -193,7 +189,6 @@ func (c *Client) SetGlobalCompatibility(request SetGlobalCompatibilityReq) (err 
 	}
 
 	resp, err := c.Do(http.MethodPut, basePath, contentTypeJSON, payload)
-
 	if err != nil {
 		return err
 	}
@@ -217,7 +212,6 @@ func (c *Client) RemoveSchemaVersion(name string, version string) (err error) {
 	}
 
 	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
-
 	if err != nil {
 		return err
 	}
