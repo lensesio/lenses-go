@@ -20,7 +20,7 @@ type Namespace struct {
 type Group struct {
 	Name                       string      `json:"name" yaml:"name" header:"Name"`
 	Description                string      `json:"description,omitempty" yaml:"description" header:"Description"`
-	Namespaces                 []Namespace `json:"namespaces,omitempty" yaml:"dataNamespaces" header:"Namespaces,count"`
+	Namespaces                 []Namespace `json:"namespaces" yaml:"dataNamespaces" header:"Namespaces,count"`
 	ScopedPermissions          []string    `json:"scopedPermissions" yaml:"applicationPermissions" header:"Application Permissions,count"`
 	AdminPermissions           []string    `json:"adminPermissions" yaml:"adminPermissions" header:"Admin Permissions,count"`
 	UserAccountsCount          int         `json:"userAccounts" yaml:"userAccounts" header:"User Accounts"`
@@ -59,6 +59,9 @@ func (c *Client) GetGroup(name string) (group Group, err error) {
 func (c *Client) CreateGroup(group *Group) error {
 	if group.Name == "" {
 		return errRequired("name")
+	}
+	if group.Namespaces == nil {
+		group.Namespaces = make([]Namespace, 0)
 	}
 
 	payload, err := json.Marshal(group)
