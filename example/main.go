@@ -1,6 +1,10 @@
 package main
 
-import "github.com/lensesio/lenses-go/v5"
+import (
+	"log"
+
+	lenses "github.com/lensesio/lenses-go/v5/pkg/api"
+)
 
 func main() {
 	// Prepare authentication using raw Username and Password.
@@ -26,7 +30,7 @@ func main() {
 	*/
 
 	// Prepare the client's configuration based on the host and the authentication above.
-	clientConfig := lenses.ClientConfig{Host: "domain.com", Authentication: auth, Timeout: "15s", Debug: true}
+	clientConfig := lenses.ClientConfig{Host: "lenses.example", Authentication: auth, Timeout: "15s", Debug: true}
 
 	// Creating the client using the configuration.
 	client, err := lenses.OpenConnection(clientConfig) // or (config, lenses.UsingClient(customClient)/UsingToken(ready token string))
@@ -44,7 +48,7 @@ func main() {
 	// `Client#GetTopics` returns `[]lenses.Topic`, so you can work safely.
 	// topics[index].ConsumersGroup[index].Coordinator.Host
 	if err != nil {
-		// handle error.
+		log.Fatal(err)
 	}
 
 	// Print the length of the topics we've just received from our Lenses Box.
