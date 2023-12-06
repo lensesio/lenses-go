@@ -86,7 +86,7 @@ func NewCreateGroupCommand() *cobra.Command {
 		Use:   "create",
 		Short: "Create a group",
 		Example: `
-groups create --name MyGroup --description "My test group" --applicationPermissions ViewKafkaConsumers --applicationPermissions ManageKafkaConsumers --applicationPermissions ViewConnectors --connectClustersPermissions dev,prod --dataNamespaces '[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewSchema","InsertData","DeleteData","UpdateSchema"],"system":"Kafka","instance":"Dev"}]'
+groups create --name MyGroup --description "My test group" --applicationPermissions ViewKafkaConsumers --applicationPermissions ManageKafkaConsumers --applicationPermissions ViewConnectors --connectClustersPermissions dev,prod --dataNamespaces '[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewSchema","InsertData","DeleteData","UpdateSchema"],"connection":"kafka"}]'
 `,
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -118,7 +118,7 @@ func NewUpdateGroupCommand() *cobra.Command {
 		Use:   "update",
 		Short: "Update a group",
 		Example: `
-groups update --name MyGroup --description "My test group" --applicationPermissions ViewKafkaConsumers --applicationPermissions ManageKafkaConsumers --applicationPermissions ViewConnectors --connectClustersPermissions dev,prod --dataNamespaces'[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewSchema","InsertData","DeleteData","UpdateSchema"],"system":"Kafka","instance":"Dev"}]'
+groups update --name MyGroup --description "My test group" --applicationPermissions ViewKafkaConsumers --applicationPermissions ManageKafkaConsumers --applicationPermissions ViewConnectors --connectClustersPermissions dev,prod --dataNamespaces'[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewSchema","InsertData","DeleteData","UpdateSchema"],"connection":"kafka"}]'
 `,
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -228,7 +228,7 @@ func addCreateUpdateFlags(cmd *cobra.Command, namespacesRaw *string, group *api.
 	cmd.Flags().StringVar(&group.Description, "description", "", "Group description")
 	cmd.Flags().StringArrayVar(&group.ScopedPermissions, "applicationPermissions", []string{}, "Group application permissions")
 	cmd.Flags().StringArrayVar(&group.AdminPermissions, "adminPermissions", []string{}, "Group admin permissions")
-	cmd.Flags().StringVar(namespacesRaw, "dataNamespaces", "", `Group data namespaces: "[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewSchema","InsertData","DeleteData","UpdateSchema"],"system":"Kafka","instance":"Dev"}]"`)
+	cmd.Flags().StringVar(namespacesRaw, "dataNamespaces", "", `Group data namespaces: "[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewSchema","InsertData","DeleteData","UpdateSchema"],"connection":"kafka"}]"`)
 	cmd.Flags().StringSliceVar(&group.ConnectClustersPermissions, "connectClustersPermissions", nil, "Connect clusters access")
 
 	bite.Prepend(cmd, bite.FileBind(&group))

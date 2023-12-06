@@ -28,8 +28,7 @@ const groupsOkReponse = `[
           "ShowTopic",
           "ViewTopicMetadata"
         ],
-        "system": "Kafka",
-        "instance": "Dev"
+        "connection": "kafka"
       },
       {
         "wildcards": [
@@ -40,8 +39,7 @@ const groupsOkReponse = `[
           "ShowTopic",
           "ViewTopicMetadata"
         ],
-        "system": "Kafka",
-        "instance": "Dev"
+        "connection": "kafka"
       }
     ],
     "scopedPermissions": [
@@ -84,8 +82,7 @@ const groupsOkReponse = `[
           "ShowTopic",
           "ViewTopicMetadata"
         ],
-        "system": "Kafka",
-        "instance": "Dev"
+        "connection": "kafka"
       }
     ],
     "scopedPermissions": [
@@ -181,8 +178,7 @@ const groupOkResponse = `{
 		  "ShowTopic",
 		  "ViewTopicMetadata"
 		],
-		"system": "Kafka",
-		"instance": "Dev"
+        "connection": "kafka"
 	  },
 	  {
 		"wildcards": [
@@ -193,8 +189,7 @@ const groupOkResponse = `{
 		  "ShowTopic",
 		  "ViewTopicMetadata"
 		],
-		"system": "Kafka",
-		"instance": "Dev"
+        "connection": "kafka"
 	  }
 	],
 	"scopedPermissions": [
@@ -290,7 +285,7 @@ func TestGroupCreateCommandSuccess(t *testing.T) {
 		"--applicationPermissions=ViewKafkaConsumers",
 		"--applicationPermissions=ViewSQLProcessors",
 		`--dataNamespaces`,
-		`[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewTopicMetadata","InsertData","DeleteData","UpdateTablestore"],"system":"Kafka","instance":"Dev"}]`,
+		`[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewTopicMetadata","InsertData","DeleteData","UpdateTablestore"],"connection":"kafka"}]`,
 	)
 	assert.Nil(t, err)
 	assert.Equal(t, "Group [MyGroup] created\n", output)
@@ -329,7 +324,7 @@ func TestGroupUpdateCommandHttpFail(t *testing.T) {
 		"--applicationPermissions=ViewKafkaConsumers",
 		"--applicationPermissions=ViewSQLProcessors",
 		`--dataNamespaces`,
-		`[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewTopicMetadata","InsertData","DeleteData","UpdateTablestore"],"system":"Kafka","instance":"Dev"}]`,
+		`[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewTopicMetadata","InsertData","DeleteData","UpdateTablestore"],"connection":"kafka"}]`,
 	)
 	assert.NotNil(t, err)
 	config.Client = nil
@@ -357,7 +352,7 @@ func TestGroupUpdateCommandSuccess(t *testing.T) {
 		"--applicationPermissions=ViewKafkaConsumers",
 		"--applicationPermissions=ViewSQLProcessors",
 		`--dataNamespaces`,
-		`[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewTopicMetadata","InsertData","DeleteData","UpdateTablestore"],"system":"Kafka","instance":"Dev"}]`,
+		`[{"wildcards":["*"],"permissions":["CreateTopic","DropTopic","ConfigureTopic","QueryTopic","ShowTopic","ViewTopicMetadata","InsertData","DeleteData","UpdateTablestore"],"connection":"kafka"}]`,
 	)
 	assert.Nil(t, err)
 	assert.Equal(t, "Group [MyGroup] updated\n", output)

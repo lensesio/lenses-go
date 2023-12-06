@@ -12,8 +12,7 @@ const groupPath = "api/v1/group"
 type Namespace struct {
 	Wildcards   []string `json:"wildcards" yaml:"wildcards" header:"Wildcards"`
 	Permissions []string `json:"permissions" yaml:"permissions" header:"Permissions"`
-	System      string   `json:"system" yaml:"system" header:"system"`
-	Instance    string   `json:"instance" yaml:"instance" header:"instance"`
+	Connection  string   `json:"connection" yaml:"connection" header:"connection"`
 }
 
 // Group the payload object
