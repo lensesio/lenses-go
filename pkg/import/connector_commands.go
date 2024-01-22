@@ -24,11 +24,10 @@ func NewImportConnectorsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "connectors",
 		Short:            "connectors",
-		Example:          `import connectors --landscape /my-landscape --ignore-errors`,
+		Example:          `import connectors --dir /my-landscape`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			path = fmt.Sprintf("%s/%s", path, pkg.ConnectorsPath)
 			if err := loadConnectors(config.Client, cmd, path, interval, retries); err != nil {
 				return fmt.Errorf("failed to load connectors. [%s]", err.Error())
@@ -66,7 +65,6 @@ func loadConnectors(client *api.Client, cmd *cobra.Command, loadpath, interval s
 		}
 
 		connectors, err := client.GetConnectors(connector.ClusterName)
-
 		if err != nil {
 			return err
 		}

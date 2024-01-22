@@ -20,11 +20,10 @@ func NewImportQuotasCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "quotas",
 		Short:            "quotas",
-		Example:          `import quotas --landscape /my-landscape --ignore-errors`,
+		Example:          `import quotas --dir /my-landscape`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			path = fmt.Sprintf("%s/%s", path, pkg.QuotasPath)
 			if err := loadQuotas(config.Client, cmd, path); err != nil {
 				golog.Errorf("Failed to load quotas. [%s]", err.Error())

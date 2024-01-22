@@ -11,15 +11,15 @@ func NewImportGroupCommand() *cobra.Command {
 		Use:   "import",
 		Short: "import a landscape",
 		Example: `
-import acls --landscape my-acls-dir
-import alert-settings --landscape my-acls-dir
-import connectors --landscape my-acls-dir
-import connections --landscape my-acls-dir
-import processors  --landscape my-acls-dir
-import quota --landscape my-acls-dir
-import schemas --landscape my-acls-dir
-import topics --landscape my-acls-dir
-import policies --landscape my-acls-dir
+import acls --dir my-acls-dir
+import alert-settings --dir my-acls-dir
+import connectors --dir my-acls-dir
+import connections --dir my-acls-dir
+import processors  --dir my-acls-dir
+import quota --dir my-acls-dir
+import schemas --dir my-acls-dir
+import topics --dir my-acls-dir
+import policies --dir my-acls-dir
 import groups --dir groups
 import topic-settings --dir topic-settings
 import serviceaccounts --dir serviceaccounts`,

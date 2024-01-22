@@ -19,11 +19,10 @@ func NewImportPoliciesCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "policies",
 		Short:            "policies",
-		Example:          `import policies --landscape /my-landscape --ignore-errors`,
+		Example:          `import policies --dir /my-landscape`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			path = fmt.Sprintf("%s/%s", path, pkg.PoliciesPath)
 			if err := loadPolicies(config.Client, cmd, path); err != nil {
 				golog.Errorf("Failed to load policies. [%s]", err.Error())
@@ -49,7 +48,6 @@ func loadPolicies(client *api.Client, cmd *cobra.Command, loadpath string) error
 	}
 
 	polices, err := client.GetPolicies()
-
 	if err != nil {
 		return err
 	}

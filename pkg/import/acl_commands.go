@@ -20,11 +20,10 @@ func NewImportAclsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "acls",
 		Short:            "acls",
-		Example:          `import acls --landscape /my-landscape --ignore-errors`,
+		Example:          `import acls --dir /my-landscape`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			path = fmt.Sprintf("%s/%s", path, pkg.AclsPath)
 			if err := loadAcls(config.Client, cmd, path); err != nil {
 				golog.Errorf("Failed to load acls. [%s]", err.Error())
@@ -50,7 +49,6 @@ func loadAcls(client *api.Client, cmd *cobra.Command, loadpath string) error {
 	}
 
 	knownACLs, err := client.GetACLs()
-
 	if err != nil {
 		return err
 	}

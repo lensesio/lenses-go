@@ -20,11 +20,10 @@ func NewImportAlertSettingsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "alert-settings",
 		Short:            "alert-settings",
-		Example:          `import alert-settings --dir <dir> --ignore-errors`,
+		Example:          `import alert-settings --dir <dir>`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			path = fmt.Sprintf("%s/%s", path, pkg.AlertSettingsPath)
 
 			if err := loadProducerAlertSettings(config.Client, cmd, path); err != nil {
@@ -111,7 +110,6 @@ func loadConsumerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 
 		err := config.Client.SetAlertSettingsConsumerCondition(strconv.Itoa(2000), "",
 			api.ConsumerAlertConditionRequestv1{Condition: targetCondition.Condition, Channels: targetCondition.Channels})
-
 		if err != nil {
 			return err
 		}
@@ -189,7 +187,6 @@ func loadProducerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 			targetCondition.Condition.Threshold,
 			targetCondition.Condition.Duration,
 			targetCondition.Channels)
-
 		if err != nil {
 			return err
 		}

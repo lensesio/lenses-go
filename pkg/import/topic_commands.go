@@ -19,11 +19,10 @@ func NewImportTopicsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "topics",
 		Short:            "topics",
-		Example:          `import topics --landscape /my-landscape --ignore-errors`,
+		Example:          `import topics --dir /my-landscape`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			path = fmt.Sprintf("%s/%s", path, pkg.TopicsPath)
 			if err := loadTopics(config.Client, cmd, path); err != nil {
 				return err
@@ -94,7 +93,6 @@ func loadTopics(client *api.Client, cmd *cobra.Command, loadpath string) error {
 
 			// compare the config from imported file with the config on the remote server
 			for k, v := range topicFromFile.Configs {
-
 				// If at least one config value is different then perform a single PUT on all config
 				if v != topicValue.configs[k] {
 					if err := client.UpdateTopicConfig(topicFromFile.TopicName, []api.KV{topicFromFile.Configs}); err != nil {
@@ -104,7 +102,6 @@ func loadTopics(client *api.Client, cmd *cobra.Command, loadpath string) error {
 					golog.Infof("Updated topic '%s' config", topicFromFile.TopicName)
 					break
 				}
-
 			}
 		} else {
 			// If topic doesn't exist on the remote server then import it as new

@@ -20,11 +20,10 @@ func NewImportProcessorsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "processors",
 		Short:            "processors",
-		Example:          `import processors --dir /my-landscape --ignore-errors`,
+		Example:          `import processors --dir /my-landscape`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			path = fmt.Sprintf("%s/%s", path, pkg.SQLPath)
 			if err := loadProcessors(config.Client, cmd, path); err != nil {
 				golog.Errorf("Failed to load processors. [%s]", err.Error())
@@ -50,7 +49,6 @@ func loadProcessors(client *api.Client, cmd *cobra.Command, loadpath string) err
 	}
 
 	processors, err := client.GetProcessors()
-
 	if err != nil {
 		golog.Errorf("Failed to retrieve processors. [%s]", err.Error())
 	}
@@ -76,7 +74,7 @@ IterateImportFiles:
 				// Iterate next file from 'files'
 				continue IterateImportFiles
 			}
-			//scale
+			// scale
 			if err := client.UpdateProcessorRunners(p.ID, processor.Runners); err != nil {
 				golog.Errorf("Error scaling processor [%s] from file [%s/%s]. [%s]", p.ID, loadpath, file.Name(), err.Error())
 				return err
