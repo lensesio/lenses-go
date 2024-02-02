@@ -21,6 +21,20 @@ var (
 		{"Run `offsets` subcommand", []string{"offsets"}, nil},
 	}
 
+	testsDeleteConsumerGroup = []struct {
+		name        string
+		args        []string
+		expectOut   string
+		expectError error
+	}{
+		{
+			"Setting `to-offset` flag",
+			[]string{"", "delete-consumer-group", "--group", "foo-group"},
+			deleteConsumerGroupCmdSuccess,
+			nil,
+		},
+	}
+
 	testsSingleTopic = []struct {
 		name        string
 		args        []string
@@ -186,6 +200,28 @@ func TestUpdateSingleTopicOffset(t *testing.T) {
 	config.Client = client
 
 	for _, tt := range testsSingleTopic {
+		t.Run(tt.name, func(t *testing.T) {
+			consumersCmd := NewRootCommand()
+			out, err := test.ExecuteCommand(consumersCmd, tt.args...)
+			test.CheckStringContains(t, out, tt.expectOut)
+			if err != nil && err.Error() != tt.expectError.Error() {
+				t.Errorf("got `%v`, want `%v`", err, tt.expectError)
+			}
+		})
+	}
+}
+
+func TestDeleteConsumerGroup(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(nil))
+	})
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+	client, err := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+	assert.Nil(t, err)
+	config.Client = client
+
+	for _, tt := range testsDeleteConsumerGroup {
 		t.Run(tt.name, func(t *testing.T) {
 			consumersCmd := NewRootCommand()
 			out, err := test.ExecuteCommand(consumersCmd, tt.args...)
