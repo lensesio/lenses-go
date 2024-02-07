@@ -65,12 +65,17 @@ const (
 
 var errMultipleTopics = errors.New("Only one topic is allowed")
 var errMissingSinglePartitionFlag = errors.New("required flags, \"to-offset\" or \"to-earliest\" or \"to-latest\" not set")
+var errMissingConsumerGroupFlag = errors.New("required flag(s) \"group\" not set")
+var errMissingConsumerPartitionFlag = errors.New("required flag(s) \"partition\" not set")
 var errMissingMultiplePartitionsFlag = errors.New("required flags, \"to-datetime\" or \"to-earliest\" or \"to-latest\" not set")
 var errTopicMissing = errors.New("required flag \"topic\" not set")
 var errTopicsMissing = errors.New("required flags \"topic\" or \"all-topics\" not set")
 
 // NewRootCommand registers the `consumers` subcommand to Cobra and returns it
 func NewRootCommand() *cobra.Command {
+	var (
+		group string
+	)
 
 	cmd := &cobra.Command{
 		Use:              "consumers",
@@ -78,6 +83,9 @@ func NewRootCommand() *cobra.Command {
 		Long:             consumersCmdDescLong,
 		TraverseChildren: true,
 	}
+
+	cmd.PersistentFlags().StringVarP(&group, "group", "g", "", "Consumer Group ID")
+	cmd.MarkPersistentFlagRequired("group")
 
 	cmd.AddCommand(newOffsetsCommand())
 	cmd.AddCommand(newConsumerGroupDelete())
@@ -87,7 +95,6 @@ func NewRootCommand() *cobra.Command {
 
 func newOffsetsCommand() *cobra.Command {
 	var (
-		group string
 		topic []string
 	)
 	cmd := &cobra.Command{
@@ -96,13 +103,11 @@ func newOffsetsCommand() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	cmd.PersistentFlags().StringVarP(&group, "group", "g", "", "Consumer Group ID")
 	cmd.PersistentFlags().StringSliceVarP(&topic, "topic", "t", nil, "Topic")
-	cmd.MarkPersistentFlagRequired("group")
 	cmd.AddCommand(newOffsetsUpdateSinglePartition())
 	cmd.AddCommand(newOffsetsUpdateMultiplePartition())
 	cmd.AddCommand(newOffsetsDeleteSinglePartition())
-	cmd.AddCommand(newOffsetsDeleteMultiplePartition())
+	cmd.AddCommand(newOffsetsDeleteMultipleTopics())
 
 	return cmd
 }
@@ -206,12 +211,12 @@ func newOffsetsDeleteSinglePartition() *cobra.Command {
 	return cmd
 }
 
-func newOffsetsDeleteMultiplePartition() *cobra.Command {
+func newOffsetsDeleteMultipleTopics() *cobra.Command {
 	var (
 		allTopics bool
 	)
 	cmd := &cobra.Command{
-		Use:     "delete-multiple-topic",
+		Use:     "delete-multiple-topics-offsets",
 		Long:    deleteMultipleOffsetsCmdDescLong,
 		Example: deleteMultipleOffsetsCmdExample,
 		RunE: func(cmd *cobra.Command, args []string) error {

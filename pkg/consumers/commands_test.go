@@ -28,9 +28,97 @@ var (
 		expectError error
 	}{
 		{
-			"Setting `to-offset` flag",
-			[]string{"", "delete-consumer-group", "--group", "foo-group"},
+			"Deleting a consumer group",
+			[]string{"delete-consumer-group", "--group", "foo-group"},
 			deleteConsumerGroupCmdSuccess,
+			nil,
+		},
+		{
+			"Skipping a necessary flag",
+			[]string{"delete-consumer-group"},
+			"",
+			errMissingConsumerGroupFlag,
+		},
+	}
+
+	testsDeleteSingleTopicsOffsets = []struct {
+		name        string
+		args        []string
+		expectOut   string
+		expectError error
+	}{
+		{
+			"Delete single offset",
+			[]string{
+				"offsets", "delete-single-partition-offsets", "--group", "foo-group", "--topic", "foo",
+				"--partition", "1"},
+			deleteSingleOffsetCmdSuccess,
+			nil,
+		},
+		{
+			"Delete single offset with multiple `topic` flags",
+			[]string{
+				"offsets", "delete-single-partition-offsets", "--group", "foo-group", "--topic", "foo",
+				"--topic", "foo2", "--partition", "1"},
+			"",
+			errMultipleTopics,
+		},
+		{
+			"Skipping offset flag",
+			[]string{
+				"offsets", "delete-single-partition-offsets", "--group", "foo-group", "--topic", "foo"},
+			"",
+			errMissingConsumerPartitionFlag,
+		},
+		{
+			"Skipping `topic` flag",
+			[]string{
+				"offsets", "delete-single-partition-offsets", "--group", "foo-group", "--partition", "1"},
+			errTopicMissing.Error(),
+			nil,
+		},
+	}
+
+	testsDeleteMultipleTopicsOffests = []struct {
+		name        string
+		args        []string
+		expectOut   string
+		expectError error
+	}{
+		{
+			"Delete multiple topics offset",
+			[]string{
+				"offsets", "delete-multiple-topics-offsets", "--group", "foo-group", "--topic", "foo"},
+			deleteMultipleOffsetsCmdSuccess,
+			nil,
+		},
+		{
+			"Delete multiple topics offset with all-topics flag",
+			[]string{
+				"offsets", "delete-multiple-topics-offsets", "--group", "foo-group", "--all-topics"},
+			deleteMultipleOffsetsCmdSuccess,
+			nil,
+		},
+		{
+			"Delete multiple offset with multiple `topic` flags",
+			[]string{
+				"offsets", "delete-multiple-topics-offsets", "--group", "foo-group", "--topic", "foo",
+				"--topic", "foo2"},
+			deleteMultipleOffsetsCmdSuccess,
+			nil,
+		},
+		{
+			"Skipping `group` flag",
+			[]string{
+				"offsets", "delete-multiple-topics-offsets", "--topic", "foo"},
+			"",
+			errMissingConsumerGroupFlag,
+		},
+		{
+			"Skipping `topic` flag",
+			[]string{
+				"offsets", "delete-multiple-topics-offsets", "--group", "foo-group"},
+			errTopicsMissing.Error(),
 			nil,
 		},
 	}
@@ -222,6 +310,50 @@ func TestDeleteConsumerGroup(t *testing.T) {
 	config.Client = client
 
 	for _, tt := range testsDeleteConsumerGroup {
+		t.Run(tt.name, func(t *testing.T) {
+			consumersCmd := NewRootCommand()
+			out, err := test.ExecuteCommand(consumersCmd, tt.args...)
+			test.CheckStringContains(t, out, tt.expectOut)
+			if err != nil && err.Error() != tt.expectError.Error() {
+				t.Errorf("got `%v`, want `%v`", err, tt.expectError)
+			}
+		})
+	}
+}
+
+func TestDeleteSingleConsumerGroupOffsets(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(nil))
+	})
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+	client, err := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+	assert.Nil(t, err)
+	config.Client = client
+
+	for _, tt := range testsDeleteSingleTopicsOffsets {
+		t.Run(tt.name, func(t *testing.T) {
+			consumersCmd := NewRootCommand()
+			out, err := test.ExecuteCommand(consumersCmd, tt.args...)
+			test.CheckStringContains(t, out, tt.expectOut)
+			if err != nil && err.Error() != tt.expectError.Error() {
+				t.Errorf("got `%v`, want `%v`", err, tt.expectError)
+			}
+		})
+	}
+}
+
+func TestDeleteMultipleConsumerGroupOffsets(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(nil))
+	})
+	httpClient, teardown := test.TestingHTTPClient(h)
+	defer teardown()
+	client, err := api.OpenConnection(test.ClientConfig, api.UsingClient(httpClient))
+	assert.Nil(t, err)
+	config.Client = client
+
+	for _, tt := range testsDeleteMultipleTopicsOffests {
 		t.Run(tt.name, func(t *testing.T) {
 			consumersCmd := NewRootCommand()
 			out, err := test.ExecuteCommand(consumersCmd, tt.args...)
