@@ -2,6 +2,7 @@ package consumers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -54,6 +55,14 @@ var (
 				"--partition", "1"},
 			deleteSingleOffsetCmdSuccess,
 			nil,
+		},
+		{
+			"Delete single offset",
+			[]string{
+				"offsets", "delete-single-partition-offsets", "--group", "foo-group", "--topic", "",
+				"--partition", "1"},
+			"",
+			errNoTopic,
 		},
 		{
 			"Delete single offset with multiple `topic` flags",
@@ -118,8 +127,8 @@ var (
 			"Skipping `topic` flag",
 			[]string{
 				"offsets", "delete-multiple-topics-offsets", "--group", "foo-group"},
-			errTopicsMissing.Error(),
-			nil,
+			"",
+			errTopicsMissing,
 		},
 	}
 
@@ -136,6 +145,14 @@ var (
 				"--partition", "1", "--to-offset", "1"},
 			updateSingleCmdSuccess,
 			nil,
+		},
+		{
+			"Setting `to-offset` flag",
+			[]string{
+				"offsets", "update-single-partition", "--group", "foo-group", "--topic", "",
+				"--partition", "1", "--to-offset", "1"},
+			"",
+			errNoTopic,
 		},
 		{
 			"Setting `to-earliest` flag",
@@ -226,8 +243,8 @@ var (
 			"Skipping `topics` flag",
 			[]string{
 				"offsets", "update-multiple-partitions", "--group", "foo-group", "--to-latest"},
-			errTopicsMissing.Error(),
-			nil,
+			"",
+			errTopicsMissing,
 		},
 		{
 			"Setting `all-topics` flag",
@@ -251,8 +268,8 @@ var (
 				"offsets", "update-single-partition", "--group", "foo-group", "--topic", "foo",
 				"--partition", "1", "--to-offset", "1"},
 			400,
-			updateSingleCmdFailure,
-			nil,
+			"",
+			fmt.Errorf(updateSingleCmdFailure, errors.New("response returned status code 400")),
 		},
 		{
 			"Receive a 400 for `update-multiple-partitions` subcommand",
@@ -260,8 +277,8 @@ var (
 				"offsets", "update-multiple-partitions", "--group", "foo-group", "--topic", "foo",
 				"--to-datetime", "1"},
 			400,
-			updateMultipleCmdFailure,
-			nil,
+			"",
+			fmt.Errorf(updateSingleCmdFailure, errors.New("response returned status code 400")),
 		},
 	}
 )

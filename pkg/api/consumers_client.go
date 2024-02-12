@@ -34,10 +34,12 @@ func (c *Client) UpdateSingleTopicOffset(groupID, topic, partitionID, offsetType
 	singleTopic := SingleTopicOffset{Type: offsetType, Offset: offset}
 	payload, err := json.Marshal(singleTopic)
 
-	_, err = c.Do(http.MethodPut, path, contentTypeJSON, payload)
+	resp, err := c.Do(http.MethodPut, path, contentTypeJSON, payload)
 	if err != nil {
 		return err
 	}
+
+	defer resp.Body.Close()
 
 	return nil
 }
@@ -63,10 +65,12 @@ func (c *Client) DeleteSingleTopicOffset(groupID, topic, partitionID string) err
 
 	path := fmt.Sprintf("%s/%s/topics/%s/partitions/%s/offsets", pkg.ConsumersGroupPath, groupID, topic, partitionID)
 
-	_, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
 	if err != nil {
 		return err
 	}
+
+	defer resp.Body.Close()
 
 	return nil
 }
@@ -77,11 +81,16 @@ func (c *Client) DeleteMultipleTopicsOffset(groupID string, topics []string) err
 	path := fmt.Sprintf("%s/%s/offsets/delete", pkg.ConsumersGroupPath, groupID)
 	multipleTopics := MultipleTopicOffsets{Topics: topics}
 	payload, err := json.Marshal(multipleTopics)
-
-	_, err = c.Do(http.MethodPost, path, contentTypeJSON, payload)
 	if err != nil {
 		return err
 	}
+
+	resp, err := c.Do(http.MethodPost, path, contentTypeJSON, payload)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
 
 	return nil
 }
@@ -90,10 +99,12 @@ func (c *Client) DeleteMultipleTopicsOffset(groupID string, topics []string) err
 func (c *Client) DeleteConsumerGroup(groupID string) error {
 	path := fmt.Sprintf("%s/%s", pkg.ConsumersGroupPath, groupID)
 
-	_, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
+	resp, err := c.Do(http.MethodDelete, path, contentTypeJSON, nil)
 	if err != nil {
 		return err
 	}
+
+	defer resp.Body.Close()
 
 	return nil
 }

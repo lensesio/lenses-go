@@ -25,7 +25,7 @@ const (
   update-single-partition --group <group_name> --topic <topic_name> --partition <partition_id> --to-latest`
 
 	updateSingleCmdSuccess      string = "Update single topic partition offset has succeeded"
-	updateSingleCmdFailure      string = "Update single topic partition offset has failed"
+	updateSingleCmdFailure      string = "Update single topic partition offset has failed: %w"
 	updateSingleCmdMissingFlags string = "Missing flags, \"to-offset\" or \"to-earliest\" or \"to-latest\""
 
 	updateMultipleCmdDescLong string = "Updates consumer group offsets for all partitions of multiple topics of a consumer group."
@@ -39,31 +39,32 @@ const (
   # Update all partitions of multiple topics to the latest offset available
   lenses-cli consumers offsets update-multiple-partitions --group <group_name> --topic <topic_name> --to-latest`
 	updateMultipleCmdSuccess string = "Bulk update offsets for a consumer group has succeeded"
-	updateMultipleCmdFailure string = "Bulk update offsets for a consumer group has failed!"
+	updateMultipleCmdFailure string = "Bulk update offsets for a consumer group has failed: %w"
 
 	deleteSingleOffsetCmdDescLong string = "Deletes consumer group offsets for a single partition of a single topic."
 	deleteSingleOffsetCmdSuccess  string = "Delete single topic partition offset has succeeded"
-	deleteSingleOffsetCmdFailure  string = "Delete single topic partition offset has failed"
+	deleteSingleOffsetCmdFailure  string = "Delete single topic partition offset has failed: %w"
 	deleteSingleOffsetCmdExample  string = `
 	# Delete a single topic's partition offset
 	lenses-cli consumers offsets delete-single-partition --group <group_name> --topic <topic_name> --partition <partition_id>`
 
 	deleteMultipleOffsetsCmdDescLong string = "Deletes consumer group offsets for all partitions of multiple topics."
 	deleteMultipleOffsetsCmdSuccess  string = "Delete single topic partition offset has succeeded"
-	deleteMultipleOffsetsCmdFailure  string = "Delete single topic partition offset has failed"
+	deleteMultipleOffsetsCmdFailure  string = "Delete single topic partition offset has failed: %w"
 	deleteMultipleOffsetsCmdExample  string = `
 	# Update offsets for all partitions of multiple topics of a consumer group to the specified timestamp (ISO 8601 forma)
 	lenses-cli consumers offsets delete-multiple-partitions --group <group_name> --topic <topic_name> --topic <topic_name>`
 
 	deleteConsumerGroupCmdDescLong string = "Deletes a single consumer group."
 	deleteConsumerGroupCmdSuccess  string = "Delete consumer group has succeeded"
-	deleteConsumerGroupCmdFailure  string = "Delete consumer group has failed"
+	deleteConsumerGroupCmdFailure  string = "Delete consumer group has failed: %w"
 	deleteConsumerGroupCmdExample  string = `
 	# Update offsets for all partitions of multiple topics of a consumer group to the specified timestamp (ISO 8601 forma)
 	lenses-cli consumers delete-consumer-group --group <group_name>`
 )
 
 var errMultipleTopics = errors.New("Only one topic is allowed")
+var errNoTopic = errors.New("No topic set")
 var errMissingSinglePartitionFlag = errors.New("required flags, \"to-offset\" or \"to-earliest\" or \"to-latest\" not set")
 var errMissingConsumerGroupFlag = errors.New("required flag(s) \"group\" not set")
 var errMissingConsumerPartitionFlag = errors.New("required flag(s) \"partition\" not set")
@@ -128,11 +129,16 @@ func newOffsetsUpdateSinglePartition() *cobra.Command {
 				return nil
 			}
 			topicsList, err := cmd.Flags().GetStringSlice("topic")
-
-			if len(topicsList) > 1 {
+			if err != nil {
+				return err
+			} else if len(topicsList) > 1 {
 				return errMultipleTopics
+			} else if len(topicsList) < 1 {
+				return errNoTopic
 			}
+
 			groupID, _ := cmd.Flags().GetString("group")
+
 			topicName := topicsList[0]
 			partitionID, _ := cmd.LocalFlags().GetInt("partition")
 			offset := -100
@@ -152,8 +158,7 @@ func newOffsetsUpdateSinglePartition() *cobra.Command {
 
 			err = config.Client.UpdateSingleTopicOffset(groupID, topicName, strconv.Itoa(partitionID), offsetType, offset)
 			if err != nil {
-				fmt.Fprintln(cmd.ErrOrStderr(), updateSingleCmdFailure)
-				return nil
+				return fmt.Errorf(updateSingleCmdFailure, err)
 			}
 
 			fmt.Fprintln(cmd.OutOrStdout(), updateSingleCmdSuccess)
@@ -186,18 +191,22 @@ func newOffsetsDeleteSinglePartition() *cobra.Command {
 				return nil
 			}
 			topicsList, err := cmd.Flags().GetStringSlice("topic")
-
-			if len(topicsList) > 1 {
+			if err != nil {
+				return err
+			} else if len(topicsList) > 1 {
 				return errMultipleTopics
+			} else if len(topicsList) < 1 {
+				return errNoTopic
+
 			}
+
 			groupID, _ := cmd.Flags().GetString("group")
 			topicName := topicsList[0]
 			partitionID, _ := cmd.LocalFlags().GetInt("partition")
 
 			err = config.Client.DeleteSingleTopicOffset(groupID, topicName, strconv.Itoa(partitionID))
 			if err != nil {
-				fmt.Fprintln(cmd.ErrOrStderr(), deleteSingleOffsetCmdFailure)
-				return nil
+				return fmt.Errorf(deleteSingleOffsetCmdFailure, err)
 			}
 
 			fmt.Fprintln(cmd.OutOrStdout(), deleteSingleOffsetCmdSuccess)
@@ -231,14 +240,12 @@ func newOffsetsDeleteMultipleTopics() *cobra.Command {
 			} else if localFlags.Changed("all-topics") {
 				topics = nil
 			} else {
-				fmt.Fprintln(cmd.ErrOrStderr(), errTopicsMissing)
-				return nil
+				return errTopicsMissing
 			}
 
 			err := config.Client.DeleteMultipleTopicsOffset(groupID, topics)
 			if err != nil {
-				fmt.Fprintln(cmd.ErrOrStderr(), deleteMultipleOffsetsCmdFailure)
-				return nil
+				return fmt.Errorf(deleteMultipleOffsetsCmdFailure, err)
 			}
 
 			fmt.Fprintln(cmd.OutOrStdout(), deleteMultipleOffsetsCmdSuccess)
@@ -266,12 +273,15 @@ func newConsumerGroupDelete() *cobra.Command {
 
 			var groupID string
 
-			groupID, _ = cmd.Flags().GetString("group")
+			groupID, err := cmd.Flags().GetString("group")
 
-			err := config.Client.DeleteConsumerGroup(groupID)
 			if err != nil {
-				fmt.Fprintln(cmd.ErrOrStderr(), deleteConsumerGroupCmdFailure)
-				return nil
+				return err
+			}
+
+			err = config.Client.DeleteConsumerGroup(groupID)
+			if err != nil {
+				return fmt.Errorf(deleteConsumerGroupCmdFailure, err)
 			}
 
 			fmt.Fprintln(cmd.OutOrStdout(), deleteConsumerGroupCmdSuccess)
@@ -305,8 +315,7 @@ func newOffsetsUpdateMultiplePartition() *cobra.Command {
 			} else if localFlags.Changed("all-topics") {
 				topics = nil
 			} else {
-				fmt.Fprintln(cmd.ErrOrStderr(), errTopicsMissing)
-				return nil
+				return errTopicsMissing
 			}
 
 			if localFlags.Changed("to-datetime") {
@@ -323,8 +332,7 @@ func newOffsetsUpdateMultiplePartition() *cobra.Command {
 
 			err := config.Client.UpdateMultipleTopicsOffset(groupID, offsetType, targetDate, topics)
 			if err != nil {
-				fmt.Fprintln(cmd.ErrOrStderr(), updateMultipleCmdFailure)
-				return nil
+				return fmt.Errorf(updateMultipleCmdFailure, err)
 			}
 
 			fmt.Fprintln(cmd.OutOrStdout(), updateMultipleCmdSuccess)
