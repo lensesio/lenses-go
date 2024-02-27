@@ -129,9 +129,9 @@ func WriteSchemaCmd() *cobra.Command {
 		"AVRO" or "PROTOBUF".
 		`),
 		Example: heredoc.Doc(`
-		$ lenses-cli schema-regstiry write --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
-		$ lenses-cli schema-regstiry create --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
-		$ lenses-cli schema-regstiry update --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
+		$ lenses-cli schema-registry write --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
+		$ lenses-cli schema-registry create --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
+		$ lenses-cli schema-registry update --name="<NAME>" --format="<FORMAT>" --schema="<SCHEMA>"
 		`),
 		TraverseChildren: true,
 		SilenceErrors:    true,
