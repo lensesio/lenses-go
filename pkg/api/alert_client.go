@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -83,11 +84,10 @@ type ConsumerAlertSettings struct {
 
 // UpdateAlertSettings corresponds to `/api/v1/alerts/settings/{alert_setting_id}`
 func (c *Client) UpdateAlertSettings(alertSettings AlertSettingsPayload) error {
-	path := fmt.Sprintf("%s/%s", pkg.AlertsSettingsPath, alertSettings.AlertID)
+	path := fmt.Sprintf("%s/%s", pkg.AlertsSettingsPathV1, alertSettings.AlertID)
 
 	jsonPayload, err := json.Marshal(AlertSettingsPayload{Enable: alertSettings.Enable, Channels: alertSettings.Channels})
 	_, err = c.Do(http.MethodPut, path, contentTypeJSON, jsonPayload)
-
 	if err != nil {
 		return err
 	}
@@ -97,11 +97,10 @@ func (c *Client) UpdateAlertSettings(alertSettings AlertSettingsPayload) error {
 
 // CreateAlertSettingsCondition corresponds to `/api/v1/alerts/settings/{alert_setting_id}/condition/{condition_id}`
 func (c *Client) CreateAlertSettingsCondition(alertID, condition string, channels []string) error {
-	path := fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
+	path := fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPathV1, alertID)
 
 	jsonPayload, err := json.Marshal(AlertSettingsConditionPayload{Condition: condition, Channels: channels})
 	_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
-
 	if err != nil {
 		return err
 	}
@@ -119,10 +118,10 @@ func (c *Client) SetAlertSettingsConsumerCondition(alertID string, conditionID s
 
 	var path string
 	if conditionID != "" {
-		path = fmt.Sprintf("%s/%s/conditions/%s", pkg.AlertsSettingsPath, alertID, conditionID)
+		path = fmt.Sprintf("%s/%s/conditions/%s", pkg.AlertsSettingsPathV1, alertID, conditionID)
 		_, err = c.Do(http.MethodPut, path, contentTypeJSON, jsonPayload)
 	} else {
-		path = fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
+		path = fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPathV1, alertID)
 		_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
 	}
 
@@ -159,10 +158,10 @@ func (c *Client) SetAlertSettingsProducerCondition(alertID, conditionID, topic s
 
 	var path string
 	if conditionID != "" {
-		path = fmt.Sprintf("%s/%s/conditions/%s", pkg.AlertsSettingsPath, alertID, conditionID)
+		path = fmt.Sprintf("%s/%s/conditions/%s", pkg.AlertsSettingsPathV1, alertID, conditionID)
 		_, err = c.Do(http.MethodPut, path, contentTypeJSON, jsonPayload)
 	} else {
-		path = fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPath, alertID)
+		path = fmt.Sprintf("%s/%s/conditions", pkg.AlertsSettingsPathV1, alertID)
 		_, err = c.Do(http.MethodPost, path, contentTypeJSON, jsonPayload)
 	}
 
@@ -203,27 +202,80 @@ func (c *Client) DeleteAlertEvents(timestamp int64) (err error) {
 	return resp.Body.Close()
 }
 
-// GetAlertSettings returns all the configured alert settings.
+// HasAlertSettingsV2Endpoints answers the question: are the v2 endpoints
+// available or not? They were introduced in v5.2, dropping the v1. It returns
+// true if a GET /api/v2/alert/settings yields 2xx; it returns false if the
+// endpoint yields 404; it returns an error otherwise.
+func (c *Client) HasAlertSettingsV2Endpoints() (bool, error) {
+	resp, err := c.Do(http.MethodGet, "api/v2/alert/settings", "", nil)
+	if err == nil {
+		defer resp.Body.Close()
+		return true, nil
+	}
+
+	var x ResourceError
+	if errors.As(err, &x); x.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	return false, err
+}
+
+// GetAlertSettingsV1 returns all the configured alert settings.
 // Alerts are divided into two categories:
 //
 // * Infrastructure - These are out of the box alerts that be toggled on and offset.
 // * Consumer group - These are user-defined alerts on consumer groups.
 //
 // Alert notifications are the result of an `AlertSetting` Condition being met on an `AlertSetting`.
-func (c *Client) GetAlertSettings() (AlertSettings, error) {
-	resp, err := c.Do(http.MethodGet, pkg.AlertsSettingsPath, "", nil)
+func (c *Client) GetAlertSettingsV1() (AlertSettings, error) {
+	resp, err := c.Do(http.MethodGet, pkg.AlertsSettingsPathV1, "", nil)
 	if err != nil {
 		return AlertSettings{}, err
 	}
+	defer resp.Body.Close()
 
 	var settings AlertSettings
 	err = c.ReadJSON(resp, &settings)
 	return settings, err
 }
 
-// GetAlertSetting returns a specific alert setting based on its "id".
-func (c *Client) GetAlertSetting(id int) (setting AlertSetting, err error) {
-	resp, respErr := c.GetAlertSettings()
+func (c *Client) GetAlertSettingsV2() (CategorisedAlertRules, error) {
+	resp, err := c.Do(http.MethodGet, "api/v2/alert/settings", "", nil)
+	if err != nil {
+		return CategorisedAlertRules{}, err
+	}
+	defer resp.Body.Close()
+
+	var categories CategorisedAlertRules
+	if err := c.ReadJSON(resp, &categories); err != nil {
+		return categories, fmt.Errorf("unmarshal categories: %w", err)
+	}
+	return categories, nil
+}
+
+// GetAlertSettingV2 lists alert settings using GetAlertSettingsV2 and picks
+// the alert with requested id from the list.
+func (c *Client) GetAlertSettingV2(id int) (AlertRuleV2, error) {
+	// There is no endpoint to retrieve individual alerts, hence list them and
+	// search for the requested one.
+	cat, err := c.GetAlertSettingsV2()
+	if err != nil {
+		return AlertRuleV2{}, err
+	}
+
+	for _, c := range cat.Categories {
+		for _, a := range c {
+			if a.ID == id {
+				return a, nil
+			}
+		}
+	}
+	return AlertRuleV2{}, fmt.Errorf("no alert found with id: %d", id)
+}
+
+// GetAlertSettingV1 returns a specific alert setting based on its "id".
+func (c *Client) GetAlertSettingV1(id int) (setting AlertSettingV1, err error) {
+	resp, respErr := c.GetAlertSettingsV1()
 	if respErr != nil {
 		err = respErr
 		return
@@ -259,7 +311,7 @@ type AlertSettingCondition struct {
 func (c *Client) GetAlertSettingConditions(id int) ([]AlertSettingCondition, error) {
 	conditions := make([]AlertSettingCondition, 0)
 
-	resp, err := c.GetAlertSetting(id)
+	resp, err := c.GetAlertSettingV1(id)
 	if err != nil {
 		return conditions, err
 	}
@@ -286,7 +338,7 @@ func (c *Client) GetAlertSettingConditions(id int) ([]AlertSettingCondition, err
 
 // DeleteAlertSettingCondition deletes a condition from an alert setting.
 func (c *Client) DeleteAlertSettingCondition(alertSettingID int, conditionUUID string) error {
-	path := fmt.Sprintf("%s/%d/conditions/%s", pkg.AlertsSettingsPath, alertSettingID, conditionUUID)
+	path := fmt.Sprintf("%s/%d/conditions/%s", pkg.AlertsSettingsPathV1, alertSettingID, conditionUUID)
 	resp, err := c.Do(http.MethodDelete, path, "", nil)
 	if err != nil {
 		return err

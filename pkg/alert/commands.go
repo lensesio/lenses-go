@@ -33,9 +33,7 @@ func NewAlertGroupCommand() *cobra.Command {
 
 // NewGetAlertsCommand creates the `alerts` command
 func NewGetAlertsCommand() *cobra.Command {
-	var (
-		pageSize int
-	)
+	var pageSize int
 
 	cmd := &cobra.Command{
 		Use:              "alerts",
@@ -98,9 +96,19 @@ func NewGetAlertSettingsCommand() *cobra.Command {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			settings, err := config.Client.GetAlertSettings()
+			useV2, err := config.Client.HasAlertSettingsV2Endpoints()
 			if err != nil {
-				return fmt.Errorf("failed to retrieve alerts' settings. Error: [%s]", err.Error())
+				return fmt.Errorf("has v2 alerts: %w", err)
+			}
+
+			var settings any
+			if useV2 {
+				settings, err = config.Client.GetAlertSettingsV2()
+			} else {
+				settings, err = config.Client.GetAlertSettingsV1()
+			}
+			if err != nil {
+				return fmt.Errorf("get alert settings v2=%t: %w", useV2, err)
 			}
 
 			// force json, may contains conditions that are easier to be seen in json format.
@@ -138,11 +146,25 @@ func NewAlertSettingGroupCommand() *cobra.Command {
 				return bite.PrintInfo(cmd, "Alert setting [%d] disabled", id)
 			}
 
-			settings, err := config.Client.GetAlertSetting(id)
+			useV2, err := config.Client.HasAlertSettingsV2Endpoints()
 			if err != nil {
-				return fmt.Errorf("failed to retrieve alert's settings. Error: [%s]", err.Error())
+				return fmt.Errorf("has v2 alerts: %w", err)
 			}
 
+			if useV2 {
+				settings, err := config.Client.GetAlertSettingV2(id)
+				if err != nil {
+					return fmt.Errorf("get alert setting v2=%t: %w", useV2, err)
+				}
+				// The v2 DTOs do not have the "header" magic struct tags, hence
+				// print as JSON.
+				return bite.PrintJSON(cmd, settings)
+			}
+
+			settings, err := config.Client.GetAlertSettingV1(id)
+			if err != nil {
+				return fmt.Errorf("get alert setting v2=%t: %w", useV2, err)
+			}
 			return bite.PrintObject(cmd, settings)
 		},
 	}
@@ -245,7 +267,6 @@ func NewAlertSettingConditionGroupCommand() *cobra.Command {
 
 // NewSetAlertSettingConditionCommand creates `alert condition set` command
 func NewSetAlertSettingConditionCommand() *cobra.Command {
-
 	var (
 		conds     SettingConditionPayloads
 		cond      SettingConditionPayload
@@ -364,7 +385,7 @@ alert setting condition set ./alert_cond.yml`
 					return errors.New(`required flag "mode" not correct (supported modes: PerPartitionMode or PerTopicMode)`)
 				}
 
-				var channels = cond.Channels
+				channels := cond.Channels
 				if channels == nil {
 					channels = []string{}
 				}
@@ -456,7 +477,7 @@ func NewGetAlertChannelTemplatesCommand() *cobra.Command {
 alertchannel-templates
 
 # Do a simple query using jq
-alertchannel-templates --output=json | jq '.[] | select(.name =="Slack")' 
+alertchannel-templates --output=json | jq '.[] | select(.name =="Slack")'
 `,
 		TraverseChildren: true,
 		SilenceErrors:    true,

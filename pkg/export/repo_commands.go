@@ -23,7 +23,6 @@ func InitRepoCommand() *cobra.Command {
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if gitSupport {
 				if err := addGitSupport(cmd, gitURL); err != nil {
 					return err
@@ -43,7 +42,7 @@ func InitRepoCommand() *cobra.Command {
 }
 
 func addGitSupport(cmd *cobra.Command, gitURL string) error {
-	repo, err := git.PlainOpen("")
+	_, err := git.PlainOpen("")
 
 	if err == nil {
 		pwd, _ := os.Getwd()
@@ -61,9 +60,8 @@ func addGitSupport(cmd *cobra.Command, gitURL string) error {
 	file, err := os.OpenFile(
 		".gitignore",
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-		0666,
+		0o666,
 	)
-
 	if err != nil {
 		golog.Fatal(err)
 	}
@@ -72,9 +70,8 @@ func addGitSupport(cmd *cobra.Command, gitURL string) error {
 	readme, err := os.OpenFile(
 		"README.md",
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-		0666,
+		0o666,
 	)
-
 	if err != nil {
 		golog.Fatal(err)
 	}
@@ -87,7 +84,6 @@ This repo contains Lenses landscape resource descriptions described in yaml file
 	`)
 
 	wt, err := repo.Worktree()
-
 	if err != nil {
 		return err
 	}

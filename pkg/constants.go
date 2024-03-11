@@ -36,7 +36,7 @@ const (
 	AuditChannelsPath          = "api/v1/audit/channels"
 	AlertChannelTemplatesPath  = "api/v1/alert/channel-templates"
 	AuditChannelTemplatesPath  = "api/v1/audit/channel-templates"
-	AlertsSettingsPath         = "api/v1/alert/settings"
+	AlertsSettingsPathV1       = "api/v1/alert/settings"
 	AlertEventsPath            = "api/v1/alert/events"
 	MetadataTopicsPath         = "api/v1/metadata/topics"
 

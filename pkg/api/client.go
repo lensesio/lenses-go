@@ -594,7 +594,6 @@ func (c *Client) getBoxConfig(ptr interface{}) error {
 		r.Header.Set("Accept", "application/json, text/plain")
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -697,7 +696,7 @@ func (c *Client) GetExecutionMode() (ExecutionMode, error) {
 // ConnectCluster contains the connect cluster information that is returned by the `GetConnectClusters` call.
 type ConnectCluster struct {
 	Name     string `json:"name" header:"Name"`
-	URL      string `json:"url"` //header:"URL"`
+	URL      string `json:"url"` // header:"URL"`
 	Statuses string `json:"statuses" header:"Status"`
 	Config   string `json:"config" header:"Config"`
 	Offsets  string `json:"offsets" header:"Offsets,count"`
@@ -1117,7 +1116,6 @@ func (c *Client) GetTopicMetadata(topicName string) (TopicMetadata, error) {
 
 // CreateOrUpdateTopicMetadata adds or updates an existing topic metadata.
 func (c *Client) CreateOrUpdateTopicMetadata(metadata TopicMetadata) error {
-
 	payload, err := json.Marshal(metadata)
 	if err != nil {
 		return err
@@ -1174,7 +1172,6 @@ func (c *Client) CreateTopic(topicName string, replication, partitions int, conf
 	}
 
 	send, err := json.Marshal(payload)
-
 	if err != nil {
 		return err
 	}
@@ -1266,7 +1263,6 @@ func (c *Client) UpdateTopicConfig(topicName string, configsSlice []KV) error {
 	}
 
 	send, err := json.Marshal(UpdateConfigs{kvs})
-
 	if err != nil {
 		return err
 	}
@@ -1427,8 +1423,10 @@ func (c *Client) GetTopic(topicName string) (topic Topic, err error) {
 
 // Processor API
 
-const processorsPath = "api/v1/streams"
-const deploymentTargetPath = "api/v1/deployment/targets"
+const (
+	processorsPath       = "api/v1/streams"
+	deploymentTargetPath = "api/v1/deployment/targets"
+)
 
 // CreateProcessorFilePayload holds the data to be sent from `CreateProcessor`.
 type CreateProcessorFilePayload struct {
@@ -1479,7 +1477,7 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 		runners = 1
 	}
 
-	var payload = CreateProcessorRequestPayload{
+	payload := CreateProcessorRequestPayload{
 		Name:        name,
 		SQL:         sql,
 		Runners:     runners,
@@ -1490,7 +1488,6 @@ func (c *Client) CreateProcessor(name string, sql string, runners int, clusterNa
 	}
 
 	send, err := json.Marshal(payload)
-
 	if err != nil {
 		return err
 	}
@@ -1595,7 +1592,6 @@ type (
 
 // UnmarshalJSON makes unmarshaling compatible with lenses >= 4.3 and lenses <= 4.2
 func (topicName *TopicName) UnmarshalJSON(data []byte) error {
-
 	var topicString string
 	if err := json.Unmarshal(data, &topicString); err != nil {
 		var legacyTopicName LegacyTopicName
@@ -1712,7 +1708,6 @@ func (c *Client) LookupProcessorIdentifier(id, name, clusterName, namespace stri
 		} else {
 			return "", fmt.Errorf("LookupProcessorIdentifier: name or id arguments are missing")
 		}
-
 	} else if mode == ExecutionModeKubernetes {
 		if id != "" {
 			identifier = id
@@ -2941,8 +2936,8 @@ func (c *Client) DeleteQuotaForClient(clientID string, propertiesToRemove ...str
 // Alert API
 
 type (
-	// AlertSetting describes the type of list entry of the `GetAlertSetting` and `CreateOrUpdateAlertSettingCondition`.
-	AlertSetting struct {
+	// AlertSettingV1 describes the type of list entry of the `GetAlertSetting` and `CreateOrUpdateAlertSettingCondition`.
+	AlertSettingV1 struct {
 		ID                int                              `json:"id,omitempty" header:"ID,text"`
 		Description       string                           `json:"description,omitempty" header:"Desc"`
 		Category          string                           `json:"category,omitempty" header:"Category"`
@@ -2979,15 +2974,136 @@ type (
 
 	// AlertSettingsCategoryMap describes the type of `AlertSetting`'s Categories.
 	AlertSettingsCategoryMap struct {
-		Infrastructure []AlertSetting `json:"infrastructure" header:"Infrastructure"`
-		Consumers      []AlertSetting `json:"consumers" header:"Consumers"`
-		Producers      []AlertSetting `json:"Data Produced" header:"Producers"`
-		Apps           []AlertSetting `json:"Apps" header:"Apps"`
+		Infrastructure []AlertSettingV1 `json:"infrastructure" header:"Infrastructure"`
+		Consumers      []AlertSettingV1 `json:"consumers" header:"Consumers"`
+		Producers      []AlertSettingV1 `json:"Data Produced" header:"Producers"`
+		Apps           []AlertSettingV1 `json:"Apps" header:"Apps"`
 	}
 )
 
-func (categoryMap AlertSettingsCategoryMap) allCategories() [][]AlertSetting {
-	return [][]AlertSetting{
+type (
+	CategorisedAlertRules struct {
+		Categories map[string][]AlertRuleV2 `json:"categories"`
+	}
+
+	AlertRuleV2 struct {
+		ID                int                         `json:"id"`
+		Description       string                      `json:"description"`
+		Category          Category                    `json:"category"`
+		Enabled           bool                        `json:"enabled"`
+		ConditionTemplate *string                     `json:"conditionTemplate,omitempty"`
+		ConditionRegex    *string                     `json:"conditionRegex,omitempty"`
+		Docs              *string                     `json:"docs,omitempty"`
+		IsAvailable       bool                        `json:"isAvailable"`
+		Details           PolymorphicAlertRuleDetails `json:"details"`
+	}
+
+	// PolymorphicAlertRuleDetails can either be conditional or fixed. The
+	// "alertType" field actts as discriminator. Custom (un)marshal methods
+	// take care of the polymorphism.
+	PolymorphicAlertRuleDetails struct {
+		// Exactly one of the following fields must be non-nil.
+		Conditional *ConditionalAlertRuleDetails
+		Fixed       *FixedAlertRuleDetails
+		AlertType   AlertType `json:"alertType"` // Discriminator.
+	}
+
+	ConditionalAlertRuleDetails struct {
+		Conditions MapUUIDConditionDetails `json:"conditions"`
+	}
+
+	FixedAlertRuleDetails struct {
+		Channels     []ChannelSummary `json:"channels,omitempty"`
+		Condition    *string          `json:"condition,omitempty"`
+		ConditionDsl map[string]any   `json:"conditionDsl,omitempty"`
+		ModifiedBy   string           `json:"modifiedBy"`
+		ModifiedAt   time.Time        `json:"modifiedAt"`
+	}
+
+	ChannelSummary struct {
+		ID           string `json:"id"`
+		Name         string `json:"name"`
+		TemplateName string `json:"templateName"`
+	}
+	MapUUIDConditionDetails map[string]ConditionDetails
+
+	ConditionDetails struct {
+		CreatedAt      time.Time        `json:"createdAt"`
+		CreatedBy      string           `json:"createdBy"`
+		ModifiedAt     time.Time        `json:"modifiedAt"`
+		ModifiedBy     string           `json:"modifiedBy"`
+		Channels       []ChannelSummary `json:"channels,omitempty"`
+		Condition      string           `json:"condition"`
+		ConditionDsl   json.RawMessage  `json:"conditionDsl"`
+		ConditionState map[string]any   `json:"conditionState,omitempty"`
+	}
+)
+
+func (p PolymorphicAlertRuleDetails) MarshalJSON() ([]byte, error) {
+	if p.Conditional != nil && p.Fixed != nil {
+		return nil, fmt.Errorf("exactly one of the polymorphic alert rule details fields can be set")
+	}
+	if p.Conditional == nil && p.Fixed == nil {
+		return nil, fmt.Errorf("none of the polymorphic alert rule details fields has been set")
+	}
+	if p.Conditional != nil && p.AlertType == AlertTypeConditional {
+		return json.Marshal(struct {
+			ConditionalAlertRuleDetails
+			AlertType AlertType `json:"alertType"` // Discriminator.
+		}{
+			ConditionalAlertRuleDetails: *p.Conditional,
+			AlertType:                   AlertTypeConditional,
+		})
+	}
+	if p.Fixed != nil && p.AlertType == AlertTypeFixed {
+		return json.Marshal(struct {
+			FixedAlertRuleDetails
+			AlertType AlertType `json:"alertType"` // Discriminator.
+		}{
+			FixedAlertRuleDetails: *p.Fixed,
+			AlertType:             AlertTypeFixed,
+		})
+	}
+	return nil, fmt.Errorf("the PolymorphicAlertRuleDetails fields do not correspond to alert type: %q", p.AlertType)
+}
+
+func (p *PolymorphicAlertRuleDetails) UnmarshalJSON(b []byte) error {
+	var disc struct {
+		AlertType AlertType `json:"alertType"` // Discriminator.
+	}
+	if err := json.Unmarshal(b, &disc); err != nil {
+		return fmt.Errorf("unmarshal discriminator: %w", err)
+	}
+	p.AlertType = disc.AlertType
+	switch disc.AlertType {
+	case AlertTypeConditional:
+		return json.Unmarshal(b, &p.Conditional)
+	case AlertTypeFixed:
+		return json.Unmarshal(b, &p.Fixed)
+	}
+	return fmt.Errorf("unknown PolymorphicAlertRuleDetails discriminator value: %q", disc.AlertType)
+}
+
+type AlertType string
+
+const (
+	AlertTypeFixed       AlertType = "Fixed"
+	AlertTypeConditional AlertType = "Conditional"
+)
+
+type Category string
+
+const (
+	CategoryInfrastructure Category = "Infrastructure"
+	CategoryConsumers      Category = "Consumers"
+	CategoryKafkaConnect   Category = "Kafka Connect"
+	CategoryTopics         Category = "Topics"
+	CategoryDataProduced   Category = "Data Produced"
+	CategoryApps           Category = "Apps"
+)
+
+func (categoryMap AlertSettingsCategoryMap) allCategories() [][]AlertSettingV1 {
+	return [][]AlertSettingV1{
 		categoryMap.Apps,
 		categoryMap.Consumers,
 		categoryMap.Producers,
@@ -2996,7 +3112,7 @@ func (categoryMap AlertSettingsCategoryMap) allCategories() [][]AlertSetting {
 }
 
 type (
-	//AlertResult  alerts in a paging format
+	// AlertResult  alerts in a paging format
 	AlertResult struct {
 		PagesCount int     `json:"pagesAmount"`
 		Alerts     []Alert `json:"values"`
@@ -3277,7 +3393,6 @@ const auditPath = "api/audit?pageSize=1000"
 // Retrives the last N audit entries created.
 // See `GetAuditEntriesLive` for real-time notifications.
 func (c *Client) GetAuditEntries() (entries []AuditEntry, err error) {
-
 	resp, err := c.Do(http.MethodGet, auditPath, "", nil)
 	if err != nil {
 		return nil, nil
@@ -3500,20 +3615,21 @@ const (
 	topicExtractPath = "/api/topology/"
 )
 
-// TopicExtract a topics parents and descendants from a Lenses topology
-type TopicExtract struct {
+// TopologyNodeExtended a topics parents and descendants from a Lenses topology
+type TopologyNodeExtended struct {
 	Parents     []string `json:"parents" yaml:"parents" header:"Parents"`
 	Descendants []string `json:"descendants" yaml:"descendants" header:"descendants"`
 }
 
-// GetTopicExtract returns a TopicExtract for an id
-func (c *Client) GetTopicExtract(id string) ([]TopicExtract, error) {
-	var topics []TopicExtract
+// GetgetTopologyNodeGraph returns a TopologyNodeExtended for a node id.
+func (c *Client) GetgetTopologyNodeGraph(id string) ([]TopologyNodeExtended, error) {
+	var topics []TopologyNodeExtended
 
 	resp, err := c.Do(http.MethodGet, topicExtractPath+id, "", nil)
 	if err != nil {
 		return topics, err
 	}
+	defer resp.Body.Close()
 
 	err = c.ReadJSON(resp, &topics)
 	return topics, err
@@ -3554,12 +3670,10 @@ type SQLValidationResponse struct {
 
 // ValidateSQL valids a Lenses sql statement
 func (c *Client) ValidateSQL(sql string, caret int) (SQLValidationResponse, error) {
-
 	var response SQLValidationResponse
 
 	payload := SQLValidationRequest{SQL: sql, Caret: caret}
 	send, err := json.Marshal(payload)
-
 	if err != nil {
 		return response, err
 	}
@@ -3716,7 +3830,6 @@ func (c *Client) PolicyForPrint(p DataPolicy) DataPolicyTablePrint {
 
 // GetPolicies retrieves data policies from Lenses
 func (c *Client) GetPolicies() ([]DataPolicy, error) {
-
 	var response []DataPolicy
 
 	resp, err := c.Do(http.MethodGet, policyPath, "", nil)
@@ -3809,7 +3922,6 @@ func (c *Client) GetPolicyImpacts() ([]DataImpactType, error) {
 
 // CreatePolicy create a data policy
 func (c *Client) CreatePolicy(policy DataPolicyRequest) error {
-
 	send, err := json.Marshal(policy)
 	if err != nil {
 		return err
@@ -3825,7 +3937,6 @@ func (c *Client) CreatePolicy(policy DataPolicyRequest) error {
 
 // UpdatePolicy updates a policy
 func (c *Client) UpdatePolicy(policy DataPolicyUpdateRequest) error {
-
 	path := fmt.Sprintf("%s/%s", policyPath, policy.ID)
 
 	send, err := json.Marshal(policy)

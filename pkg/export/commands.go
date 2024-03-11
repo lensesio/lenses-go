@@ -2,7 +2,6 @@ package export
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/lensesio/bite"
@@ -12,8 +11,6 @@ import (
 
 	"github.com/kataras/golog"
 	"github.com/spf13/cobra"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 const (
@@ -21,36 +18,42 @@ const (
 	sqlConnectorClass = "com.landoop.connect.SQL"
 )
 
-var mode api.ExecutionMode
-var dependents bool
-var landscapeDir string
-var systemTopicExclusions = []string{
-	"connect-configs",
-	"connect-offsets",
-	"connect-status",
-	"connect-statuses",
-	"_schemas",
-	"__consumer_offsets",
-	"_kafka_lenses_",
-	"lsql_",
-	"__transaction_state",
-	"__topology",
-	"__topology__metrics",
-	"_connect-configs",
-	"_connect-status",
-	"_connect-offsets",
-	"_lenses_",
-}
+var (
+	mode api.ExecutionMode
 
-var topicExclusions string
-var prefix string
+	// If set, export other resource types as well if the resource to be
+	// exported references them.
+	dependents bool
+
+	landscapeDir string
+
+	systemTopicExclusions = []string{
+		"connect-configs",
+		"connect-offsets",
+		"connect-status",
+		"connect-statuses",
+		"_schemas",
+		"__consumer_offsets",
+		"_kafka_lenses_",
+		"lsql_",
+		"__transaction_state",
+		"__topology",
+		"__topology__metrics",
+		"_connect-configs",
+		"_connect-status",
+		"_connect-offsets",
+		"_lenses_",
+	}
+	topicExclusions string
+	prefix          string
+)
 
 // NewExportGroupCommand creates the `export` command
 func NewExportGroupCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "export a landscape",
-		Example: `	
+		Example: `
 export acls --dir my-dir
 export alert-settings --dir my-dir
 export alert-channels
@@ -90,7 +93,6 @@ export serviceaccounts --dir serviceaccounts`,
 
 func setExecutionMode(client *api.Client) error {
 	execMode, err := getExecutionMode(client)
-
 	if err != nil {
 		return err
 	}
@@ -108,31 +110,33 @@ func getExecutionMode(client *api.Client) (api.ExecutionMode, error) {
 	return mode, nil
 }
 
+// getAttachedTopics returns a slice of CreateTopicPayload for a topology node
+// ID. If dependents is not set, it returns an empty slice.
 func getAttachedTopics(client *api.Client, id string) ([]api.CreateTopicPayload, error) {
+	if !dependents {
+		return nil, nil
+	}
+
 	var topics []api.CreateTopicPayload
 
-	if dependents {
-		extractedTopics, err := client.GetTopicExtract(id)
+	extractedTopics, err := client.GetgetTopologyNodeGraph(id)
+	if err != nil {
+		return topics, err
+	}
 
-		if err != nil {
-			return topics, err
-		}
+	for _, topicName := range extractedTopics {
+		tree := append(topicName.Descendants, topicName.Parents...)
 
-		for _, topicName := range extractedTopics {
-			var tree = append(topicName.Descendants, topicName.Parents...)
-
-			for _, t := range tree {
-				if strings.HasPrefix(t, "TOPIC-") {
-					var strippedTopicName = strings.Replace(t, "TOPIC-", "", len(t))
-					topic, err := client.GetTopic(strippedTopicName)
-
-					if err != nil {
-						return topics, err
-					}
-
-					overrides := getTopicConfigOverrides(topic.Configs)
-					topics = append(topics, topic.GetTopicAsRequest(overrides))
+		for _, t := range tree {
+			if strings.HasPrefix(t, "TOPIC-") {
+				strippedTopicName := strings.Replace(t, "TOPIC-", "", len(t))
+				topic, err := client.GetTopic(strippedTopicName)
+				if err != nil {
+					return topics, err
 				}
+
+				overrides := getTopicConfigOverrides(topic.Configs)
+				topics = append(topics, topic.GetTopicAsRequest(overrides))
 			}
 		}
 	}
@@ -140,43 +144,9 @@ func getAttachedTopics(client *api.Client, id string) ([]api.CreateTopicPayload,
 	return topics, nil
 }
 
-func createBranch(cmd *cobra.Command, branchName string) error {
-
-	dir, err := os.Getwd()
-
-	if err != nil {
-		golog.Fatal(err)
-		return err
-	}
-
-	r, err := git.PlainOpen(dir)
-
-	if err != nil {
-		return err
-	}
-
-	w, err := r.Worktree()
-
-	if err != nil {
-		return err
-	}
-
-	branch := fmt.Sprintf("refs/heads/%s", branchName)
-	b := plumbing.ReferenceName(branch)
-	if err = w.Checkout(&git.CheckoutOptions{Create: true, Force: false, Branch: b}); err != nil {
-		return err
-	}
-
-	bite.PrintInfo(cmd, "Branch [%s] created", branchName)
-
-	return nil
-}
-
 func handleDependents(cmd *cobra.Command, client *api.Client, id string) error {
-
-	//get topics
+	// get topics
 	topics, err := getAttachedTopics(client, id)
-
 	if err != nil {
 		return err
 	}
@@ -195,17 +165,15 @@ func handleDependents(cmd *cobra.Command, client *api.Client, id string) error {
 	writeTopicsAsRequest(cmd, topics)
 
 	// get alert settings
-	settings, err := getAlertSettings(cmd, client, topicNames)
-
+	settings, err := getConsumerAlertsByTopics(cmd, client, topicNames)
 	if err != nil {
 		return err
 	}
 
 	writeAlertSettingsAsRequest(cmd, settings)
 
-	//get acls
+	// get acls
 	acls, err := client.GetACLs()
-
 	if err != nil {
 		return err
 	}
@@ -227,7 +195,6 @@ func handleDependents(cmd *cobra.Command, client *api.Client, id string) error {
 }
 
 func checkFileFlags(cmd *cobra.Command) {
-
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
 	if output == "TABLE" {
@@ -240,6 +207,4 @@ func checkFileFlags(cmd *cobra.Command) {
 	}
 
 	cmd.Flag(bite.GetOutPutFlagKey()).Value.Set(output)
-
-	return
 }

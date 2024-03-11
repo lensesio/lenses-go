@@ -1,7 +1,6 @@
 package export
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -16,11 +15,9 @@ import (
 
 // NewExportAlertsCommand creates `export alert-settings` command
 func NewExportAlertsCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:              "alert-settings",
 		Short:            "export alert-settings",
-		Example:          `export alert-settings --resource-name=my-alert`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -39,23 +36,25 @@ func NewExportAlertsCommand() *cobra.Command {
 	return cmd
 }
 
-func writeAlertSetting(cmd *cobra.Command, client *api.Client) error {
-
-	producerSettings, err := getProducerAlertSettings(client)
+func writeAlertSetting(cmd *cobra.Command, client alert.Client) error {
+	producerSettings, err := alert.GetProducerAlertSettings(client)
 	if err != nil {
 		return err
 	}
-	consumerSettings, err := getConsumerAlertSettings(client)
+	consumerSettings, err := alert.GetConsumerAlertSettings(client)
 	if err != nil {
 		return err
 	}
-	writeProducerAlertSettings(cmd, producerSettings)
-	writeConsumerAlertSettings(cmd, consumerSettings)
-
+	if err := writeProducerAlertSettingsV1(cmd, producerSettings); err != nil {
+		return fmt.Errorf("write producer settings: %w", err)
+	}
+	if err := writeConsumerAlertSettingsV1(cmd, consumerSettings); err != nil {
+		return fmt.Errorf("write consumer settings: %w", err)
+	}
 	return nil
 }
 
-func writeProducerAlertSettings(cmd *cobra.Command, settings api.ProducerAlertSettings) error {
+func writeProducerAlertSettingsV1(cmd *cobra.Command, settings api.ProducerAlertSettings) error {
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	fileName := fmt.Sprintf("alert-setting-producer.%s", strings.ToLower(output))
 
@@ -68,7 +67,7 @@ func writeProducerAlertSettings(cmd *cobra.Command, settings api.ProducerAlertSe
 	return nil
 }
 
-func writeConsumerAlertSettings(cmd *cobra.Command, settings api.ConsumerAlertSettings) error {
+func writeConsumerAlertSettingsV1(cmd *cobra.Command, settings api.ConsumerAlertSettings) error {
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	fileName := fmt.Sprintf("alert-setting-consumer.%s", strings.ToLower(output))
 
@@ -81,6 +80,88 @@ func writeConsumerAlertSettings(cmd *cobra.Command, settings api.ConsumerAlertSe
 	return nil
 }
 
+// getConsumerAlertsByTopics  goes through the alerts of category "consumer". If
+// the "conditions" expression contains any of the provided topics the condition
+// is added to the return value. It gives control to the v2 alert settings
+// endpoint if available, or falls back to the v1 otherwise. It is used in the
+// "dependents" logic.
+func getConsumerAlertsByTopics(cmd *cobra.Command, client *api.Client, topics []string) (alert.SettingConditionPayloads, error) {
+	useV2, err := client.HasAlertSettingsV2Endpoints()
+	if err != nil {
+		return alert.SettingConditionPayloads{}, fmt.Errorf("has alert settings v2 endpoints: %w", err)
+	}
+	if useV2 {
+		return getConsumerAlertsByTopicsV2(cmd, client, topics)
+	}
+	return getConsumerAlertsByTopicsV1(cmd, client, topics)
+}
+
+// getConsumerAlertsByTopicsV1 goes through the alerts of category "consumer".
+// If the "conditions" expression contains any of the provided topics the
+// condition is added to the return value.
+func getConsumerAlertsByTopicsV1(cmd *cobra.Command, client *api.Client, topics []string) (alert.SettingConditionPayloads, error) {
+	settings, err := client.GetAlertSettingsV1()
+	if err != nil {
+		return alert.SettingConditionPayloads{}, err
+	}
+
+	if len(settings.Categories.Consumers) == 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "no alert settings found")
+		return alert.SettingConditionPayloads{}, nil
+	}
+
+	var conditions []string
+	for _, setting := range settings.Categories.Consumers {
+		for _, condition := range setting.Conditions {
+			for _, topic := range topics {
+				// A condition is e.g.: "lag >= 42 on group my-consumer-group and topic my-topic".
+				if strings.Contains(condition, "topic "+topic) {
+					conditions = append(conditions, condition)
+				}
+			}
+		}
+	}
+
+	if len(conditions) == 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "no consumer conditions found\n")
+		return alert.SettingConditionPayloads{}, nil
+	}
+
+	return alert.SettingConditionPayloads{AlertID: 2000, Conditions: conditions}, nil
+}
+
+// getConsumerAlertsByTopics goes through the alerts of category "consumer". If
+// the "conditions" expression contains any of the provided topics the condition
+// is added to the return value. Its behaviour aims to replicate that of the
+// original v1 version [getConsumerAlertsByTopicsV1].
+func getConsumerAlertsByTopicsV2(cmd *cobra.Command, client *api.Client, topics []string) (alert.SettingConditionPayloads, error) {
+	rule, err := client.GetAlertSettingV2(2000)
+	if err != nil {
+		return alert.SettingConditionPayloads{}, err
+	}
+
+	if rule.Details.AlertType != api.AlertTypeConditional {
+		return alert.SettingConditionPayloads{}, fmt.Errorf("expected a conditional alert type, got: %q", rule.Details.AlertType)
+	}
+
+	var conditions []string
+	for _, condition := range rule.Details.Conditional.Conditions {
+		for _, topic := range topics {
+			// A condition is e.g.: "lag >= 42 on group my-consumer-group and topic my-topic".
+			if strings.Contains(condition.Condition, "topic "+topic) {
+				conditions = append(conditions, condition.Condition)
+			}
+		}
+	}
+
+	if len(conditions) == 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "no consumer conditions found\n")
+		return alert.SettingConditionPayloads{}, nil
+	}
+
+	return alert.SettingConditionPayloads{AlertID: 2000, Conditions: conditions}, nil
+}
+
 func writeAlertSettingsAsRequest(cmd *cobra.Command, settings alert.SettingConditionPayloads) error {
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 	fileName := fmt.Sprintf("alert-setting.%s", strings.ToLower(output))
@@ -91,103 +172,4 @@ func writeAlertSettingsAsRequest(cmd *cobra.Command, settings alert.SettingCondi
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "successfully wrote to %s\n", fileName)
 	return nil
-}
-
-func getAlertSettings(cmd *cobra.Command, client *api.Client, topics []string) (alert.SettingConditionPayloads, error) {
-	var alertSettings alert.SettingConditionPayloads
-	var conditions []string
-
-	settings, err := client.GetAlertSettings()
-
-	if err != nil {
-		return alertSettings, err
-	}
-
-	if len(settings.Categories.Consumers) == 0 {
-		fmt.Fprintf(cmd.OutOrStdout(), "no alert settings found")
-		return alertSettings, nil
-	}
-
-	consumerSettings := settings.Categories.Consumers
-
-	for _, setting := range consumerSettings {
-		for _, condition := range setting.Conditions {
-			if len(topics) == 0 {
-				conditions = append(conditions, condition)
-				continue
-			}
-
-			// filter by topic name
-			for _, topic := range topics {
-				if strings.Contains(condition, fmt.Sprintf("topic %s", topic)) {
-					conditions = append(conditions, condition)
-				}
-			}
-		}
-	}
-
-	if len(conditions) == 0 {
-		fmt.Fprintf(cmd.OutOrStdout(), "no consumer conditions found\n")
-		return alertSettings, nil
-	}
-
-	return alert.SettingConditionPayloads{AlertID: 2000, Conditions: conditions}, nil
-}
-
-func getConsumerAlertSettings(client *api.Client) (api.ConsumerAlertSettings, error) {
-	var consumerAlertSettings api.ConsumerAlertSettings
-
-	settings, err := client.GetAlertSetting(2000)
-	if err != nil {
-		return consumerAlertSettings, err
-	}
-
-	consumerAlertSettings.ID = settings.ID
-	consumerAlertSettings.Description = settings.Description
-
-	// iterate over the consumer condition details
-	for _, condDetail := range settings.ConditionDetails {
-		jsonStringCondition, _ := json.Marshal(condDetail.ConditionDsl)
-
-		consumerAlertConditionDetail := api.ConsumerAlertConditionRequestv1{}
-		json.Unmarshal(jsonStringCondition, &consumerAlertConditionDetail.Condition)
-
-		// iterate channels of a condition detail
-		for _, chann := range condDetail.Channels {
-			consumerAlertConditionDetail.Channels = append(consumerAlertConditionDetail.Channels, chann.Name)
-		}
-
-		consumerAlertSettings.ConditionDetails = append(consumerAlertSettings.ConditionDetails, consumerAlertConditionDetail)
-	}
-
-	return consumerAlertSettings, nil
-}
-
-func getProducerAlertSettings(client *api.Client) (api.ProducerAlertSettings, error) {
-	var producerAlertSettings api.ProducerAlertSettings
-
-	settings, err := client.GetAlertSetting(5000)
-	if err != nil {
-		return producerAlertSettings, err
-	}
-
-	producerAlertSettings.ID = settings.ID
-	producerAlertSettings.Description = settings.Description
-
-	// iterate over the data produced condition details
-	for _, condDetail := range settings.ConditionDetails {
-		jsonStringCondition, _ := json.Marshal(condDetail.ConditionDsl)
-
-		producerAlertConditionDetail := api.AlertConditionRequestv1{}
-		json.Unmarshal(jsonStringCondition, &producerAlertConditionDetail.Condition)
-
-		// iterate channels of a condition detail
-		for _, chann := range condDetail.Channels {
-			producerAlertConditionDetail.Channels = append(producerAlertConditionDetail.Channels, chann.Name)
-		}
-
-		producerAlertSettings.ConditionDetails = append(producerAlertSettings.ConditionDetails, producerAlertConditionDetail)
-	}
-
-	return producerAlertSettings, nil
 }

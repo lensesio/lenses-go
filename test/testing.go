@@ -20,7 +20,7 @@ var (
 		Username: "user",
 		Password: "pass",
 	}
-	//ClientConfig mocked for testing
+	// ClientConfig mocked for testing
 	ClientConfig = api.ClientConfig{
 		Authentication: auth,
 		Debug:          true,
@@ -58,7 +58,8 @@ func ResetCommandLineFlagSet() {
 	pflag.CommandLine = pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
 }
 
-// TestingHTTPClient tests an http client
+// TestingHTTPClient starts a [httptest.Server] that serves the provided handler
+// and returns an http.Client that always dials to this server.
 func TestingHTTPClient(handler http.Handler) (*http.Client, func()) {
 	s := httptest.NewServer(handler)
 

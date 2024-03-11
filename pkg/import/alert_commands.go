@@ -1,13 +1,13 @@
 package imports
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
 
 	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/v5/pkg"
+	"github.com/lensesio/lenses-go/v5/pkg/alert"
 	"github.com/lensesio/lenses-go/v5/pkg/api"
 	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 	"github.com/spf13/cobra"
@@ -47,26 +47,9 @@ func NewImportAlertSettingsCommand() *cobra.Command {
 }
 
 func loadConsumerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath string) error {
-	settings, err := client.GetAlertSetting(2000)
+	existingConsumerAlertSettings, err := alert.GetConsumerAlertSettings(client)
 	if err != nil {
-		return err
-	}
-
-	var existingConsumerAlertSettings api.ConsumerAlertSettings
-	existingConsumerAlertSettings.ID = settings.ID
-	existingConsumerAlertSettings.Description = settings.Description
-
-	for _, condDetail := range settings.ConditionDetails {
-		jsonStringCondition, _ := json.Marshal(condDetail.ConditionDsl)
-
-		consumerAlertConditionDetail := api.ConsumerAlertConditionRequestv1{}
-		json.Unmarshal(jsonStringCondition, &consumerAlertConditionDetail.Condition)
-
-		for _, chann := range condDetail.Channels {
-			consumerAlertConditionDetail.Channels = append(consumerAlertConditionDetail.Channels, chann.Name)
-		}
-
-		existingConsumerAlertSettings.ConditionDetails = append(existingConsumerAlertSettings.ConditionDetails, consumerAlertConditionDetail)
+		return fmt.Errorf("get consumer alert settings: %w", err)
 	}
 
 	var targetConsumerAlertSettings api.ConsumerAlertSettings
@@ -121,26 +104,9 @@ func loadConsumerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath 
 }
 
 func loadProducerAlertSettings(client *api.Client, cmd *cobra.Command, loadpath string) error {
-	settings, err := client.GetAlertSetting(5000)
+	existingProducerAlertSettings, err := alert.GetProducerAlertSettings(client)
 	if err != nil {
-		return err
-	}
-
-	var existingProducerAlertSettings api.ProducerAlertSettings
-	existingProducerAlertSettings.ID = settings.ID
-	existingProducerAlertSettings.Description = settings.Description
-
-	for _, condDetail := range settings.ConditionDetails {
-		jsonStringCondition, _ := json.Marshal(condDetail.ConditionDsl)
-
-		producerAlertConditionDetail := api.AlertConditionRequestv1{}
-		json.Unmarshal(jsonStringCondition, &producerAlertConditionDetail.Condition)
-
-		for _, chann := range condDetail.Channels {
-			producerAlertConditionDetail.Channels = append(producerAlertConditionDetail.Channels, chann.Name)
-		}
-
-		existingProducerAlertSettings.ConditionDetails = append(existingProducerAlertSettings.ConditionDetails, producerAlertConditionDetail)
+		return fmt.Errorf("get producer alert settings: %w", err)
 	}
 
 	var targetProducerAlertSettings api.ProducerAlertSettings

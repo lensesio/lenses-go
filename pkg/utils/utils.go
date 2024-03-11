@@ -25,7 +25,7 @@ import (
 
 // CreateDirectory creates a directory with full permissions
 func CreateDirectory(directoryPath string) error {
-	return os.MkdirAll(directoryPath, 0777)
+	return os.MkdirAll(directoryPath, 0o777)
 }
 
 // DecryptAES decrypting AES
@@ -101,7 +101,6 @@ func Fetch(fromFile, prefix string) ([]string, error) {
 	if fromFile != "" {
 		golog.Infof("Loading variables from file [%s] with prefix [%s]", fromFile, prefix)
 		lines, err := ReadLines(fromFile)
-
 		if err != nil {
 			return vars, err
 		}
@@ -144,7 +143,6 @@ func GetEnvVars(prefix string) []string {
 // FindFiles finds the files in provided directory
 func FindFiles(dir string) ([]fs.DirEntry, error) {
 	allFiles, err := os.ReadDir(dir)
-
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +160,7 @@ func FindFiles(dir string) ([]fs.DirEntry, error) {
 }
 
 func isValidImportFile(fileName string) bool {
-	var regex = regexp.MustCompile("^(/.)|(.yaml|.yml)$")
+	regex := regexp.MustCompile("^(/.)|(.yaml|.yml)$")
 	return regex.MatchString(fileName)
 }
 
@@ -262,15 +260,13 @@ func WalkPropertyValueFromArgs(args []string, actionFunc func(property, value st
 
 // WriteByteFile writes to a file from byte data
 func WriteByteFile(fileName string, data []byte) error {
-
 	os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
 
 	file, err := os.OpenFile(
 		fileName,
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-		0666,
+		0o666,
 	)
-
 	if err != nil {
 		golog.Fatal(err)
 		return err
@@ -289,15 +285,13 @@ func WriteByteFile(fileName string, data []byte) error {
 
 // WriteStringFile writes to a file from string data
 func WriteStringFile(fileName string, data []string) error {
-
 	os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
 
 	file, err := os.OpenFile(
 		fileName,
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-		0666,
+		0o666,
 	)
-
 	if err != nil {
 		golog.Fatal(err)
 		return err
@@ -318,7 +312,6 @@ func WriteStringFile(fileName string, data []string) error {
 
 // WriteBytesFile write bytes to a file to basepath with filename and the given format
 func WriteBytesFile(landscapeDir, basePath, fileName string, data []byte) error {
-
 	dir := fmt.Sprintf("%s/%s", landscapeDir, basePath)
 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -332,9 +325,8 @@ func WriteBytesFile(landscapeDir, basePath, fileName string, data []byte) error 
 	file, err := os.OpenFile(
 		path,
 		os.O_WRONLY|os.O_TRUNC|os.O_CREATE,
-		0666,
+		0o666,
 	)
-
 	if err != nil {
 		golog.Fatal(err)
 		return err
@@ -362,9 +354,7 @@ func WriteFile(landscapeDir, basePath, fileName, format string, resource interfa
 
 // WriteJSON write JSON to a file to basepath with filename
 func WriteJSON(landscapeDir, basePath, fileName string, resource interface{}) error {
-
 	y, err := json.Marshal(resource)
-
 	if err != nil {
 		return err
 	}
@@ -374,9 +364,7 @@ func WriteJSON(landscapeDir, basePath, fileName string, resource interface{}) er
 
 // WriteYAML write YAMLto a file to basepath with filename
 func WriteYAML(landscapeDir, basePath, fileName string, resource interface{}) error {
-
 	y, err := ToYaml(resource)
-
 	if err != nil {
 		return err
 	}
