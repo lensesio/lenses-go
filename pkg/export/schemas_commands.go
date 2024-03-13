@@ -2,6 +2,7 @@ package export
 
 import (
 	"fmt"
+	"hash/fnv"
 	"path/filepath"
 	"strings"
 
@@ -62,6 +63,7 @@ func WriteSchemas(cmd *cobra.Command, client *api.Client, name string) error {
 	if err != nil {
 		return err
 	}
+
 	for _, sub := range subjects {
 		if err := writeSchema(output, client, sub.Name); err != nil {
 			return err
@@ -77,7 +79,17 @@ func writeSchema(outputFormat string, client *api.Client, name string) error {
 		return err
 	}
 
-	fileName := fmt.Sprintf("%s.%s", strings.ToLower(strings.ReplaceAll(schema.Name, " ", "_")), strings.ToLower(outputFormat))
+	h := fnv.New64a()
+	_, err = h.Write([]byte(schema.Schema))
+	if err != nil {
+		return err
+	}
+	fileName := fmt.Sprintf("%s-%s-%08x.%s",
+		strings.ToLower(schema.Name),
+		strings.ToLower(schema.SchemaID),
+		uint32(h.Sum64()),
+		strings.ToLower(outputFormat))
+
 	filePath := filepath.Join(landscapeDir, pkg.SchemasPath, fileName)
 
 	if err := utils.WriteFile(landscapeDir, pkg.SchemasPath, fileName, outputFormat, schema); err != nil {

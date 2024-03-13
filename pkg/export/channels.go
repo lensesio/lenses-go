@@ -3,6 +3,7 @@ package export
 import (
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/lensesio/bite"
@@ -52,7 +53,12 @@ func writeChannels(cmd *cobra.Command, channelsPath, channelType, channelName st
 }
 
 func writeChannelToFile(cmd *cobra.Command, channelType, channelName string, channel interface{}) error {
-	fileName := fmt.Sprintf("%s-channel-%s.%s", channelType, strings.ToLower(channelName), strings.ToLower(bite.GetOutPutFlag(cmd)))
+	h := fnv.New64a()
+	_, err := h.Write([]byte(channelName))
+	if err != nil {
+		return fmt.Errorf("failed to hash channel name: [%v]", err)
+	}
+	fileName := fmt.Sprintf("%s-channel-%s-%08x.%s", channelType, strings.ToLower(channelName), uint32(h.Sum64()), strings.ToLower(bite.GetOutPutFlag(cmd)))
 	subDir := channelType + "-channels"
 
 	utils.WriteFile(landscapeDir, subDir, fileName, strings.ToUpper(bite.GetOutPutFlag(cmd)), channel)

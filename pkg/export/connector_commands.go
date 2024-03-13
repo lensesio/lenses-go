@@ -2,6 +2,7 @@ package export
 
 import (
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/kataras/golog"
@@ -89,7 +90,13 @@ func writeConnectors(cmd *cobra.Command, client *api.Client, clusterName string,
 			request := connector.ConnectorAsRequest()
 
 			output := strings.ToUpper(bite.GetOutPutFlag(cmd))
-			fileName := fmt.Sprintf("connector-%s-%s.%s", strings.ToLower(cluster), strings.ToLower(connectorName), strings.ToLower(output))
+			h := fnv.New64a()
+			_, err = h.Write([]byte(connectorName))
+			if err != nil {
+				return err
+			}
+
+			fileName := fmt.Sprintf("connector-%s-%s-%08x.%s", strings.ToLower(cluster), strings.ToLower(connectorName), uint32(h.Sum64()), strings.ToLower(output))
 
 			if output == "TABLE" {
 				output = "YAML"

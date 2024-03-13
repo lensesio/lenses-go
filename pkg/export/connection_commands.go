@@ -2,6 +2,7 @@ package export
 
 import (
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/lensesio/bite"
@@ -64,7 +65,14 @@ func writeConnections(cmd *cobra.Command, connectionName string) error {
 			return err
 		}
 
-		fileName := fmt.Sprintf("connection-%s-%s.%s", strings.ToLower(strings.ReplaceAll(connection.Name, " ", "_")), connection.Name, strings.ToLower(output))
+		h := fnv.New64a()
+		_, err = h.Write([]byte(connection.Name))
+		if err != nil {
+			return err
+		}
+
+		fileName := fmt.Sprintf("connection-%s-%08x.%s", strings.ToLower(connection.Name), uint32(h.Sum64()), strings.ToLower(output))
+
 		err = utils.WriteFile(landscapeDir, pkg.ConnectionsFilePath, fileName, output, connectionComplete)
 		if err != nil {
 			return fmt.Errorf("could not export connection to file %s", fileName)

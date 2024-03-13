@@ -55,7 +55,7 @@ func writePolicies(cmd *cobra.Command, client *api.Client, name string, ID strin
 			return err
 		}
 
-		fileName := fmt.Sprintf("policies-%s.%s", strings.ToLower(policy.Name), strings.ToLower(output))
+		fileName := fmt.Sprintf("policies-%s-%s.%s", strings.ToLower(policy.Name), strings.ToLower(policy.ID), strings.ToLower(output))
 		request := client.PolicyAsRequest(policy)
 		return utils.WriteFile(landscapeDir, pkg.PoliciesPath, fileName, output, request)
 	}
@@ -66,7 +66,7 @@ func writePolicies(cmd *cobra.Command, client *api.Client, name string, ID strin
 	}
 
 	for _, policy := range policies {
-		fileName := fmt.Sprintf("policies-%s.%s", strings.ToLower(policy.Name), strings.ToLower(output))
+		fileName := fmt.Sprintf("policies-%s-%s.%s", strings.ToLower(policy.Name), strings.ToLower(policy.ID), strings.ToLower(output))
 		if name != "" && policy.Name == name {
 			return utils.WriteFile(landscapeDir, pkg.PoliciesPath, fileName, output, policy)
 		}

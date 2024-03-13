@@ -90,12 +90,14 @@ func writeProcessors(cmd *cobra.Command, client *api.Client, id, cluster, namesp
 
 		var fileName string
 
+		// Appends the processor id to avoid file name conflicts when the processor name is
+		// the same but the id is different, or the processor name differs in case sensitivity.
 		if mode == api.ExecutionModeInProcess {
-			fileName = fmt.Sprintf("processor-%s.%s", strings.ToLower(processor.Name), strings.ToLower(output))
+			fileName = fmt.Sprintf("processor-%s-%s.%s", strings.ToLower(processor.Name), strings.ToLower(processor.ProcessorID), strings.ToLower(output))
 		} else if mode == api.ExecutionModeConnect {
-			fileName = fmt.Sprintf("processor-%s-%s.%s", strings.ToLower(processor.ClusterName), strings.ToLower(processor.Name), strings.ToLower(output))
+			fileName = fmt.Sprintf("processor-%s-%s-%s.%s", strings.ToLower(processor.ClusterName), strings.ToLower(processor.Name), strings.ToLower(processor.ProcessorID), strings.ToLower(output))
 		} else {
-			fileName = fmt.Sprintf("processor-%s-%s-%s.%s", strings.ToLower(processor.ClusterName), strings.ToLower(processor.Namespace), strings.ToLower(processor.Name), strings.ToLower(output))
+			fileName = fmt.Sprintf("processor-%s-%s-%s-%s.%s", strings.ToLower(processor.ClusterName), strings.ToLower(processor.Namespace), strings.ToLower(processor.Name), strings.ToLower(processor.ProcessorID), strings.ToLower(output))
 		}
 
 		// trim so the yaml is a multiline string

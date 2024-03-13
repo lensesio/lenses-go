@@ -2,6 +2,7 @@ package export
 
 import (
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/kataras/golog"
@@ -103,9 +104,16 @@ func writeTopicsAsRequest(cmd *cobra.Command, requests []api.CreateTopicPayload)
 	// write topics
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
+	h := fnv.New64a()
 	for _, topic := range requests {
 
-		fileName := fmt.Sprintf("topic-%s.%s", strings.ToLower(topic.TopicName), strings.ToLower(output))
+		_, err := h.Write([]byte(topic.TopicName))
+		if err != nil {
+			return err
+		}
+		topicNameLower := strings.ToLower(topic.TopicName)
+
+		fileName := fmt.Sprintf("topic-%s-%08x.%s", topicNameLower, uint32(h.Sum64()), strings.ToLower(output))
 
 		if err := utils.WriteFile(landscapeDir, pkg.TopicsPath, fileName, output, topic); err != nil {
 			return err

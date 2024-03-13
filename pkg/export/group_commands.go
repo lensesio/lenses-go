@@ -2,6 +2,7 @@ package export
 
 import (
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/kataras/golog"
@@ -48,7 +49,12 @@ func writeGroups(cmd *cobra.Command, groupName string) error {
 			return err
 		}
 
-		fileName := fmt.Sprintf("groups-%s.%s", strings.ToLower(group.Name), strings.ToLower(output))
+		h := fnv.New64a()
+		_, err = h.Write([]byte(group.Name))
+		if err != nil {
+			return err
+		}
+		fileName := fmt.Sprintf("groups-%s-%08x.%s", strings.ToLower(group.Name), uint32(h.Sum64()), strings.ToLower(output))
 		return utils.WriteFile(landscapeDir, pkg.GroupsPath, fileName, output, group)
 	}
 	groups, err := config.Client.GetGroups()
@@ -56,8 +62,17 @@ func writeGroups(cmd *cobra.Command, groupName string) error {
 		return err
 	}
 
+	h := fnv.New64a()
+
 	for _, group := range groups {
-		fileName := fmt.Sprintf("groups-%s.%s", strings.ToLower(group.Name), strings.ToLower(output))
+
+		_, err = h.Write([]byte(group.Name))
+		if err != nil {
+			return err
+		}
+
+		fileName := fmt.Sprintf("groups-%s-%08x.%s", strings.ToLower(group.Name), uint32(h.Sum64()), strings.ToLower(output))
+
 		if groupName != "" && group.Name == groupName {
 			return utils.WriteFile(landscapeDir, pkg.GroupsPath, fileName, output, group)
 		}

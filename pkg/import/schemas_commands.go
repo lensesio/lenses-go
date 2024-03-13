@@ -2,8 +2,6 @@ package imports
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"github.com/kataras/golog"
 	"github.com/lensesio/lenses-go/v5/pkg"
@@ -60,16 +58,17 @@ func ReadSchemas(client *api.Client, cmd *cobra.Command, filePath string) error 
 	}
 
 	for _, file := range files {
-		var schema api.WriteSchemaReq
-		var fileName = file.Name()
+		var schema struct {
+			name string
+			api.WriteSchemaReq
+		}
 
+		fileName := file.Name()
 		if err := bite.LoadFile(cmd, fmt.Sprintf("%s/%s", filePath, file.Name()), &schema); err != nil {
 			return errors.Wrapf(err, "Could not load file [%s]", fileName)
 		}
 
-		schemaName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
-
-		if err := client.WriteSchema(schemaName, schema); err != nil {
+		if err := client.WriteSchema(schema.name, schema.WriteSchemaReq); err != nil {
 			return errors.Wrapf(err, "Could not import Schemas [%s]", fileName)
 		}
 		golog.Infof("imported schema from file '%s'", filePath)

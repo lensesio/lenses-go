@@ -2,6 +2,7 @@ package export
 
 import (
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/kataras/golog"
@@ -56,13 +57,21 @@ func writeServiceAccounts(cmd *cobra.Command, accountName string) error {
 		return err
 	}
 
+	h := fnv.New64a()
 	for _, svcAcc := range svcaccs {
-		fileName := fmt.Sprintf("svc-accounts-%s.%s", strings.ToLower(svcAcc.Name), strings.ToLower(output))
+		_, err := h.Write([]byte(svcAcc.Name))
+		if err != nil {
+			return err
+		}
+
+		lowerSvcAccName := strings.ToLower(svcAcc.Name)
+		fileName := fmt.Sprintf("svc-accounts-%s-%08x.%s", lowerSvcAccName, uint32(h.Sum64()), strings.ToLower(output))
+
 		if accountName != "" && svcAcc.Name == accountName {
 			return utils.WriteFile(landscapeDir, pkg.ServiceAccountsPath, fileName, output, svcAcc)
 		}
 
-		err := utils.WriteFile(landscapeDir, pkg.ServiceAccountsPath, fileName, output, svcAcc)
+		err = utils.WriteFile(landscapeDir, pkg.ServiceAccountsPath, fileName, output, svcAcc)
 		if err != nil {
 			return err
 		}
