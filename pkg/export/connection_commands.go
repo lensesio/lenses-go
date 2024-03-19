@@ -65,13 +65,12 @@ func writeConnections(cmd *cobra.Command, connectionName string) error {
 			return err
 		}
 
+		// Since connections can differ in case, we use a hash to ensure uniqueness
+		// and avoid writing one file over another with the same name
 		h := fnv.New64a()
-		_, err = h.Write([]byte(connection.Name))
-		if err != nil {
-			return err
-		}
+		h.Write([]byte(connection.Name))
 
-		fileName := fmt.Sprintf("connection-%s-%08x.%s", strings.ToLower(connection.Name), uint32(h.Sum64()), strings.ToLower(output))
+		fileName := strings.ToLower(fmt.Sprintf("connection-%s-%08x.%s", connection.Name, uint32(h.Sum64()), output))
 
 		err = utils.WriteFile(landscapeDir, pkg.ConnectionsFilePath, fileName, output, connectionComplete)
 		if err != nil {

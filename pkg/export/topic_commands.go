@@ -104,16 +104,18 @@ func writeTopicsAsRequest(cmd *cobra.Command, requests []api.CreateTopicPayload)
 	// write topics
 	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 
+	// Since topics can differ in case, we use a hash to ensure uniqueness
+	// and avoid writing one file over another with the same name
 	h := fnv.New64a()
 	for _, topic := range requests {
 
-		_, err := h.Write([]byte(topic.TopicName))
-		if err != nil {
-			return err
-		}
-		topicNameLower := strings.ToLower(topic.TopicName)
+		h.Write([]byte(topic.TopicName))
 
-		fileName := fmt.Sprintf("topic-%s-%08x.%s", topicNameLower, uint32(h.Sum64()), strings.ToLower(output))
+		fileName := strings.ToLower(
+			fmt.Sprintf("topic-%s-%08x.%s",
+				topic.TopicName,
+				uint32(h.Sum64()),
+				output))
 
 		if err := utils.WriteFile(landscapeDir, pkg.TopicsPath, fileName, output, topic); err != nil {
 			return err

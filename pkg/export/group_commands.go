@@ -49,12 +49,12 @@ func writeGroups(cmd *cobra.Command, groupName string) error {
 			return err
 		}
 
+		// Since groups can differ in case, we use a hash to ensure uniqueness
+		// and avoid writing one file over another with the same name
 		h := fnv.New64a()
-		_, err = h.Write([]byte(group.Name))
-		if err != nil {
-			return err
-		}
-		fileName := fmt.Sprintf("groups-%s-%08x.%s", strings.ToLower(group.Name), uint32(h.Sum64()), strings.ToLower(output))
+		h.Write([]byte(group.Name))
+
+		fileName := strings.ToLower(fmt.Sprintf("groups-%s-%08x.%s", group.Name, uint32(h.Sum64()), output))
 		return utils.WriteFile(landscapeDir, pkg.GroupsPath, fileName, output, group)
 	}
 	groups, err := config.Client.GetGroups()
@@ -62,16 +62,14 @@ func writeGroups(cmd *cobra.Command, groupName string) error {
 		return err
 	}
 
+	// Since groups can differ in case, we use a hash to ensure uniqueness
+	// and avoid writing one file over another with the same name
 	h := fnv.New64a()
 
 	for _, group := range groups {
+		h.Write([]byte(group.Name))
 
-		_, err = h.Write([]byte(group.Name))
-		if err != nil {
-			return err
-		}
-
-		fileName := fmt.Sprintf("groups-%s-%08x.%s", strings.ToLower(group.Name), uint32(h.Sum64()), strings.ToLower(output))
+		fileName := strings.ToLower(fmt.Sprintf("groups-%s-%08x.%s", group.Name, uint32(h.Sum64()), output))
 
 		if groupName != "" && group.Name == groupName {
 			return utils.WriteFile(landscapeDir, pkg.GroupsPath, fileName, output, group)

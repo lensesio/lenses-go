@@ -79,11 +79,11 @@ func writeSchema(outputFormat string, client *api.Client, name string) error {
 		return err
 	}
 
+	// Since schema names can differ in case, we use a hash to ensure uniqueness
+	// and avoid writing one file over another with the same name
 	h := fnv.New64a()
-	_, err = h.Write([]byte(schema.Schema))
-	if err != nil {
-		return err
-	}
+	h.Write([]byte(schema.Schema))
+
 	fileName := fmt.Sprintf("%s-%s-%08x.%s",
 		strings.ToLower(schema.Name),
 		strings.ToLower(schema.SchemaID),

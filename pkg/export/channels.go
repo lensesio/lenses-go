@@ -54,10 +54,7 @@ func writeChannels(cmd *cobra.Command, channelsPath, channelType, channelName st
 
 func writeChannelToFile(cmd *cobra.Command, channelType, channelName string, channel interface{}) error {
 	h := fnv.New64a()
-	_, err := h.Write([]byte(channelName))
-	if err != nil {
-		return fmt.Errorf("failed to hash channel name: [%v]", err)
-	}
+	h.Write([]byte(channelName))
 	fileName := fmt.Sprintf("%s-channel-%s-%08x.%s", channelType, strings.ToLower(channelName), uint32(h.Sum64()), strings.ToLower(bite.GetOutPutFlag(cmd)))
 	subDir := channelType + "-channels"
 

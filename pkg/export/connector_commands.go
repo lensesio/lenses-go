@@ -90,13 +90,13 @@ func writeConnectors(cmd *cobra.Command, client *api.Client, clusterName string,
 			request := connector.ConnectorAsRequest()
 
 			output := strings.ToUpper(bite.GetOutPutFlag(cmd))
-			h := fnv.New64a()
-			_, err = h.Write([]byte(connectorName))
-			if err != nil {
-				return err
-			}
 
-			fileName := fmt.Sprintf("connector-%s-%s-%08x.%s", strings.ToLower(cluster), strings.ToLower(connectorName), uint32(h.Sum64()), strings.ToLower(output))
+			// Since connectors can differ in case, we use a hash to ensure uniqueness
+			// and avoid writing one file over another with the same name
+			h := fnv.New64a()
+			h.Write([]byte(connectorName))
+
+			fileName := strings.ToLower(fmt.Sprintf("connector-%s-%s-%08x.%s", cluster, connectorName, uint32(h.Sum64()), output))
 
 			if output == "TABLE" {
 				output = "YAML"

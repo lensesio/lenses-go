@@ -57,12 +57,11 @@ func writeServiceAccounts(cmd *cobra.Command, accountName string) error {
 		return err
 	}
 
+	// Since service accounts name can differ in case, we use a hash to ensure uniqueness
+	// and avoid writing one file over another with the same name
 	h := fnv.New64a()
 	for _, svcAcc := range svcaccs {
-		_, err := h.Write([]byte(svcAcc.Name))
-		if err != nil {
-			return err
-		}
+		h.Write([]byte(svcAcc.Name))
 
 		lowerSvcAccName := strings.ToLower(svcAcc.Name)
 		fileName := fmt.Sprintf("svc-accounts-%s-%08x.%s", lowerSvcAccName, uint32(h.Sum64()), strings.ToLower(output))
