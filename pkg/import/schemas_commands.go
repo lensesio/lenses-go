@@ -59,8 +59,9 @@ func ReadSchemas(client *api.Client, cmd *cobra.Command, filePath string) error 
 
 	for _, file := range files {
 		var schema struct {
-			name string
-			api.WriteSchemaReq
+			Name   string `yaml:"name"`
+			Format string `json:"format" yaml:"format"`
+			Schema string `json:"schema" yaml:"schema"`
 		}
 
 		fileName := file.Name()
@@ -68,7 +69,10 @@ func ReadSchemas(client *api.Client, cmd *cobra.Command, filePath string) error 
 			return errors.Wrapf(err, "Could not load file [%s]", fileName)
 		}
 
-		if err := client.WriteSchema(schema.name, schema.WriteSchemaReq); err != nil {
+		if err := client.WriteSchema(schema.Name, api.WriteSchemaReq{
+			Format: schema.Format,
+			Schema: schema.Schema,
+		}); err != nil {
 			return errors.Wrapf(err, "Could not import Schemas [%s]", fileName)
 		}
 		golog.Infof("imported schema from file '%s'", filePath)
