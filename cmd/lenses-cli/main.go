@@ -11,6 +11,7 @@ import (
 	"github.com/lensesio/lenses-go/v5/pkg/acl"
 	"github.com/lensesio/lenses-go/v5/pkg/alert"
 	"github.com/lensesio/lenses-go/v5/pkg/api"
+	"github.com/lensesio/lenses-go/v5/pkg/ascode"
 	"github.com/lensesio/lenses-go/v5/pkg/audit"
 	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 	"github.com/lensesio/lenses-go/v5/pkg/connection"
@@ -239,6 +240,9 @@ func main() {
 
 	// Add provision command for dynamic config
 	app.AddCommand(provision.NewProvisionCommand())
+
+	// Add apply resource command for as code(pre-gitops)
+	app.AddCommand(ascode.ApplyResourceCmd())
 
 	if err := app.Run(os.Stdout, os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)

@@ -78,6 +78,7 @@ func isOK(resp *http.Response) bool {
 const (
 	contentTypeHeaderKey = "Content-Type"
 	contentTypeJSON      = "application/json"
+	contentTypeYaml      = "application/yaml"
 
 	xKafkaLensesTokenHeaderKey = "X-Kafka-Lenses-Token"
 

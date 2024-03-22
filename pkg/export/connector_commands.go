@@ -1,8 +1,10 @@
 package export
 
 import (
+	"errors"
 	"fmt"
 	"hash/fnv"
+	"os"
 	"strings"
 
 	"github.com/kataras/golog"
@@ -17,18 +19,22 @@ import (
 // NewExportConnectorsCommand creates `export connectors` command
 func NewExportConnectorsCommand() *cobra.Command {
 	var name, cluster string
+	var yamlVersion int32
 
 	cmd := &cobra.Command{
 		Use:              "connectors",
 		Short:            "export connectors",
-		Example:          `export connectors --resource-name my-connector --cluster-name cluster1`,
+		Example:          `export connectors --version 2 --resource-name my-connector --cluster-name cluster1`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := config.Client
 			setExecutionMode(client)
 			checkFileFlags(cmd)
-			if err := writeConnectors(cmd, client, cluster, name); err != nil {
+			if yamlVersion != 2 {
+				golog.Warnf("Exporting connectors in the deprecated format. Please add --version 2 for the new format")
+			}
+			if err := writeConnectors(cmd, client, cluster, name, yamlVersion); err != nil {
 				golog.Errorf("Error writing connectors. [%s]", err.Error())
 				return err
 			}
@@ -41,6 +47,7 @@ func NewExportConnectorsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&name, "resource-name", "", "The resource name to export")
 	cmd.Flags().StringVar(&cluster, "cluster-name", "", "Select by cluster name, available only in CONNECT and KUBERNETES mode")
 	cmd.Flags().StringVar(&prefix, "prefix", "", "Connector with the prefix in the name only")
+	cmd.Flags().Int32Var(&yamlVersion, "version", 1, "Which export version to use, default is 1(deprecated), 2 for the new format")
 	bite.CanPrintJSON(cmd)
 	bite.CanBeSilent(cmd)
 	return cmd
@@ -49,7 +56,8 @@ func NewExportConnectorsCommand() *cobra.Command {
 // writeConnectors writes the connectors to files as yaml
 // If a clusterName is provided the connectors are filtered by clusterName
 // If a name is provided the connectors are filtered by connector name
-func writeConnectors(cmd *cobra.Command, client *api.Client, clusterName string, name string) error {
+// When version is 2, the connectors are written in the new format geared towards the gitops roadmap
+func writeConnectors(cmd *cobra.Command, client *api.Client, clusterName string, name string, yamlVersion int32) error {
 	clusters, err := client.GetConnectClusters()
 
 	if err != nil {
@@ -78,39 +86,84 @@ func writeConnectors(cmd *cobra.Command, client *api.Client, clusterName string,
 				continue
 			}
 
-			connector, err := client.GetConnector(cluster, connectorName)
-			if err != nil {
-				return err
-			}
-
-			if connector.Config[connectorClassKey] == sqlConnectorClass {
-				continue
-			}
-
-			request := connector.ConnectorAsRequest()
-
-			output := strings.ToUpper(bite.GetOutPutFlag(cmd))
-
 			// Since connectors can differ in case, we use a hash to ensure uniqueness
 			// and avoid writing one file over another with the same name
 			h := fnv.New64a()
 			h.Write([]byte(connectorName))
 
+			output := strings.ToUpper(bite.GetOutPutFlag(cmd))
 			fileName := strings.ToLower(fmt.Sprintf("connector-%s-%s-%08x.%s", cluster, connectorName, uint32(h.Sum64()), output))
 
-			if output == "TABLE" {
-				output = "YAML"
-			}
-
-			golog.Debugf("Exporting connector [%s.%s] to [%s%s]", cluster, connectorName, landscapeDir, fileName)
-			if err := utils.WriteFile(landscapeDir, pkg.ConnectorsPath, fileName, output, request); err != nil {
-				return err
-			}
-
-			if dependents {
-				handleDependents(cmd, client, fmt.Sprintf("%s:%s", connector.ClusterName, connector.Name))
+			if yamlVersion == 2 {
+				err = writeVersion2(client, connectorName, cluster, fileName)
+				if err != nil {
+					return err
+				}
+			} else {
+				err = writeDeprecatedFormat(cmd, client, connectorName, cluster, fileName)
+				if err != nil {
+					return err
+				}
 			}
 		}
+	}
+	return nil
+}
+
+func writeVersion2(client *api.Client, connector string, cluster string, file string) error {
+	connectorAsCode, err := client.GetConnectorAsCode(cluster, connector)
+	if err != nil {
+		return errors.New("Failed to get connector: " + connector + " in the connect-cluster:" + cluster)
+	}
+
+	//create landscapeDir if it does not exist
+	if _, err := os.Stat(landscapeDir); os.IsNotExist(err) {
+		err = os.Mkdir(landscapeDir, 0755)
+		if err != nil {
+			return errors.New("Failed to create directory: " + landscapeDir)
+		}
+	}
+	// merge landscapeDir and filePath
+	filePath := fmt.Sprintf("%s/%s", landscapeDir, file)
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	golog.Infof("Exporting connector [%s.%s] to [%s]", cluster, connector, filePath)
+	_, err = f.WriteString(connectorAsCode)
+	if err != nil {
+		return errors.New("Failed to write connector: " + connector + " in the connect-cluster:" + cluster + " to the file: " + file)
+	}
+
+	return nil
+}
+
+func writeDeprecatedFormat(cmd *cobra.Command, client *api.Client, connectorName string, cluster string, fileName string) error {
+	connector, err := client.GetConnector(cluster, connectorName)
+	if err != nil {
+		return err
+	}
+
+	if connector.Config[connectorClassKey] == sqlConnectorClass {
+		return nil
+	}
+	request := connector.ConnectorAsRequest()
+
+	output := strings.ToUpper(bite.GetOutPutFlag(cmd))
+
+	if output == "TABLE" {
+		output = "YAML"
+	}
+
+	golog.Debugf("Exporting connector [%s.%s] to [%s%s]", cluster, connectorName, landscapeDir, fileName)
+	if err := utils.WriteFile(landscapeDir, pkg.ConnectorsPath, fileName, output, request); err != nil {
+		return err
+	}
+
+	if dependents {
+		return handleDependents(cmd, client, fmt.Sprintf("%s:%s", connector.ClusterName, connector.Name))
 	}
 	return nil
 }
