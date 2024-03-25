@@ -104,13 +104,7 @@ func applyResourcesFromFolder(importer resourceImporter, folderPath string) erro
 			golog.Infof("Processing file:%s", file)
 
 			if err := applyResourceFile(importer, file); err != nil {
-				return fmt.Errorf("failed to apply resource from file %s: %s", file, err)
-			}
-		} else {
-			golog.Infof("Processing folder: %", file)
-			err = applyResourcesFromFolder(importer, file)
-			if err != nil {
-				return fmt.Errorf("failed to apply resource from folder %s: %s", file, err)
+				return fmt.Errorf("failed to apply resource from file %s: %w", file, err)
 			}
 		}
 		return nil
