@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/kataras/golog"
@@ -117,22 +118,15 @@ func writeVersion2(client *api.Client, connector string, cluster string, file st
 	}
 
 	//create landscapeDir if it does not exist
-	if _, err := os.Stat(landscapeDir); os.IsNotExist(err) {
-		err = os.Mkdir(landscapeDir, 0755)
-		if err != nil {
-			return errors.New("Failed to create directory: " + landscapeDir)
-		}
-	}
-	// merge landscapeDir and filePath
-	filePath := fmt.Sprintf("%s/%s", landscapeDir, file)
-	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	err = os.MkdirAll(landscapeDir, 0o755)
 	if err != nil {
-		return err
+		return errors.New("Failed to create directory: " + landscapeDir)
 	}
-	defer f.Close()
 
+	// merge landscapeDir and filePath
+	filePath := filepath.Join(landscapeDir, file)
 	golog.Infof("Exporting connector [%s.%s] to [%s]", cluster, connector, filePath)
-	_, err = f.WriteString(connectorAsCode)
+	os.WriteFile(filePath, []byte(connectorAsCode), 0644)
 	if err != nil {
 		return errors.New("Failed to write connector: " + connector + " in the connect-cluster:" + cluster + " to the file: " + file)
 	}

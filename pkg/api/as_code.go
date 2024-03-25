@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -13,19 +12,13 @@ const resourceConnectBasePath = resourceKafkaPath + "/connect" //api/v1/resource
 // Returns the connector as code
 func (c *Client) GetConnectorAsCode(cluster string, connector string) (yaml string, err error) {
 	path := fmt.Sprintf("%s/%s/connector/%s", resourceConnectBasePath, cluster, connector)
+	//c.Do handles the error handling
 	resp, err := c.Do(http.MethodGet, path, contentTypeYaml, nil)
 	if err != nil {
 		return "", err
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		var errorResponse ErrorResponse
-		if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
-			return "", fmt.Errorf("failed to decode error response: %w", err)
-		}
-		return "", fmt.Errorf("request failed with status code %d: %s", resp.StatusCode, errorResponse.Error)
-	}
 
 	bodyBytes, err := c.ReadResponseBody(resp)
 	if err != nil {
@@ -38,22 +31,10 @@ func (c *Client) GetConnectorAsCode(cluster string, connector string) (yaml stri
 }
 
 func (c *Client) ImportResource(yaml string) error {
-	resp, err := c.Do(http.MethodPut, resourcePath, contentTypeYaml, []byte(yaml))
+	// c.Do handles the error handling
+	_, err := c.Do(http.MethodPut, resourcePath, contentTypeYaml, []byte(yaml))
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	switch resp.StatusCode {
-	case http.StatusCreated:
-		return nil
-	case http.StatusBadRequest, http.StatusUnauthorized, http.StatusPaymentRequired, http.StatusForbidden, http.StatusNotFound, http.StatusInternalServerError:
-		var errorResponse ErrorResponse
-		if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
-			return fmt.Errorf("failed to decode error response: %w", err)
-		}
-		return fmt.Errorf("request failed with status code %d: %s", resp.StatusCode, errorResponse.Error)
-	default:
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
+	return nil
 }

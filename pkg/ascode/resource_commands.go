@@ -12,7 +12,7 @@ import (
 )
 
 // ResourceImporter defines the interface for importing resources
-type ResourceImporter interface {
+type resourceImporter interface {
 	ImportResource(yaml string) error
 }
 
@@ -24,11 +24,8 @@ func ApplyResourceCmd() *cobra.Command {
 		Example:          `apply resource.yaml`,
 		SilenceErrors:    true,
 		TraverseChildren: true,
+		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return fmt.Errorf("expected exactly one argument, the file or folder to import")
-			}
-
 			fileOrFolderPath := args[0]
 			if _, err := os.Stat(fileOrFolderPath); os.IsNotExist(err) {
 				return fmt.Errorf("file or folder %s does not exist", fileOrFolderPath)
@@ -37,7 +34,7 @@ func ApplyResourceCmd() *cobra.Command {
 			importer := config.Client
 
 			if err := applyResource(importer, fileOrFolderPath); err != nil {
-				return fmt.Errorf("failed to apply resource: %s", err)
+				return fmt.Errorf("failed to apply resource: %w", err)
 			}
 
 			return nil
@@ -47,7 +44,7 @@ func ApplyResourceCmd() *cobra.Command {
 	return cmd
 }
 
-func applyResource(importer ResourceImporter, path string) error {
+func applyResource(importer resourceImporter, path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -60,7 +57,7 @@ func applyResource(importer ResourceImporter, path string) error {
 	return applyResourceFile(importer, path)
 }
 
-func applyResourceFile(importer ResourceImporter, filePath string) error {
+func applyResourceFile(importer resourceImporter, filePath string) error {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return fmt.Errorf("file %s does not exist", filePath)
 	}
@@ -79,8 +76,8 @@ func applyResourceFile(importer ResourceImporter, filePath string) error {
 	apiVersion := resource.APIVersion
 	kind := resource.Kind
 
-	if apiVersion != "lenses.io/v0beta" {
-		return fmt.Errorf("unsupported API version: %s. Only supporting 'lenses.io/v0beta'", apiVersion)
+	if got, expect := apiVersion, "lenses.io/v0beta"; got != expect {
+		return fmt.Errorf("unsupported API version: %q; only supporting %q", got, expect)
 	}
 
 	switch kind {
@@ -95,7 +92,7 @@ func applyResourceFile(importer ResourceImporter, filePath string) error {
 	return nil
 }
 
-func applyResourcesFromFolder(importer ResourceImporter, folderPath string) error {
+func applyResourcesFromFolder(importer resourceImporter, folderPath string) error {
 	err := filepath.Walk(folderPath, func(file string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
