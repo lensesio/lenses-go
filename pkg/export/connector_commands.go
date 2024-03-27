@@ -126,7 +126,7 @@ func writeVersion2(client *api.Client, connector string, cluster string, file st
 	// merge landscapeDir and filePath
 	filePath := filepath.Join(landscapeDir, file)
 	golog.Infof("Exporting connector [%s.%s] to [%s]", cluster, connector, filePath)
-	os.WriteFile(filePath, []byte(connectorAsCode), 0644)
+	err = os.WriteFile(filePath, []byte(connectorAsCode), 0644)
 	if err != nil {
 		return errors.New("Failed to write connector: " + connector + " in the connect-cluster:" + cluster + " to the file: " + file)
 	}

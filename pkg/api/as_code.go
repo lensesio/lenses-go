@@ -32,9 +32,10 @@ func (c *Client) GetConnectorAsCode(cluster string, connector string) (yaml stri
 
 func (c *Client) ImportResource(yaml string) error {
 	// c.Do handles the error handling
-	_, err := c.Do(http.MethodPut, resourcePath, contentTypeYaml, []byte(yaml))
+	response, err := c.Do(http.MethodPut, resourcePath, contentTypeYaml, []byte(yaml))
 	if err != nil {
 		return err
 	}
+	response.Body.Close()
 	return nil
 }
