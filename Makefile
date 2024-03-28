@@ -30,11 +30,9 @@ clean: dep ## Clean
 
 cross-build: dep ## Build the app for multiple os/arch
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-darwin-amd64 ./cmd/${EXECUTABLE}
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-darwin-arm64 ./cmd/${EXECUTABLE}
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-amd64 ./cmd/${EXECUTABLE}
-	GOOS=linux GOARCH=386 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-386 ./cmd/${EXECUTABLE}
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-arm64 ./cmd/${EXECUTABLE}
-	GOOS=linux GOARCH=arm CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-linux-arm ./cmd/${EXECUTABLE}
-	GOOS=windows GOARCH=386 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-windows-386.exe ./cmd/${EXECUTABLE}
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ${LDFLAGS} -o ${OUTPUT}/${EXECUTABLE}-windows-amd64.exe ./cmd/${EXECUTABLE}
 
 format-check: ## Check format of source code according to Go's best practices
@@ -46,7 +44,7 @@ publish: ## Publish lenses CLI as docker
 race: dep ## Run data race detector
 	go test -race -short ${PKG_LIST}
 
-setup: ## Get all the necessary dependencies 
+setup: ## Get all the necessary dependencies
 	go get -u golang.org/x/lint/golint
 	go get -u golang.org/x/tools/cmd/goimports
 
