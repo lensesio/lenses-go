@@ -40,7 +40,9 @@ const (
 	AlertEventsPath            = "api/v1/alert/events"
 	MetadataTopicsPath         = "api/v1/metadata/topics"
 
-	LicensePath    = "api/v1/license"
-	FileUploadPath = "api/v1/files"
-	SetupPath      = "api/v1/setup" // aka Wizard mode
+	LicensePath                = "api/v1/license"
+	FileUploadPath             = "api/v1/files"
+	SetupPath                  = "api/v1/setup" // aka Wizard mode
+	ProvisioningPath           = "api/v1/state"
+	ProvisionedConnectionsPath = ProvisioningPath + "/connections"
 )

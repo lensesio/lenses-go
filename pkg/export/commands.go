@@ -7,6 +7,7 @@ import (
 	"github.com/lensesio/bite"
 	"github.com/lensesio/lenses-go/v5/pkg"
 	"github.com/lensesio/lenses-go/v5/pkg/api"
+	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 	"github.com/lensesio/lenses-go/v5/pkg/utils"
 
 	"github.com/kataras/golog"
@@ -72,6 +73,8 @@ export serviceaccounts --dir serviceaccounts`,
 		TraverseChildren: true,
 	}
 
+	var writer fileWriter = OSFileWriter{}
+
 	cmd.MarkPersistentFlagRequired("dir")
 	cmd.AddCommand(NewExportAclsCommand())
 	cmd.AddCommand(NewExportAlertsCommand())
@@ -80,7 +83,7 @@ export serviceaccounts --dir serviceaccounts`,
 	cmd.AddCommand(NewExportQuotasCommand())
 	cmd.AddCommand(NewExportTopicsCommand())
 	cmd.AddCommand(NewExportPoliciesCommand())
-	cmd.AddCommand(NewExportConnectionsCommand())
+	cmd.AddCommand(NewExportConnectionsCommand(config.Client, writer))
 	cmd.AddCommand(NewExportGroupsCommand())
 	cmd.AddCommand(NewExportServiceAccountsCommand())
 	cmd.AddCommand(NewExportAlertChannelsCommand())

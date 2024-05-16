@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/kataras/golog"
 	"github.com/lensesio/bite"
 	"github.com/spf13/cobra"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/config"
 )
 
 // InitRepoCommand creates the `init-repo` command
