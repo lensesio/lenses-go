@@ -19,7 +19,7 @@ pipeline {
 
     environment {
         // Build stage variables
-        DOCKER_GO_IMG = 'golang:1.19'
+        DOCKER_GO_IMG = 'golang:1.22'
         DOCKER_GO_CACHE = '/tmp/cli-cache'
         DOCKER_GO_ARGS = "--volume /tmp:/tmp " +
           "--env HOME=${DOCKER_GO_CACHE}/home " +
@@ -31,7 +31,7 @@ pipeline {
         // Dev. vars.
         // GCLOUD_SA_KEY_PATH = credentials("gcloud-dev")
         // GCLOUD_PROJECT = 'k8-engine'
-        GCLOUD_DOCKER_IMAGE = 'google/cloud-sdk:360.0.0-slim'
+        GCLOUD_DOCKER_IMAGE = 'gcr.io/google.com/cloudsdktool/google-cloud-cli:482.0.0-slim'
         GCLOUD_DOCKER_ARGS = '--env HOME=/tmp'
         GCLOUD_BUCKET = 'cli'
         GCLOUD_BUCKET_DEVELOPMENT = 'lenses-artifacts-development'
