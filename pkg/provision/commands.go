@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	config "github.com/lensesio/lenses-go/v5/pkg/configs"
 	"github.com/spf13/cobra"
@@ -17,7 +19,6 @@ var (
 
 // NewProvisionCommand is the 'beta provision' commmand
 func NewProvisionCommand() *cobra.Command {
-
 	cmdShortDesc := "Provision Lenses with a YAML config file to setup license, connections, etc."
 	cmdLongDesc := `Provision Lenses with a YAML config file to setup license, connections, etc..
 If --mode flag set to 'sidecar' (for k8s purposes) then keep CLI running.`
@@ -28,7 +29,6 @@ If --mode flag set to 'sidecar' (for k8s purposes) then keep CLI running.`
 		Long:    cmdLongDesc,
 		Example: "provision wizard.yml --mode=sidecar",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if len(args) == 0 {
 				return errors.New("missing provisioning file, refer to `provision --help` for more info")
 			}
@@ -53,8 +53,15 @@ If --mode flag set to 'sidecar' (for k8s purposes) then keep CLI running.`
 
 			if configMode == "sidecar" {
 				fmt.Fprintln(cmd.OutOrStdout(), "lenses-cli will stay in idle state")
-				// An empty select block will keep the go processes running
-				select {}
+				// If we're a sidecar and our job is done, do not terminate
+				// (otherwise k8s will restart us). Wait for either context
+				// cancellation or a SIGINT/SIGTERM.
+				sigs := make(chan os.Signal, 1)
+				signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+				select {
+				case <-sigs:
+				case <-cmd.Context().Done():
+				}
 			}
 			return nil
 		},
