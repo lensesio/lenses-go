@@ -91,7 +91,7 @@ func NewCreateUserCommand() *cobra.Command {
 		Use:   "create",
 		Short: "Create a user",
 		Example: `
-users create --username john --password secretpass --security basic --groups MyGroup
+users create --username john --password secretpass --security basic --groups MyGroup --manualGroupsMapping=true
 `,
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -106,7 +106,7 @@ users create --username john --password secretpass --security basic --groups MyG
 			}
 
 			if err := config.Client.CreateUser(&user); err != nil {
-				return fmt.Errorf("Failed to create user [%s]. [%s]", user.Username, err.Error())
+				return fmt.Errorf("failed to create user [%s]. [%s]", user.Username, err.Error())
 			}
 
 			return bite.PrintInfo(cmd, "User [%s] created", user.Username)
@@ -116,8 +116,9 @@ users create --username john --password secretpass --security basic --groups MyG
 	cmd.Flags().StringVar(&user.Username, "username", "", "User username")
 	cmd.Flags().StringVar(&user.Password, "password", "", "User Password")
 	cmd.Flags().StringVar(&user.Email, "email", "", "User email")
-	cmd.Flags().StringVar(&user.Type, "security", "", "User security type")
+	cmd.Flags().StringVar(&user.Type, "security", "", "User security type (basic, ldap, sso)")
 	cmd.Flags().StringArrayVar(&user.Groups, "groups", []string{}, "User groups")
+	cmd.Flags().BoolVar(&user.ManualGroupsMapping, "manualGroupsMapping", false, "Manual group mapping")
 
 	bite.Prepend(cmd, bite.FileBind(&user))
 	bite.CanBeSilent(cmd)
@@ -134,7 +135,7 @@ func NewUpdateUserCommand() *cobra.Command {
 		Short: "update a group",
 		Example: `
 users update --username john --groups MyGroup
-users update --username john --email johndoe@mail.com --groups MyGroup
+users update --username john --email johndoe@mail.com --groups MyGroup --type basic --manualGroupsMapping=true
 `,
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -160,6 +161,8 @@ users update --username john --email johndoe@mail.com --groups MyGroup
 	cmd.Flags().StringVar(&user.Username, "username", "", "User username")
 	cmd.Flags().StringVar(&user.Email, "email", "", "User email")
 	cmd.Flags().StringArrayVar(&user.Groups, "groups", []string{}, "User groups")
+	cmd.Flags().StringVar(&user.Type, "security", "", "User security type")
+	cmd.Flags().BoolVar(&user.ManualGroupsMapping, "manualGroupsMapping", false, "Manual group mapping")
 
 	bite.Prepend(cmd, bite.FileBind(&user))
 	bite.CanBeSilent(cmd)
