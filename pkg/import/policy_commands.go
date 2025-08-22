@@ -67,11 +67,12 @@ func loadPolicies(client *api.Client, cmd *cobra.Command, loadpath string) error
 
 				payload := api.DataPolicyUpdateRequest{
 					ID:          p.ID,
-					Name:        p.Name,
-					Category:    p.Category,
-					ImpactType:  p.ImpactType,
-					Obfuscation: p.Obfuscation,
-					Fields:      p.Fields,
+					Name:        policy.Name,
+					Category:    policy.Category,
+					ImpactType:  policy.ImpactType,
+					Obfuscation: policy.Obfuscation,
+					Datasets:    policy.Datasets,
+					Fields:      policy.Fields,
 				}
 
 				if err := client.UpdatePolicy(payload); err != nil {
