@@ -19,7 +19,7 @@ pipeline {
 
     environment {
         // Build stage variables
-        DOCKER_GO_IMG = 'golang:1.23'
+        DOCKER_GO_IMG = 'golang:1.26'
         DOCKER_GO_CACHE = '/tmp/cli-cache'
         DOCKER_GO_ARGS = "--volume /tmp:/tmp " +
           "--env HOME=${DOCKER_GO_CACHE}/home " +

@@ -2486,7 +2486,7 @@ func (acl *ACL) Validate() error {
 			errMsg = fmt.Sprintf("invalid operation for resource type: [%s]. The valid operations for this type are: [%s]", acl.ResourceType, validOps)
 		}
 
-		return fmt.Errorf(errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	return nil

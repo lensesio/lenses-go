@@ -209,11 +209,11 @@ func TestNewProcessorCreateCommand(t *testing.T) {
 			output, err := test.ExecuteCommand(cmd, tc.params...)
 
 			if !assert.Nil(t, err) {
-				t.Fatalf(err.Error())
+				t.Fatal(err.Error())
 			}
 			diff := cmp.Diff(tc.expected, output)
 			if diff != "" {
-				t.Fatalf(diff)
+				t.Fatal(diff)
 			}
 		})
 	}
@@ -274,7 +274,7 @@ func TestNewProcessorCreateValidationErrors(t *testing.T) {
 
 			diff := cmp.Diff(string(registerProcessorErrorAsJSON), err.Error())
 			if diff != "" {
-				t.Fatalf(diff)
+				t.Fatal(diff)
 			}
 		})
 	}

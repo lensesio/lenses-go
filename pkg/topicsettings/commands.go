@@ -91,11 +91,11 @@ func UpdateTopicSettingsCmd() *cobra.Command {
 			}
 
 			if namingPattern != "" && namingDescription == "" {
-				return fmt.Errorf(utils.RED("'naming-description' is mandatory if `naming-pattern` is provided"))
+				return fmt.Errorf("%s", utils.RED("'naming-description' is mandatory if `naming-pattern` is provided"))
 			}
 
 			if namingPattern == "" && namingDescription != "" {
-				return fmt.Errorf(utils.RED("'naming-pattern' is mandatory if `naming-description` is provided"))
+				return fmt.Errorf("%s", utils.RED("'naming-pattern' is mandatory if `naming-description` is provided"))
 			}
 
 			err := config.Client.UpdateTopicSettings(settings)

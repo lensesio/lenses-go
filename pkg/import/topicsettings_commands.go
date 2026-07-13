@@ -32,7 +32,7 @@ func ImportTopicSettingsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path = fmt.Sprintf("%s/%s", path, pkg.TopicSettingsPath)
 			err := ReadTopicSettings(config.Client, cmd, path)
-			return errors.Wrapf(err, utils.RED("Failed to read topic-settings"))
+			return errors.Wrap(err, utils.RED("Failed to read topic-settings"))
 		},
 	}
 
